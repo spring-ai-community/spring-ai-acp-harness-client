@@ -1,6 +1,6 @@
 # spring-ai-acp-harness-client
 
-[![CI](https://github.com/cpage-pivotal/acp-spring/actions/workflows/ci.yml/badge.svg)](https://github.com/cpage-pivotal/acp-spring/actions/workflows/ci.yml)
+[![CI](https://github.com/spring-ai-community/spring-ai-acp-harness-client/actions/workflows/ci.yml/badge.svg)](https://github.com/spring-ai-community/spring-ai-acp-harness-client/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://adoptium.net/temurin/releases/?version=21)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.x-6DB33F.svg)](https://docs.spring.io/spring-boot/)

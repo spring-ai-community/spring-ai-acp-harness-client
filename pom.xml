@@ -19,7 +19,7 @@
 
     <name>Spring AI ACP Harness Client</name>
     <description>Spring abstraction over Agent Client Protocol coding agents</description>
-    <url>https://github.com/cpage-pivotal/acp-spring</url>
+    <url>https://github.com/spring-ai-community/spring-ai-acp-harness-client</url>
 
     <organization>
         <name>Spring AI Community</name>
@@ -27,19 +27,19 @@
     </organization>
 
     <scm>
-        <url>https://github.com/cpage-pivotal/acp-spring</url>
-        <connection>scm:git:https://github.com/cpage-pivotal/acp-spring.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/cpage-pivotal/acp-spring.git</developerConnection>
+        <url>https://github.com/spring-ai-community/spring-ai-acp-harness-client</url>
+        <connection>scm:git:https://github.com/spring-ai-community/spring-ai-acp-harness-client.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/spring-ai-community/spring-ai-acp-harness-client.git</developerConnection>
     </scm>
 
     <issueManagement>
         <system>GitHub Issues</system>
-        <url>https://github.com/cpage-pivotal/acp-spring/issues</url>
+        <url>https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues</url>
     </issueManagement>
 
     <ciManagement>
         <system>GitHub Actions</system>
-        <url>https://github.com/cpage-pivotal/acp-spring/actions</url>
+        <url>https://github.com/spring-ai-community/spring-ai-acp-harness-client/actions</url>
     </ciManagement>
 
     <licenses>

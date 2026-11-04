@@ -6,7 +6,7 @@ Please do not disclose suspected vulnerabilities in a public issue, discussion, 
 request.
 
 Report vulnerabilities privately through the project's
-[GitHub Security Advisories](https://github.com/cpage-pivotal/acp-spring/security/advisories/new).
+[GitHub Security Advisories](https://github.com/spring-ai-community/spring-ai-acp-harness-client/security/advisories/new).
 Include the affected version, impact, reproduction steps, and any known mitigations.
 
 The maintainers will acknowledge a report as soon as practical, investigate it, and
