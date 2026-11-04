@@ -20,11 +20,11 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  *
  * <p>
  * This is what makes "any ACP agent" a claim rather than a roadmap item. Set
- * {@code spring.acp.runtime: gemini} with no Gemini adapter on the classpath and this
- * resolves the entry from the registry snapshot, obtains the agent the way the registry
- * says to — an npm package through {@code npx}, a Python one through {@code uvx}, or a
- * verified archive for this platform — and launches it with the arguments the registry
- * says make it speak ACP.
+ * {@code spring.ai.acp.harness.runtime: gemini} with no Gemini adapter on the classpath
+ * and this resolves the entry from the registry snapshot, obtains the agent the way the
+ * registry says to — an npm package through {@code npx}, a Python one through
+ * {@code uvx}, or a verified archive for this platform — and launches it with the
+ * arguments the registry says make it speak ACP.
  *
  * <p>
  * <strong>What it cannot do is the more useful half of the documentation.</strong> An
@@ -42,12 +42,14 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  *
  * <pre>{@code
  * spring:
- *   acp:
- *     runtime: gemini
- *     runtimes:
- *       gemini:
- *         args: [--yolo]                    # appended to what the registry supplies
- *         env: { GEMINI_API_KEY: "${KEY}" }
+ *   ai:
+ *     acp:
+ *       harness:
+ *         runtime: gemini
+ *         runtimes:
+ *           gemini:
+ *             args: [--yolo]                    # appended to what the registry supplies
+ *             env: { GEMINI_API_KEY: "${KEY}" }
  * }</pre>
  */
 public class RegistryAcpAgentRuntime implements AcpAgentRuntime {

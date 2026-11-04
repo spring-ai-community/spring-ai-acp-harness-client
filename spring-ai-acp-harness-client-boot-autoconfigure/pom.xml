@@ -65,7 +65,7 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- The HTTP endpoint is opt-in twice over: this dependency, then spring.acp.controller.enabled. -->
+        <!-- The HTTP endpoint is opt-in twice over: this dependency, then spring.ai.acp.harness.controller.enabled. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>

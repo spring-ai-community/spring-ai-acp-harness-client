@@ -10,7 +10,8 @@ import java.util.Optional;
  * The counterpart to the catalogue an agent advertises on {@code session/new}. That one
  * is authoritative for the vendor the agent was built against and worthless for anything
  * else: no amount of reading it will tell you which model a private gateway is in front
- * of. When {@code spring.acp.provider.base-url} is set, this is the list that decides.
+ * of. When {@code spring.ai.acp.harness.provider.base-url} is set, this is the list that
+ * decides.
  *
  * <p>
  * A catalogue that cannot answer returns empty, which is not the same as an empty list.

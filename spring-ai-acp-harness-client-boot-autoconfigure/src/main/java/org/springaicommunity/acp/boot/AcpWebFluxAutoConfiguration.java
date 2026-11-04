@@ -25,7 +25,7 @@ import org.springaicommunity.acp.client.AcpAgentClient;
 @AutoConfiguration(after = AcpAutoConfiguration.class)
 @ConditionalOnClass(WebFluxConfigurer.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
-@ConditionalOnProperty(prefix = "spring.acp.controller", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "spring.ai.acp.harness.controller", name = "enabled", havingValue = "true")
 public class AcpWebFluxAutoConfiguration {
 
 	@Bean

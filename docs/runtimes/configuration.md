@@ -4,12 +4,14 @@ Each agent has settings of its own that ACP does not standardize: Goose's built-
 
 ```yaml title="application.yaml"
 spring:
-  acp:
-    runtime: goose
-    runtimes:
-      goose:    { builtins: developer }                       # used: goose is selected
-      codex:    { config-toml: { model_reasoning_effort: high } }   # ignored until codex is selected
-      opencode: { config: { share: disabled } }               # ignored until opencode is selected
+  ai:
+    acp:
+      harness:
+        runtime: goose
+        runtimes:
+          goose:    { builtins: developer }                       # used: goose is selected
+          codex:    { config-toml: { model_reasoning_effort: high } }   # ignored until codex is selected
+          opencode: { config: { share: disabled } }               # ignored until opencode is selected
 ```
 
 - **Only the selected runtime reads its block.** Blocks for the others are inert, so an application can keep settings for every agent it supports side by side. A block for an id that no adapter or registry can supply fails startup, which catches a misspelled runtime name.
@@ -19,11 +21,11 @@ spring:
 - **Any property source works.** Top-level keys bind relaxed, while nested keys keep the spelling you wrote, because they end up verbatim in a file the agent parses:
 
     ```properties
-    spring.acp.runtimes.codex.config-toml.model_reasoning_effort=high
-    spring.acp.runtimes.goose.env.GOOSE_MAX_TURNS=40
+    spring.ai.acp.harness.runtimes.codex.config-toml.model_reasoning_effort=high
+    spring.ai.acp.harness.runtimes.goose.env.GOOSE_MAX_TURNS=40
     ```
 
-- **Files are written to `spring.acp.runtime-home`** (a directory under the JVM's temp directory by default), never to the workspace.
+- **Files are written to `spring.ai.acp.harness.runtime-home`** (a directory under the JVM's temp directory by default), never to the workspace.
 
 !!! tip
 
@@ -31,7 +33,7 @@ spring:
 
     | To set… | Use | Not |
     | --- | --- | --- |
-    | Model, mode, provider | `spring.acp.model`, `.mode`, `.provider` | `GOOSE_MODEL`, `GOOSE_MODE`, `model` in `config-toml` or `config` |
-    | MCP servers | `spring.acp.mcp-servers` | Goose extensions, Codex `mcp_servers`, OpenCode `mcp` |
-    | Skills | `spring.acp.skills` | OpenCode `skills` paths |
+    | Model, mode, provider | `spring.ai.acp.harness.model`, `.mode`, `.provider` | `GOOSE_MODEL`, `GOOSE_MODE`, `model` in `config-toml` or `config` |
+    | MCP servers | `spring.ai.acp.harness.mcp-servers` | Goose extensions, Codex `mcp_servers`, OpenCode `mcp` |
+    | Skills | `spring.ai.acp.harness.skills` | OpenCode `skills` paths |
     | Instructions | `<workspace>/AGENTS.md` | OpenCode `instructions`, unless you need more than one file |

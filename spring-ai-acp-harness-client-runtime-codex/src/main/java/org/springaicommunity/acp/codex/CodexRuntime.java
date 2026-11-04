@@ -33,8 +33,9 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * Unlike Goose and OpenCode, Codex ships no ACP mode in its own binary; the registry
  * entry distributes an npm package instead, so the default launch is {@code npx}. That is
  * a real cost — the first start pays a download — and an application that would rather
- * not can point {@code spring.acp.runtimes.codex.command} at a locally installed adapter,
- * or have one named by {@value #CLI_PATH_ENV}, as the Codex supply buildpack does.
+ * not can point {@code spring.ai.acp.harness.runtimes.codex.command} at a locally
+ * installed adapter, or have one named by {@value #CLI_PATH_ENV}, as the Codex supply
+ * buildpack does.
  *
  * <p>
  * It is the only one of the three that advertises the {@code providers} capability, so a
@@ -44,11 +45,11 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * this adapter names it whenever the application configured one. It also splits what
  * other agents call "mode" in two: {@code mode} is the approval policy (read-only, agent,
  * agent-full-access) and {@code collaboration_mode} is plan-versus-build. Both are
- * offered to {@code spring.acp.mode}, approval policy first, and the resolver takes
- * whichever one actually has the requested value.
+ * offered to {@code spring.ai.acp.harness.mode}, approval policy first, and the resolver
+ * takes whichever one actually has the requested value.
  *
  * <p>
- * Tier-3 options, under {@code spring.acp.runtimes.codex}:
+ * Tier-3 options, under {@code spring.ai.acp.harness.runtimes.codex}:
  *
  * <pre>{@code
  * package: "@agentclientprotocol/codex-acp@2.5.0"   # what npx runs

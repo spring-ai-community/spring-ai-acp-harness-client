@@ -6,11 +6,12 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * {@code spring.acp.mcp.oauth.*}: how this application registers with MCP servers'
- * authorization servers, and where it keeps what it learns. Which servers are protected
- * is said on the server itself, with {@code spring.acp.mcp-servers[n].auth: oauth}.
+ * {@code spring.ai.acp.harness.mcp.oauth.*}: how this application registers with MCP
+ * servers' authorization servers, and where it keeps what it learns. Which servers are
+ * protected is said on the server itself, with
+ * {@code spring.ai.acp.harness.mcp-servers[n].auth: oauth}.
  */
-@ConfigurationProperties("spring.acp.mcp.oauth")
+@ConfigurationProperties("spring.ai.acp.harness.mcp.oauth")
 public class McpOAuthProperties {
 
 	/**

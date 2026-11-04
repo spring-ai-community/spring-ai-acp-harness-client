@@ -18,9 +18,11 @@ configuration surface.
 
 ```yaml
 spring:
-  acp:
-    runtime: goose      # ← change to codex or opencode; nothing else moves
-    model: gpt-5.4-mini # a request, not an assignment; see on-unsupported
+  ai:
+    acp:
+      harness:
+        runtime: goose      # ← change to codex or opencode; nothing else moves
+        model: gpt-5.4-mini # a request, not an assignment; see on-unsupported
 ```
 
 ```java
@@ -61,16 +63,16 @@ agent) plus one adapter:
 | `spring-ai-acp-harness-client-boot-starter-goose` | Goose |
 | `spring-ai-acp-harness-client-boot-starter-codex` | Codex (`codex-acp`) |
 | `spring-ai-acp-harness-client-boot-starter-opencode` | OpenCode |
-| `spring-ai-acp-harness-client-boot-starter-registry` | Any agent the ACP registry publishes, named by `spring.acp.runtime` |
+| `spring-ai-acp-harness-client-boot-starter-registry` | Any agent the ACP registry publishes, named by `spring.ai.acp.harness.runtime` |
 
-With exactly one adapter on the classpath, `spring.acp.runtime` can be left out. There is no default
+With exactly one adapter on the classpath, `spring.ai.acp.harness.runtime` can be left out. There is no default
 agent: with several adapters, or only the registry, it must be set, and startup fails naming the
 choices until it is.
 
 ## Status
 
 **All four milestones are done.** One unchanged application runs against goose 1.57.0, codex-acp
-2.5.0 and opencode 2.2.4 with `spring.acp.runtime` as the only difference — the completion test,
+2.5.0 and opencode 2.2.4 with `spring.ai.acp.harness.runtime` as the only difference — the completion test,
 and the reason the abstraction is worth having. Since M4 it also runs against Gemini CLI, which this
 library has never had a line of code about: no adapter, just a catalogue entry.
 
@@ -111,8 +113,8 @@ Spring Boot 3.x is not a supported target for this project.
 ```bash
 ./mvnw install
 ./mvnw -pl samples/smoke-app spring-boot:run
-./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=codex
-./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=opencode
+./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=codex
+./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=opencode
 ```
 
 Needs the corresponding agent installed and authenticated: `goose` or `opencode` on the PATH, or
@@ -122,7 +124,7 @@ A fourth run needs nothing installed at all, because the agent is fetched from t
 verified against its published SHA-256 and launched:
 
 ```bash
-./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=gemini
+./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=gemini
 ```
 
 ## A caveat worth reading before you rely on it
@@ -135,17 +137,19 @@ The mode decides whether the question gets asked; the policy decides the answer.
 
 ```yaml
 spring:
-  acp:
-    mode: plan          # goose calls its equivalent "approve"
-    permissions:
-      policy: deny
+  ai:
+    acp:
+      harness:
+        mode: plan          # goose calls its equivalent "approve"
+        permissions:
+          policy: deny
 ```
 
 With that, goose asks twice, is refused twice, and writes nothing. The measurements and the full
 table are in the design doc's security section.
 
-M3 closed the half of this that *is* the client's: when `spring.acp.filesystem` or
-`spring.acp.terminal` is turned on, every path the agent asks this client to touch is confined to
+M3 closed the half of this that *is* the client's: when `spring.ai.acp.harness.filesystem` or
+`spring.ai.acp.harness.terminal` is turned on, every path the agent asks this client to touch is confined to
 the workspace by real path, symlinks followed — because `Path.normalize()` stops `..` and stops
 nothing else, and an agent can plant a symlink with one tool call. What remains outside any
 client's reach is the agent's *own* file access, which is the operating system's to restrict.
@@ -159,7 +163,7 @@ client's reach is the agent's *own* file access, which is the operating system's
   on top is idiomatic. Seven gaps in it are worked around and documented rather than suppressed.
 - The [ACP registry](https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json) publishes
   per-agent launch metadata, so runtimes with no hand-written adapter can be launched from data —
-  which M4 turned from a claim into `spring.acp.runtime: gemini`.
+  which M4 turned from a claim into `spring.ai.acp.harness.runtime: gemini`.
 
 ## The interesting problem
 
@@ -167,9 +171,9 @@ ACP standardizes the *conversation*, not the *provisioning*. So configuration co
 
 | Tier | Where | Example |
 | --- | --- | --- |
-| **Portable** | `spring.acp.*` | `workspace`, `mcp-servers`, `skills`, `permissions`, `timeout` |
+| **Portable** | `spring.ai.acp.harness.*` | `workspace`, `mcp-servers`, `skills`, `permissions`, `timeout` |
 | **Negotiated** | resolved against what the agent advertises | `model`, `mode`, `provider` |
-| **Runtime-specific** | `spring.acp.runtimes.<id>.*` | Goose `builtins`, Codex `config-toml`, OpenCode `config` |
+| **Runtime-specific** | `spring.ai.acp.harness.runtimes.<id>.*` | Goose `builtins`, Codex `config-toml`, OpenCode `config` |
 
 The negotiated tier is the crux: `session/set_config_option` is a standard method, but its option
 IDs and values are agent-declared, so `model:` is a request rather than an assignment.
@@ -189,7 +193,7 @@ Two things that tier turned out to require, both measured rather than guessed:
 
 And one place where reading first is exactly wrong:
 
-- **Your own endpoint, your own models.** Point `spring.acp.provider.base-url` at a gateway or a
+- **Your own endpoint, your own models.** Point `spring.ai.acp.harness.provider.base-url` at a gateway or a
   model server you run, and the agent's built-in catalogue stops being evidence — goose advertises
   ~32 OpenAI ids and repopulates them from the endpoint *after* the provider is set, so the same
   model was refused by two sessions and accepted by a third seconds later. With a `base-url` set, the
@@ -198,14 +202,16 @@ And one place where reading first is exactly wrong:
 
 ```yaml
 spring:
-  acp:
-    runtime: goose
-    model: deepseek-ai/DeepSeek-V4-Flash-0731
-    provider:
-      id: openai
-      api-type: openai
-      base-url: https://gateway.example.com/team-x/openai
-      api-key: ${GENAI_API_KEY}
+  ai:
+    acp:
+      harness:
+        runtime: goose
+        model: deepseek-ai/DeepSeek-V4-Flash-0731
+        provider:
+          id: openai
+          api-type: openai
+          base-url: https://gateway.example.com/team-x/openai
+          api-key: ${GENAI_API_KEY}
 ```
 
 ## What each agent can actually do with a session
@@ -230,7 +236,7 @@ method, rather than failing on the wire with a code the caller has to interpret.
 
 ## An agent nobody wrote an adapter for
 
-Set `spring.acp.runtime` to any of the 41 agents the ACP registry publishes, add
+Set `spring.ai.acp.harness.runtime` to any of the 41 agents the ACP registry publishes, add
 `spring-ai-acp-harness-client-boot-starter-registry`, and the agent is resolved from a cached catalogue snapshot,
 downloaded, checked against its published SHA-256 and launched:
 
@@ -269,11 +275,13 @@ Add `spring-ai-acp-harness-client-mcp-oauth`, mark the server, and add one line 
 
 ```yaml
 spring:
-  acp:
-    mcp-servers:
-      - name: finops-mcp
-        url: https://gateway.example.com/finops-mcp/mcp
-        auth: oauth
+  ai:
+    acp:
+      harness:
+        mcp-servers:
+          - name: finops-mcp
+            url: https://gateway.example.com/finops-mcp/mcp
+            auth: oauth
 ```
 
 ```java
@@ -282,7 +290,7 @@ http.with(McpClientOAuth2Configurer.mcpClientOAuth2(), mcp -> mcp.cimd(false));
 
 The first time a signed-in user needs the server, they are redirected to its authorization server;
 after that their token is refreshed as needed. A terminal application sets
-`spring.acp.mcp.oauth.mode: local` instead and needs no filter chain: the first run opens a browser
+`spring.ai.acp.harness.mcp.oauth.mode: local` instead and needs no filter chain: the first run opens a browser
 for each server, and the sign-ins are kept in `~/.config/<spring.application.name>/`. The agent never sees it: HTTP MCP servers with
 credentials are reached through a loopback proxy, one unguessable route per session. See "MCP
 credentials" in [the MCP Servers page](docs/configuration/mcp-servers.md).
@@ -298,12 +306,14 @@ MCP servers.
 
 ```yaml
 spring:
-  acp:
-    console:
-      title: Capacity & Cost Agent
-      greeting: Ask about your capacity and cost findings.
-    permissions:
-      policy: ask     # put each of the agent's permission requests to the person at the keyboard
+  ai:
+    acp:
+      harness:
+        console:
+          title: Capacity & Cost Agent
+          greeting: Ask about your capacity and cost findings.
+        permissions:
+          policy: ask     # put each of the agent's permission requests to the person at the keyboard
 ```
 
 It starts only when the process is attached to an interactive terminal, so the module can stay on

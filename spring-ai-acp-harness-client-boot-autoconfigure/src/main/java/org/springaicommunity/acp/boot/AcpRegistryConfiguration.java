@@ -30,7 +30,7 @@ import org.springaicommunity.acp.runtime.AcpAgentRuntimeProvider;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(AcpAgentRegistry.class)
-@ConditionalOnProperty(prefix = "spring.acp.registry", name = "enabled", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "spring.ai.acp.harness.registry", name = "enabled", matchIfMissing = true)
 class AcpRegistryConfiguration {
 
 	@Bean

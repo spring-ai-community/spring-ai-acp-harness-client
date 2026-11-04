@@ -319,7 +319,7 @@ public final class ConfigResolver {
 		if (warned.add(runtime.id() + '/' + option)) {
 			logger.warn(
 					"Runtime '{}' cannot honor {}='{}' ({}); continuing with the agent's own default. "
-							+ "Set spring.acp.on-unsupported=fail to make this an error.",
+							+ "Set spring.ai.acp.harness.on-unsupported=fail to make this an error.",
 					runtime.id(), option.propertyName(), value, detail);
 		}
 	}

@@ -17,9 +17,9 @@ import org.springframework.core.io.ResourceLoader;
  * own ({@code ConfigDataLocationResolvers} moves
  * {@code StandardConfigDataLocationResolver} to the end of the list on purpose), so a
  * resolver that claimed a bare {@code agents.yaml} would take that file from every other
- * library that reads one, and re-key it under {@code spring.acp} where that library would
- * never find it. The prefix is this library's own namespace, and it shows in the import
- * line which loader reads the file.
+ * library that reads one, and re-key it under {@code spring.ai.acp.harness} where that
+ * library would never find it. The prefix is this library's own namespace, and it shows
+ * in the import line which loader reads the file.
  */
 public class AcpAgentsConfigDataLocationResolver implements ConfigDataLocationResolver<AcpAgentsConfigDataResource> {
 

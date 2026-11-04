@@ -2,10 +2,10 @@
 
 `AGENTS.md` is a Markdown file of standing instructions: who the agent is serving, what the project is, its conventions, what it must never do. It is effectively the agent's system prompt. Unlike a skill, which loads on demand, `AGENTS.md` is in context on **every** turn.
 
-Agents read it from their working directory. Spring AI ACP Harness Client does not push instructions over the protocol; it sets the working directory with `spring.acp.workspace`. **So installing instructions means putting `AGENTS.md` at the workspace root.** Goose, Codex and OpenCode all read it there.
+Agents read it from their working directory. Spring AI ACP Harness Client does not push instructions over the protocol; it sets the working directory with `spring.ai.acp.harness.workspace`. **So installing instructions means putting `AGENTS.md` at the workspace root.** Goose, Codex and OpenCode all read it there.
 
 ```text
-workspace/                      ← spring.acp.workspace
+workspace/                      ← spring.ai.acp.harness.workspace
 ├── AGENTS.md                   ← always in context
 └── .agents/
     └── skills/                 ← installed by Spring AI ACP Harness Client; loaded on demand
@@ -42,8 +42,10 @@ The simplest approach, used by [acp-meridian](../guides/acp-meridian.md): keep a
 
 ```yaml
 spring:
-  acp:
-    workspace: ${WORKSPACE_DIR:./workspace}
+  ai:
+    acp:
+      harness:
+        workspace: ${WORKSPACE_DIR:./workspace}
 ```
 
 The relative path is resolved against the JVM's working directory, so run the application from the project root, or set `WORKSPACE_DIR` to an absolute path in deployment.
@@ -75,7 +77,7 @@ class InstructionsInstaller {
 | In context | Every turn | When its description matches | This turn |
 | Good for | Role, audience, constraints, tool etiquette | Multi-step procedures, checklists, scripts | The task at hand |
 | Cost | Every turn: keep it short | Only when loaded | Per call |
-| Configured by | `<workspace>/AGENTS.md` | `spring.acp.skills` | `.user(…)` |
+| Configured by | `<workspace>/AGENTS.md` | `spring.ai.acp.harness.skills` | `.user(…)` |
 
 !!! warning
 

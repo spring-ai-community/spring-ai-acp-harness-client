@@ -50,9 +50,10 @@ class CodexContractTests extends AcpAgentRuntimeContract {
 	 *
 	 * <p>
 	 * Worth noticing what carries it: {@code plan} is a value of {@code mode} on OpenCode
-	 * and of {@code collaboration_mode} here, and {@code spring.acp.mode: plan} reaches
-	 * both, because {@link CodexRuntime#configIdsFor} offers the resolver two candidates
-	 * and it takes whichever one actually has the value.
+	 * and of {@code collaboration_mode} here, and
+	 * {@code spring.ai.acp.harness.mode: plan} reaches both, because
+	 * {@link CodexRuntime#configIdsFor} offers the resolver two candidates and it takes
+	 * whichever one actually has the value.
 	 */
 	@Override
 	protected java.util.Optional<String> reviewingMode() {

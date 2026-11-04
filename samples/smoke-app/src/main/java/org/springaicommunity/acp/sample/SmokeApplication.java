@@ -21,14 +21,14 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  *
  * <p>
  * Nothing in this file names an agent. Goose, Codex and OpenCode are all on the
- * classpath, and {@code spring.acp.runtime} in {@code application.yaml} is the only thing
- * that decides which one runs — which is the claim the second milestone exists to make
- * good on. Run it three times:
+ * classpath, and {@code spring.ai.acp.harness.runtime} in {@code application.yaml} is the
+ * only thing that decides which one runs — which is the claim the second milestone exists
+ * to make good on. Run it three times:
  *
  * <pre>{@code
  * mvn -pl samples/smoke-app spring-boot:run
- * mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=codex
- * mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=opencode
+ * mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=codex
+ * mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=opencode
  * }</pre>
  *
  * <p>
@@ -37,7 +37,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
  * launched:
  *
  * <pre>{@code
- * mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=gemini
+ * mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=gemini
  * }</pre>
  */
 @SpringBootApplication

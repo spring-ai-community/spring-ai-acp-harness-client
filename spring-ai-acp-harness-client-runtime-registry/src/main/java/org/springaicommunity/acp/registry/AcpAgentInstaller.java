@@ -98,13 +98,13 @@ public class AcpAgentInstaller {
 		String sha256 = artifact.findSha256().orElse(null);
 		if (sha256 == null && settings.requireChecksum()) {
 			throw new AcpAgentInstallException("The ACP registry publishes no sha256 for '" + entry.id() + "' on "
-					+ Platform.current().id() + ", and spring.acp.registry.require-checksum is on."
-					+ " Set spring.acp.registry.require-checksum=false to install it unverified,"
+					+ Platform.current().id() + ", and spring.ai.acp.harness.registry.require-checksum is on."
+					+ " Set spring.ai.acp.harness.registry.require-checksum=false to install it unverified,"
 					+ " or install the agent yourself and select it with a runtime adapter");
 		}
 		if (settings.offline()) {
 			throw new AcpAgentInstallException("Agent '" + entry.id() + "' is not in the cache at " + settings.cache()
-					+ " and spring.acp.registry.offline is on, so it cannot be downloaded");
+					+ " and spring.ai.acp.harness.registry.offline is on, so it cannot be downloaded");
 		}
 
 		Path staging = null;

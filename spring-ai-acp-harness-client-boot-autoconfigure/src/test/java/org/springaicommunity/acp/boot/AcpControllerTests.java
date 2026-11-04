@@ -44,7 +44,7 @@ class AcpControllerTests {
 		.withConfiguration(AutoConfigurations.of(CodecsAutoConfiguration.class, WebFluxAutoConfiguration.class,
 				AcpWebFluxAutoConfiguration.class))
 		.withUserConfiguration(StubAcpAgent.class)
-		.withPropertyValues("spring.acp.controller.enabled=true");
+		.withPropertyValues("spring.ai.acp.harness.controller.enabled=true");
 
 	@Test
 	@DisplayName("no controller unless the application asked for one")
@@ -70,7 +70,7 @@ class AcpControllerTests {
 	@Test
 	@DisplayName("a prompt runs and comes back with the assistant's text")
 	void promptsWhenAllowed() {
-		runner.withPropertyValues("spring.acp.controller.allow-unauthenticated=true")
+		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true")
 			.run(context -> client(context).post()
 				.uri("/api/acp/prompt")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -88,7 +88,7 @@ class AcpControllerTests {
 	@Test
 	@DisplayName("an empty prompt is a bad request, not a turn")
 	void rejectsAnEmptyPrompt() {
-		runner.withPropertyValues("spring.acp.controller.allow-unauthenticated=true")
+		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true")
 			.run(context -> client(context).post()
 				.uri("/api/acp/prompt")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -102,8 +102,8 @@ class AcpControllerTests {
 	@DisplayName("a prompt over the size limit is refused")
 	void rejectsAnOversizePrompt() {
 		runner
-			.withPropertyValues("spring.acp.controller.allow-unauthenticated=true",
-					"spring.acp.controller.max-prompt-chars=10")
+			.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true",
+					"spring.ai.acp.harness.controller.max-prompt-chars=10")
 			.run(context -> client(context).post()
 				.uri("/api/acp/prompt")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -121,7 +121,7 @@ class AcpControllerTests {
 	@Test
 	@DisplayName("a request naming its own model is refused unless overrides are enabled")
 	void rejectsRequestOverrides() {
-		runner.withPropertyValues("spring.acp.controller.allow-unauthenticated=true")
+		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true")
 			.run(context -> client(context).post()
 				.uri("/api/acp/prompt")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -135,8 +135,8 @@ class AcpControllerTests {
 	@DisplayName("a timeout longer than the endpoint allows is refused")
 	void rejectsAnOversizeTimeout() {
 		runner
-			.withPropertyValues("spring.acp.controller.allow-unauthenticated=true",
-					"spring.acp.controller.max-timeout=1m")
+			.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true",
+					"spring.ai.acp.harness.controller.max-timeout=1m")
 			.run(context -> client(context).post()
 				.uri("/api/acp/prompt")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -149,7 +149,7 @@ class AcpControllerTests {
 	@Test
 	@DisplayName("an operation the agent does not implement is 501, not 500")
 	void reportsUnsupportedOperations() {
-		runner.withPropertyValues("spring.acp.controller.allow-unauthenticated=true")
+		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true")
 			.run(context -> client(context).get()
 				.uri("/api/acp/sessions")
 				.exchange()
@@ -175,7 +175,7 @@ class AcpControllerTests {
 	@Test
 	@DisplayName("the path can be moved")
 	void pathIsConfigurable() {
-		runner.withPropertyValues("spring.acp.controller.path=/agent")
+		runner.withPropertyValues("spring.ai.acp.harness.controller.path=/agent")
 			.run(context -> client(context).get().uri("/agent/health").exchange().expectStatus().isOk());
 	}
 

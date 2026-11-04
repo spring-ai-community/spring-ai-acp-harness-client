@@ -9,16 +9,16 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Tier-3 configuration: whatever {@code spring.acp.runtimes.<id>.*} said, handed to that
- * one adapter and ignored by every other.
+ * Tier-3 configuration: whatever {@code spring.ai.acp.harness.runtimes.<id>.*} said,
+ * handed to that one adapter and ignored by every other.
  *
  * <p>
  * This exists because the shape the values arrive in is not the adapter's business. A
  * nested block in {@code application.yaml} binds as nested maps; the same block written
- * as {@code spring.acp.runtimes.codex.config-toml.model_reasoning_effort=high} in a
- * properties file or an environment variable binds as one flat dotted key. Both mean the
- * same thing, and an adapter that read the raw map would have to handle both. So the map
- * is normalized into a tree once, here, and adapters ask for paths.
+ * as {@code spring.ai.acp.harness.runtimes.codex.config-toml.model_reasoning_effort=high}
+ * in a properties file or an environment variable binds as one flat dotted key. Both mean
+ * the same thing, and an adapter that read the raw map would have to handle both. So the
+ * map is normalized into a tree once, here, and adapters ask for paths.
  *
  * <p>
  * Lookups are relaxed the way Spring's own binding is — {@code configToml},

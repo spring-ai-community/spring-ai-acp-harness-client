@@ -11,12 +11,12 @@ import java.util.regex.Pattern;
  *
  * <p>
  * A dependency would be the obvious alternative, and it was weighed. What is emitted here
- * comes entirely from an application's own {@code spring.acp.runtimes.codex.config-toml}
- * block — a handful of keys, already constrained to what YAML or a property file can
- * express — so a full TOML implementation would be carrying a transitive dependency into
- * every application for a hundred lines of output. What it must not do is emit something
- * that parses as different TOML than was meant, which is what the quoting and the key
- * check below are for.
+ * comes entirely from an application's own
+ * {@code spring.ai.acp.harness.runtimes.codex.config-toml} block — a handful of keys,
+ * already constrained to what YAML or a property file can express — so a full TOML
+ * implementation would be carrying a transitive dependency into every application for a
+ * hundred lines of output. What it must not do is emit something that parses as different
+ * TOML than was meant, which is what the quoting and the key check below are for.
  */
 final class Toml {
 

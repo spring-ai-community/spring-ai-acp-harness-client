@@ -21,9 +21,9 @@ import org.springframework.ai.chat.model.ChatModel;
  * Registered without a property to turn it on, because the dependency <em>is</em> the
  * opt-in: nothing pulls {@code spring-ai-acp-harness-client-ai} in by accident, and an
  * application that added it did so to get this bean.
- * {@code spring.acp.chat-model.enabled=false} exists for the one case that argument does
- * not cover — an application that wants the adapter's types to construct a model of its
- * own, with its own default session.
+ * {@code spring.ai.acp.harness.chat-model.enabled=false} exists for the one case that
+ * argument does not cover — an application that wants the adapter's types to construct a
+ * model of its own, with its own default session.
  *
  * <p>
  * The default options carry no session, so every {@code ChatClient} call is a throwaway
@@ -34,7 +34,7 @@ import org.springframework.ai.chat.model.ChatModel;
  */
 @AutoConfiguration(after = AcpAutoConfiguration.class)
 @ConditionalOnClass({ ChatModel.class, AcpChatModel.class })
-@ConditionalOnProperty(prefix = "spring.acp.chat-model", name = "enabled", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "spring.ai.acp.harness.chat-model", name = "enabled", matchIfMissing = true)
 @EnableConfigurationProperties(AcpProperties.class)
 public class AcpChatModelAutoConfiguration {
 

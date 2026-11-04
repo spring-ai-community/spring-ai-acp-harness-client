@@ -83,7 +83,7 @@ agent.prompt().session("pr-482").user("What does this PR change?").call();
 agent.prompt().session("pr-482").user("Any security concerns in it?").call();   // remembers the first turn
 ```
 
-Idle named sessions are closed after `spring.acp.pool.session-ttl` (60 minutes by default). Scope names to a unit of work, such as a PR, a ticket or a chat, so context does not grow without bound. Only one turn runs in a session at a time.
+Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (60 minutes by default). Scope names to a unit of work, such as a PR, a ticket or a chat, so context does not grow without bound. Only one turn runs in a session at a time.
 
 `openSession(name)` opens a session without spending a turn. It is how to learn what the negotiated tier actually achieved before the first prompt:
 

@@ -6,12 +6,14 @@ When an agent asks permission to run a tool (`session/request_permission`), Spri
 
 ```yaml
 spring:
-  acp:
-    permissions:
-      policy: allowlist          # deny (default) | allowlist | auto-approve | ask
-      allowed-tools:
-        - developer__text_editor
-        - inventory__lookup_part
+  ai:
+    acp:
+      harness:
+        permissions:
+          policy: allowlist          # deny (default) | allowlist | auto-approve | ask
+          allowed-tools:
+            - developer__text_editor
+            - inventory__lookup_part
 ```
 
 | Policy | Behaviour |
@@ -31,10 +33,12 @@ To find the names an agent reports, run once with `logging.level.org.springaicom
 
     ```yaml
     spring:
-      acp:
-        mode: plan            # goose: approve
-        permissions:
-          policy: deny
+      ai:
+        acp:
+          harness:
+            mode: plan            # goose: approve
+            permissions:
+              policy: deny
     ```
 
     Codex's `read-only` mode still writes inside the workspace without asking; use `plan`.
@@ -45,20 +49,22 @@ ACP lets an agent borrow the *client's* file and terminal access. A server-side 
 
 ```yaml
 spring:
-  acp:
-    filesystem:
-      enabled: false        # answer fs/read_text_file
-      write: false          # also answer fs/write_text_file (implies enabled)
-    terminal:
-      enabled: false        # answer terminal/*: arbitrary execution as this JVM's user
-      allowed-commands: []  # empty allows any; matched by file name
-      output-limit: 1MB
-      command-timeout: 5m
-      max-concurrent: 8
+  ai:
+    acp:
+      harness:
+        filesystem:
+          enabled: false        # answer fs/read_text_file
+          write: false          # also answer fs/write_text_file (implies enabled)
+        terminal:
+          enabled: false        # answer terminal/*: arbitrary execution as this JVM's user
+          allowed-commands: []  # empty allows any; matched by file name
+          output-limit: 1MB
+          command-timeout: 5m
+          max-concurrent: 8
 ```
 
 When enabled, every path is confined to the workspace by its *real* path, with symlinks followed, so neither `..` nor a planted symlink escapes. This governs only what the agent asks *this client* to do. Its own process's file access is the operating system's to restrict: run the agent as a user, or in a container, that can reach only what it should.
 
 ## Where adapters write
 
-Adapters write agent config files (`config.toml`, `opencode.json`) to `spring.acp.runtime-home`, never to the workspace. It defaults to a directory under the JVM's temp directory named for the runtime. The only thing Spring AI ACP Harness Client writes into the workspace is `.agents/skills/`.
+Adapters write agent config files (`config.toml`, `opencode.json`) to `spring.ai.acp.harness.runtime-home`, never to the workspace. It defaults to a directory under the JVM's temp directory named for the runtime. The only thing Spring AI ACP Harness Client writes into the workspace is `.agents/skills/`.

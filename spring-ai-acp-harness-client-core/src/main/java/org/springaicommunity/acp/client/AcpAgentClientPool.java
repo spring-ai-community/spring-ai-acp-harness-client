@@ -358,7 +358,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 		if (slot == null) {
 			throw new AcpAgentClientException("Runtime '" + runtimeId + "' shares MCP servers across the sessions of "
 					+ "a process, so each process serves one user at a time, and all " + pool.maxProcesses()
-					+ " are serving others; close some sessions, or raise spring.acp.pool.max-processes");
+					+ " are serving others; close some sessions, or raise spring.ai.acp.harness.pool.max-processes");
 		}
 		if (slot.owner != null && !slot.owner.equals(who)) {
 			logger.debug("Restarting connection {} to runtime '{}' before it serves another principal", slot.index,
@@ -438,7 +438,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 			if (best.load() >= pool.maxSessionsPerProcess()) {
 				throw new AcpAgentClientException("Runtime '" + runtimeId + "' is holding its maximum of "
 						+ pool.capacity() + " sessions (" + pool.maxProcesses() + " process(es) × "
-						+ pool.maxSessionsPerProcess() + "); close some, or raise spring.acp.pool");
+						+ pool.maxSessionsPerProcess() + "); close some, or raise spring.ai.acp.harness.pool");
 			}
 		}
 		return best;

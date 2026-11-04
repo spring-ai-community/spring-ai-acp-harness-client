@@ -156,7 +156,7 @@ class OAuth2McpCredentialsProviderTests {
 	void withoutABaseUrlTheRegistrationSaysWhatToSet() {
 		assertThatThrownBy(() -> provider(Optional::empty).credentialsFor(finops, ALICE))
 			.isInstanceOf(IllegalStateException.class)
-			.hasMessageContaining("spring.acp.mcp.oauth.base-url");
+			.hasMessageContaining("spring.ai.acp.harness.mcp.oauth.base-url");
 		assertThat(fake.registrations).isEmpty();
 	}
 

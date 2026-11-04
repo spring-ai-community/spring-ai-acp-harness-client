@@ -11,7 +11,7 @@
     - **OpenCode**: the `opencode` CLI on the `PATH`, or `OPENCODE_CLI_PATH`. Verified against opencode 1.18.
     - **Registry agents**: nothing pre-installed; the agent is downloaded and checksum-verified. Agents distributed through npm or PyPI need `npx` or `uvx`.
 
-- **Model credentials**, either already configured in the agent itself (for example `goose configure` or `codex login`) or given to Spring AI ACP Harness Client through `spring.acp.provider` (see [Models and Providers](configuration/models.md)).
+- **Model credentials**, either already configured in the agent itself (for example `goose configure` or `codex login`) or given to Spring AI ACP Harness Client through `spring.ai.acp.harness.provider` (see [Models and Providers](configuration/models.md)).
 
 ## Add the dependency
 
@@ -55,10 +55,12 @@ Replace `-goose` with `-codex`, `-opencode` or `-registry` for another agent. No
 
 ```yaml title="src/main/resources/application.yaml"
 spring:
-  acp:
-    runtime: goose                  # optional while goose is the only adapter on the classpath
-    workspace: ${AGENT_WORKSPACE:./workspace}   # the agent's working directory; must exist
-    timeout: 5m                     # longest a single turn may take
+  ai:
+    acp:
+      harness:
+        runtime: goose                  # optional while goose is the only adapter on the classpath
+        workspace: ${AGENT_WORKSPACE:./workspace}   # the agent's working directory; must exist
+        timeout: 5m                     # longest a single turn may take
 ```
 
 The **workspace** is the agent's working directory (its ACP session `cwd`). It is also where the agent looks for `AGENTS.md` and where skills are installed, so most of this guide comes back to it. A relative path is resolved against the JVM's working directory; left unset, the JVM's working directory itself is used. It must be an existing directory.
@@ -89,7 +91,7 @@ public class ReviewApplication {
 
     ```bash
     mvn -pl samples/smoke-app spring-boot:run
-    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=codex
-    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=opencode
-    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=gemini
+    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=codex
+    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=opencode
+    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=gemini
     ```

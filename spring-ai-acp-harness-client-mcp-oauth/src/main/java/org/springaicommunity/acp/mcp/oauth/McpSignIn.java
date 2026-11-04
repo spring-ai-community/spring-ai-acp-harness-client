@@ -56,7 +56,7 @@ public interface McpSignIn {
 				String base = baseUrl.get()
 					.orElseThrow(() -> new IllegalStateException("Cannot register with the authorization server for "
 							+ "MCP server '" + server.name() + "': the redirect URI needs this application's base URL, "
-							+ "and there is no current request to read it from. Set spring.acp.mcp.oauth.base-url"));
+							+ "and there is no current request to read it from. Set spring.ai.acp.harness.mcp.oauth.base-url"));
 				return redirectUri.replace("{baseUrl}", base).replace("{registrationId}", server.name());
 			}
 

@@ -7,7 +7,7 @@ repository. `CLAUDE.md` imports this file; keep project guidance here.
 
 `spring-ai-acp-harness-client`: a Spring Boot 4 / Java 21 library that drives any Agent Client Protocol (ACP)
 coding agent (Goose, Codex, OpenCode, or any of the ~41 in the ACP registry) behind one API,
-selected by `spring.acp.runtime`. Successor to the `java-wrapper` module of `../goose-buildpack`.
+selected by `spring.ai.acp.harness.runtime`. Successor to the `java-wrapper` module of `../goose-buildpack`.
 Built on the official `com.agentclientprotocol:acp-core` (pre-1.0, pinned exactly) with its
 Jackson 3 JSON module, `acp-json-jackson3`; nothing here uses Jackson 2. Packaging the
 agent binary is out of scope. `docs/` (MkDocs; pages in `mkdocs.yml`) is the reference; read the relevant page
@@ -25,7 +25,7 @@ Java 21 is required. Use the Maven wrapper:
 ./mvnw -pl spring-ai-acp-harness-client-core test -Dtest=ConfigResolverTests            # one class
 ./mvnw -pl spring-ai-acp-harness-client-core test -Dtest=ConfigResolverTests#someMethod # one method
 ./mvnw spring-javaformat:apply                  # format; the build fails on unformatted code
-./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.acp.runtime=codex   # goose|codex|opencode|gemini
+./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=codex   # goose|codex|opencode|gemini
 ```
 
 - **Live-agent suites cost real tokens, so they are opt-in: `-Dspring-ai-acp-harness-client.test.live=true`**
@@ -69,7 +69,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   over the registry for the same id.
 - **spring-ai-acp-harness-client-boot-autoconfigure / starters**: `spring-ai-acp-harness-client-boot-starter` carries no
   agent; `spring-ai-acp-harness-client-boot-starter-{goose,codex,opencode,registry}` each add one.
-  `spring.acp.runtime` has no default (unset = the only adapter on the classpath).
+  `spring.ai.acp.harness.runtime` has no default (unset = the only adapter on the classpath).
   `AcpProperties` binding, a standalone file imported as `acp:<path>` via a `ConfigData`
   loader (the prefix only: a bare file name is never claimed from other libraries), optional HTTP
   controller, registry/observation/ChatModel configs.
@@ -82,7 +82,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   state in a mode-600 file.
 - **spring-ai-acp-harness-client-console**: terminal chat over the application's `AcpAgentClient` (JLine 3), with
   its own auto-configuration like mcp-oauth so JLine stays out of other apps. Registers nothing
-  unless the console will run: `spring.acp.console.enabled` unset means only when
+  unless the console will run: `spring.ai.acp.harness.console.enabled` unset means only when
   `System.console()` is a real terminal, so tests and CI never block on stdin. `ConsoleChat`
   runs on its own thread after `ApplicationReadyEvent` and closes the context when the user
   leaves; Ctrl-C during a turn disposes the subscription (= `session/cancel`). Also the
@@ -96,13 +96,13 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
 
 ### Non-obvious design points
 
-- **Three config tiers**: portable (`spring.acp.*`), negotiated (`model`/`mode`/`provider`,
+- **Three config tiers**: portable (`spring.ai.acp.harness.*`), negotiated (`model`/`mode`/`provider`,
   resolved against options the agent advertised; `on-unsupported` = fail/warn/ignore),
-  runtime-specific (`spring.acp.runtimes.<id>.*`). The resolver reads before writing and never
+  runtime-specific (`spring.ai.acp.harness.runtimes.<id>.*`). The resolver reads before writing and never
   sends a value the agent didn't advertise, because e.g. goose accepts unknown model ids and
   fails later inside the turn. Adapters supply candidate option-id spellings; core matches
   values across them.
-- **Except for a BYO endpoint.** With `spring.acp.provider.base-url` set, the agent's
+- **Except for a BYO endpoint.** With `spring.ai.acp.harness.provider.base-url` set, the agent's
   advertised model list is neither authoritative nor even stable (goose refreshes it from the
   endpoint *after* the provider is set), so the endpoint's own `/models` listing decides and an
   unadvertised model is sent anyway (`Mechanism.ENDPOINT`). `base-url` is canonicalised to end
@@ -130,7 +130,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   succeeds, no `session/update` arrives, and goose writes nothing to stdout or stderr — only to
   its own log file. Hence `AcpAgentRuntime.logDirectory`/`noticeOf` (declarations;
   `AcpAgentLogWatcher` does the reading), `AcpAgentClient.notices()`, and
-  `spring.acp.mcp.on-server-failure`. Goose-only, and only for an agent this client started.
+  `spring.ai.acp.harness.mcp.on-server-failure`. Goose-only, and only for an agent this client started.
   `tools/mcp-silence-check.py` re-measures it after a goose upgrade. See "When a server fails to
   load" in `docs/configuration/mcp-servers.md`.
 - **MCP credentials never reach the agent.** An `McpCredentialsProvider` routes the HTTP

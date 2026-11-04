@@ -35,8 +35,8 @@ import org.springaicommunity.acp.permission.PermissionPrompt;
  *
  * <p>
  * Also registers the {@link PermissionPrompt} that
- * {@code spring.acp.permissions.policy: ask} needs, which puts each of the agent's
- * permission requests to the person at the keyboard.
+ * {@code spring.ai.acp.harness.permissions.policy: ask} needs, which puts each of the
+ * agent's permission requests to the person at the keyboard.
  */
 @AutoConfiguration(after = AcpAutoConfiguration.class)
 @ConditionalOnBean(AcpAgentClient.class)
@@ -99,8 +99,8 @@ public class ConsoleAutoConfiguration {
 	}
 
 	/**
-	 * {@code spring.acp.console.enabled}, with unset meaning "when there is a terminal to
-	 * run in".
+	 * {@code spring.ai.acp.harness.console.enabled}, with unset meaning "when there is a
+	 * terminal to run in".
 	 */
 	static final class OnConsole extends SpringBootCondition {
 
@@ -108,16 +108,17 @@ public class ConsoleAutoConfiguration {
 
 		@Override
 		public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
-			Boolean enabled = context.getEnvironment().getProperty("spring.acp.console.enabled", Boolean.class);
+			Boolean enabled = context.getEnvironment()
+				.getProperty("spring.ai.acp.harness.console.enabled", Boolean.class);
 			if (enabled != null) {
-				return enabled ? ConditionOutcome.match("spring.acp.console.enabled is true")
-						: ConditionOutcome.noMatch("spring.acp.console.enabled is false");
+				return enabled ? ConditionOutcome.match("spring.ai.acp.harness.console.enabled is true")
+						: ConditionOutcome.noMatch("spring.ai.acp.harness.console.enabled is false");
 			}
 			if (interactive()) {
 				return ConditionOutcome.match("attached to an interactive terminal");
 			}
 			logger.info("Not starting the ACP console: not attached to an interactive terminal "
-					+ "(set spring.acp.console.enabled=true to start it anyway)");
+					+ "(set spring.ai.acp.harness.console.enabled=true to start it anyway)");
 			return ConditionOutcome.noMatch("not attached to an interactive terminal");
 		}
 

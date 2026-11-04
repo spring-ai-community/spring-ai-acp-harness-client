@@ -15,4 +15,4 @@ String answer = chat.prompt()
 - **No session** (the default): each call is a throwaway ACP session, and the whole message list is sent. Use this with Spring AI's `ChatMemory`.
 - **A named session**: the agent already holds the conversation, so only messages after the last assistant message are sent. Don't combine it with a `ChatMemory` advisor.
 - `temperature`, `topP`, `maxTokens` and similar have no ACP equivalent; they are logged once and ignored. Spring AI `ToolCallback`s are not visible to the agent; give it tools as [MCP servers](../configuration/mcp-servers.md).
-- Disable with `spring.acp.chat-model.enabled=false`.
+- Disable with `spring.ai.acp.harness.chat-model.enabled=false`.

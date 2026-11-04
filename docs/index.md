@@ -6,13 +6,15 @@ Spring AI ACP Harness Client relates to coding agents the way Spring Data relate
 
 - application code talks to one abstraction, `AcpAgentClient`;
 - configuration carries options that work on **every** agent, plus a per-agent escape hatch;
-- the agent behind it is chosen by one property, `spring.acp.runtime`.
+- the agent behind it is chosen by one property, `spring.ai.acp.harness.runtime`.
 
 ```yaml title="application.yaml"
 spring:
-  acp:
-    runtime: goose        # or codex, opencode, a registry id
-    model: gpt-5.6-terra  # a request, not an assignment
+  ai:
+    acp:
+      harness:
+        runtime: goose        # or codex, opencode, a registry id
+        model: gpt-5.6-terra  # a request, not an assignment
 ```
 
 ```java
@@ -27,12 +29,12 @@ The agent itself is a separate process: Spring AI ACP Harness Client launches it
 
 | Concern | What it gives the agent | Configured by |
 | --- | --- | --- |
-| **Runtime** | Which agent runs | `spring.acp.runtime` and a runtime starter ([Agent Runtimes](runtimes/index.md)) |
-| **Model** | Which LLM it thinks with, and where it reaches it | `spring.acp.model`, `spring.acp.provider.*` ([Models and Providers](configuration/models.md)) |
-| **MCP servers** | Tools: your APIs, databases, internal services | `spring.acp.mcp-servers` ([MCP Servers](configuration/mcp-servers.md)) |
-| **Skills** | Procedures it loads when a task calls for them | `spring.acp.skills` ([Skills](configuration/skills.md)) |
+| **Runtime** | Which agent runs | `spring.ai.acp.harness.runtime` and a runtime starter ([Agent Runtimes](runtimes/index.md)) |
+| **Model** | Which LLM it thinks with, and where it reaches it | `spring.ai.acp.harness.model`, `spring.ai.acp.harness.provider.*` ([Models and Providers](configuration/models.md)) |
+| **MCP servers** | Tools: your APIs, databases, internal services | `spring.ai.acp.harness.mcp-servers` ([MCP Servers](configuration/mcp-servers.md)) |
+| **Skills** | Procedures it loads when a task calls for them | `spring.ai.acp.harness.skills` ([Skills](configuration/skills.md)) |
 | **Instructions** | A standing system prompt, always in context | `AGENTS.md` in the workspace ([Agent Instructions](configuration/agent-instructions.md)) |
-| **Permissions** | Which tool calls it may make without a human | `spring.acp.permissions`, `spring.acp.mode` ([Permissions](configuration/permissions.md)) |
+| **Permissions** | Which tool calls it may make without a human | `spring.ai.acp.harness.permissions`, `spring.ai.acp.harness.mode` ([Permissions](configuration/permissions.md)) |
 
 ## Architecture
 
@@ -67,9 +69,9 @@ ACP standardizes the *conversation*, not the *provisioning*. So each property be
 
 | Tier | Where | Guarantee |
 | --- | --- | --- |
-| **Portable** | `spring.acp.*` | Honoured by every runtime: `workspace`, `mcp-servers`, `skills`, `permissions`, `timeout`, `provider` credentials. |
-| **Negotiated** | `spring.acp.model`, `.mode`, `.provider.id` | A *request*. Resolved against the options the agent advertises; `on-unsupported` decides what happens when it cannot be honoured. |
-| **Runtime-specific** | `spring.acp.runtimes.<id>.*` | Passed to that one adapter untouched and ignored by every other, so blocks for several runtimes can sit side by side. |
+| **Portable** | `spring.ai.acp.harness.*` | Honoured by every runtime: `workspace`, `mcp-servers`, `skills`, `permissions`, `timeout`, `provider` credentials. |
+| **Negotiated** | `spring.ai.acp.harness.model`, `.mode`, `.provider.id` | A *request*. Resolved against the options the agent advertises; `on-unsupported` decides what happens when it cannot be honoured. |
+| **Runtime-specific** | `spring.ai.acp.harness.runtimes.<id>.*` | Passed to that one adapter untouched and ignored by every other, so blocks for several runtimes can sit side by side. |
 
 ## Modules
 

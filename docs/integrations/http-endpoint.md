@@ -1,17 +1,19 @@
 # HTTP Endpoint
 
-An optional WebFlux controller exposes the agent over HTTP. It requires `spring-boot-starter-webflux` *and* `spring.acp.controller.enabled=true`, so adding either alone publishes nothing.
+An optional WebFlux controller exposes the agent over HTTP. It requires `spring-boot-starter-webflux` *and* `spring.ai.acp.harness.controller.enabled=true`, so adding either alone publishes nothing.
 
 ```yaml
 spring:
-  acp:
-    controller:
-      enabled: true
-      path: /api/acp
-      allow-unauthenticated: false    # requests need a Principal
-      allow-request-overrides: false  # a request may not choose its own model or provider
-      max-prompt-chars: 32000
-      max-timeout: 10m
+  ai:
+    acp:
+      harness:
+        controller:
+          enabled: true
+          path: /api/acp
+          allow-unauthenticated: false    # requests need a Principal
+          allow-request-overrides: false  # a request may not choose its own model or provider
+          max-prompt-chars: 32000
+          max-timeout: 10m
 ```
 
 | Endpoint | Behaviour |

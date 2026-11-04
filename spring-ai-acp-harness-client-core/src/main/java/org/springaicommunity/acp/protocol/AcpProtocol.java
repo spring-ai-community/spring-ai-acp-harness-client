@@ -80,8 +80,8 @@ public final class AcpProtocol {
 			String message = "Runtime '" + runtimeId + "' answered ACP v" + answered + " to an offer of v" + offered
 					+ ", which is not a version either side negotiated; ";
 			if (strict) {
-				throw new UnsupportedProtocolVersionException(
-						message + "set spring.acp.protocol.strict=false to continue at v" + offered + " anyway");
+				throw new UnsupportedProtocolVersionException(message
+						+ "set spring.ai.acp.harness.protocol.strict=false to continue at v" + offered + " anyway");
 			}
 			logger.warn("{}continuing at v{}, the highest that was offered", message, offered);
 			return requireSpoken(runtimeId, offered);
@@ -95,7 +95,7 @@ public final class AcpProtocol {
 					+ ", which this library does not speak: acp-core " + sdkVersion()
 					+ " models the v1 wire format, so a v" + version
 					+ " turn would decode with no stop reason and report as having ended for no reason."
-					+ " Set spring.acp.protocol.max-version=" + HIGHEST_SPOKEN + " (the default)");
+					+ " Set spring.ai.acp.harness.protocol.max-version=" + HIGHEST_SPOKEN + " (the default)");
 		}
 		if (version < V1) {
 			throw new UnsupportedProtocolVersionException(

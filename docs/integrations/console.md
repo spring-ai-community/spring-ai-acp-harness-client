@@ -29,7 +29,7 @@ you › what are my open findings costing me?
 
 The module is safe to leave on the classpath of an application that is also tested and deployed, because by default the console only starts when the process is attached to an interactive terminal. Nothing is registered otherwise: no bean, no terminal, and nothing reading stdin.
 
-| `spring.acp.console.enabled` | Behaviour |
+| `spring.ai.acp.harness.console.enabled` | Behaviour |
 | --- | --- |
 | unset (default) | Runs when stdin and stdout are a terminal: `java -jar` or `mvn spring-boot:run` from a shell. A test, a CI job or a deployed service is left alone. |
 | `true` | Always runs, reading plain lines when there is no terminal. For driving it from a pipe or a script. |
@@ -57,12 +57,12 @@ When the agent does not implement a session operation, the command says which AC
 
 | Property | Default | Description |
 | --- | --- | --- |
-| `spring.acp.console.enabled` | unset | See [When it runs](#when-it-runs). |
-| `spring.acp.console.title` | `spring.application.name` | The heading shown at startup. |
-| `spring.acp.console.greeting` | none | Shown once before the first prompt, to tell the user what to ask. |
-| `spring.acp.console.session` | `console` | The named session turns run in. `/new` and `/resume` move to `<session>-1`, `-2`, and so on. |
-| `spring.acp.console.history-file` | `~/.config/<spring.application.name>/console-history` | Input history, kept across runs. Honours `$XDG_CONFIG_HOME`, like the MCP sign-in file. Not written when input is piped. |
-| `spring.acp.console.show-thoughts` | `true` | Show the reasoning the agent surfaces, one dimmed line per thought. |
+| `spring.ai.acp.harness.console.enabled` | unset | See [When it runs](#when-it-runs). |
+| `spring.ai.acp.harness.console.title` | `spring.application.name` | The heading shown at startup. |
+| `spring.ai.acp.harness.console.greeting` | none | Shown once before the first prompt, to tell the user what to ask. |
+| `spring.ai.acp.harness.console.session` | `console` | The named session turns run in. `/new` and `/resume` move to `<session>-1`, `-2`, and so on. |
+| `spring.ai.acp.harness.console.history-file` | `~/.config/<spring.application.name>/console-history` | Input history, kept across runs. Honours `$XDG_CONFIG_HOME`, like the MCP sign-in file. Not written when input is piped. |
+| `spring.ai.acp.harness.console.show-thoughts` | `true` | Show the reasoning the agent surfaces, one dimmed line per thought. |
 
 ## Answering permission requests
 
@@ -70,10 +70,12 @@ With `policy: ask`, the console puts each of the agent's permission requests to 
 
 ```yaml
 spring:
-  acp:
-    mode: plan              # so the agent asks before it acts (see "Mode decides whether the question is asked")
-    permissions:
-      policy: ask
+  ai:
+    acp:
+      harness:
+        mode: plan              # so the agent asks before it acts (see "Mode decides whether the question is asked")
+        permissions:
+          policy: ask
 ```
 
 ```text
@@ -88,7 +90,7 @@ Ctrl-C at that prompt cancels the request, which the agent hears as a cancellati
 
 !!! note
 
-    Time spent answering counts against the turn's `spring.acp.timeout`. The prompt applies to every session in the application, not only the console's, so an application that also serves web users should leave `ask` to the console-only profile it runs locally.
+    Time spent answering counts against the turn's `spring.ai.acp.harness.timeout`. The prompt applies to every session in the application, not only the console's, so an application that also serves web users should leave `ask` to the console-only profile it runs locally.
 
 ## Customizing
 

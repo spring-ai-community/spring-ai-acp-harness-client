@@ -31,19 +31,19 @@ import org.springaicommunity.acp.runtime.AcpAgentRuntimeProvider;
 import org.springaicommunity.acp.session.SessionPrincipalResolver;
 
 /**
- * Wires an {@link AcpAgentClient} from {@code spring.acp.*}.
+ * Wires an {@link AcpAgentClient} from {@code spring.ai.acp.harness.*}.
  *
  * <p>
  * Registering a runtime means contributing an {@link AcpAgentRuntime} bean; the one whose
- * {@code id()} matches {@code spring.acp.runtime} is selected. Each first-party adapter
- * registers itself when it is on the classpath, so an application chooses its agents by
- * dependency and then picks one of them by property — and an application that wants its
- * own adapter for an agent this library ships just declares the bean, because every
- * registration backs off by name.
+ * {@code id()} matches {@code spring.ai.acp.harness.runtime} is selected. Each
+ * first-party adapter registers itself when it is on the classpath, so an application
+ * chooses its agents by dependency and then picks one of them by property — and an
+ * application that wants its own adapter for an agent this library ships just declares
+ * the bean, because every registration backs off by name.
  */
 @AutoConfiguration
 @ConditionalOnClass(AcpAgentClient.class)
-@ConditionalOnProperty(prefix = "spring.acp", name = "enabled", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "spring.ai.acp.harness", name = "enabled", matchIfMissing = true)
 @EnableConfigurationProperties(AcpProperties.class)
 @Import({ AcpAutoConfiguration.GooseRuntimeConfiguration.class, AcpAutoConfiguration.CodexRuntimeConfiguration.class,
 		AcpAutoConfiguration.OpenCodeRuntimeConfiguration.class, AcpRegistryConfiguration.class,
@@ -189,7 +189,7 @@ public class AcpAutoConfiguration {
 	 * jobs apply to a single connection as much as to four: sweeping sessions nobody has
 	 * touched since the TTL, and replacing a connection whose agent has gone. The third —
 	 * running unrelated conversations at once — is the one that needs
-	 * {@code spring.acp.pool.max-processes}.
+	 * {@code spring.ai.acp.harness.pool.max-processes}.
 	 *
 	 * <p>
 	 * Connections are opened on first use rather than at refresh, so an application whose

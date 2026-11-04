@@ -36,7 +36,8 @@ public record RegistrySettings(URI url, Path cache, Duration refresh, boolean of
 			// Plain http would mean fetching, over a network, the list of executables to
 			// download
 			// and the digests to check them against.
-			throw new IllegalArgumentException("spring.acp.registry.url must be https or file but was '" + url + "'");
+			throw new IllegalArgumentException(
+					"spring.ai.acp.harness.registry.url must be https or file but was '" + url + "'");
 		}
 	}
 

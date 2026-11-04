@@ -50,13 +50,13 @@ class AcpAutoConfigurationTests {
 	 * What most tests want. Every adapter is on this module's test classpath, so an
 	 * application in this position has to name one.
 	 */
-	private final ApplicationContextRunner runner = unnamed.withPropertyValues("spring.acp.runtime=goose");
+	private final ApplicationContextRunner runner = unnamed.withPropertyValues("spring.ai.acp.harness.runtime=goose");
 
 	@Test
 	void bindsPortableOptions() {
 		runner
-			.withPropertyValues("spring.acp.runtime=goose", "spring.acp.model=claude-sonnet-5",
-					"spring.acp.timeout=90s", "spring.acp.on-unsupported=fail")
+			.withPropertyValues("spring.ai.acp.harness.runtime=goose", "spring.ai.acp.harness.model=claude-sonnet-5",
+					"spring.ai.acp.harness.timeout=90s", "spring.ai.acp.harness.on-unsupported=fail")
 			.run(context -> {
 				AcpAgentSettings settings = context.getBean(AcpAgentSettings.class);
 				assertThat(settings.runtime()).isEqualTo("goose");
@@ -89,7 +89,7 @@ class AcpAutoConfigurationTests {
 			return Optional.of(allow);
 		};
 		runner.withBean(org.springaicommunity.acp.permission.PermissionPrompt.class, () -> prompt)
-			.withPropertyValues("spring.acp.permissions.policy=ask")
+			.withPropertyValues("spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> {
 				PermissionPolicy policy = context.getBean(AcpAgentSettings.class).permissions();
 
@@ -100,7 +100,7 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void askWithNobodyToAskFailsToStartAndSaysWhatIsMissing() {
-		runner.withPropertyValues("spring.acp.permissions.policy=ask")
+		runner.withPropertyValues("spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> assertThat(context).hasFailed()
 				.getFailure()
 				.rootCause()
@@ -123,10 +123,13 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void bindsHttpAndStdioMcpServers() {
-		runner.withPropertyValues("spring.acp.mcp-servers[0].name=remote",
-				"spring.acp.mcp-servers[0].url=https://tools.example.com/mcp",
-				"spring.acp.mcp-servers[0].headers.Authorization=Bearer token", "spring.acp.mcp-servers[1].name=local",
-				"spring.acp.mcp-servers[1].command=/usr/bin/helper", "spring.acp.mcp-servers[1].args[0]=serve")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=remote",
+					"spring.ai.acp.harness.mcp-servers[0].url=https://tools.example.com/mcp",
+					"spring.ai.acp.harness.mcp-servers[0].headers.Authorization=Bearer token",
+					"spring.ai.acp.harness.mcp-servers[1].name=local",
+					"spring.ai.acp.harness.mcp-servers[1].command=/usr/bin/helper",
+					"spring.ai.acp.harness.mcp-servers[1].args[0]=serve")
 			.run(context -> {
 				List<McpServerSpec> servers = context.getBean(AcpAgentSettings.class).mcpServers();
 				assertThat(servers).hasSize(2);
@@ -137,33 +140,39 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void aServerWhoseUrlTheApplicationProvidesMayLeaveItOut() {
-		runner.withPropertyValues("spring.acp.mcp-servers[0].name=github", "spring.acp.mcp-servers[0].auth=provided")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=github",
+					"spring.ai.acp.harness.mcp-servers[0].auth=provided")
 			.run(context -> assertThat(context.getBean(AcpAgentSettings.class).mcpServers())
 				.containsExactly(McpServerSpec.Http.provided("github", Map.of())));
 	}
 
 	@Test
 	void aServerWithoutAUrlOrCommandIsStillAMistakeUnlessItsUrlIsProvided() {
-		runner.withPropertyValues("spring.acp.mcp-servers[0].name=github")
+		runner.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=github")
 			.run(context -> assertThat(context).hasFailed());
-		runner.withPropertyValues("spring.acp.mcp-servers[0].name=github", "spring.acp.mcp-servers[0].auth=oauth")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=github",
+					"spring.ai.acp.harness.mcp-servers[0].auth=oauth")
 			.run(context -> assertThat(context).hasFailed());
 	}
 
 	@Test
 	void providedAppliesOnlyToHttpServers() {
 		runner
-			.withPropertyValues("spring.acp.mcp-servers[0].name=local", "spring.acp.mcp-servers[0].command=/usr/bin/x",
-					"spring.acp.mcp-servers[0].auth=provided")
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=local",
+					"spring.ai.acp.harness.mcp-servers[0].command=/usr/bin/x",
+					"spring.ai.acp.harness.mcp-servers[0].auth=provided")
 			.run(context -> assertThat(context).hasFailed());
 	}
 
 	@Test
 	void aSkillWithAUrlIsFetchedAndOneWithoutIsBundled() {
 		runner
-			.withPropertyValues("spring.acp.skills[0].path=skills/local",
-					"spring.acp.skills[1].url=https://github.com/owner/private",
-					"spring.acp.skills[1].path=skills/remote", "spring.acp.skills[1].token=ghp_secret")
+			.withPropertyValues("spring.ai.acp.harness.skills[0].path=skills/local",
+					"spring.ai.acp.harness.skills[1].url=https://github.com/owner/private",
+					"spring.ai.acp.harness.skills[1].path=skills/remote",
+					"spring.ai.acp.harness.skills[1].token=ghp_secret")
 			.run(context -> {
 				List<org.springaicommunity.acp.config.SkillSpec> skills = context.getBean(AcpAgentSettings.class)
 					.skills();
@@ -176,7 +185,9 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void aTokenWithoutARepositoryIsAMistake() {
-		runner.withPropertyValues("spring.acp.skills[0].path=skills/local", "spring.acp.skills[0].token=ghp_secret")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.skills[0].path=skills/local",
+					"spring.ai.acp.harness.skills[0].token=ghp_secret")
 			.run(context -> assertThat(context).hasFailed());
 	}
 
@@ -193,7 +204,7 @@ class AcpAutoConfigurationTests {
 			.of(org.springaicommunity.acp.session.SessionPrincipal.of("alice"));
 		runner.withBean(org.springaicommunity.acp.mcp.McpCredentialsProvider.class, () -> provider)
 			.withBean(org.springaicommunity.acp.session.SessionPrincipalResolver.class, () -> resolver)
-			.withPropertyValues("spring.acp.mcp.on-server-failure=fail")
+			.withPropertyValues("spring.ai.acp.harness.mcp.on-server-failure=fail")
 			.run(context -> {
 				org.springaicommunity.acp.config.McpSettings mcp = context.getBean(AcpAgentSettings.class).mcp();
 				assertThat(mcp.credentials()).isSameAs(provider);
@@ -205,7 +216,9 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void anApplicationThatWouldRatherNotStartWithoutItsToolsSaysSo() {
-		runner.withPropertyValues("spring.acp.mcp.on-server-failure=fail", "spring.acp.mcp.detect-timeout=750ms")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.mcp.on-server-failure=fail",
+					"spring.ai.acp.harness.mcp.detect-timeout=750ms")
 			.run(context -> {
 				org.springaicommunity.acp.config.McpSettings mcp = context.getBean(AcpAgentSettings.class).mcp();
 				assertThat(mcp.onServerFailure())
@@ -217,8 +230,8 @@ class AcpAutoConfigurationTests {
 	@Test
 	void rejectsAPlainHttpMcpServerOnTheOpenInternet() {
 		runner
-			.withPropertyValues("spring.acp.mcp-servers[0].name=remote",
-					"spring.acp.mcp-servers[0].url=http://tools.example.com/mcp")
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=remote",
+					"spring.ai.acp.harness.mcp-servers[0].url=http://tools.example.com/mcp")
 			.run(context -> assertThat(context).hasFailed());
 	}
 
@@ -226,7 +239,7 @@ class AcpAutoConfigurationTests {
 	void registersEveryAdapterOnTheClasspath() {
 		// The completion test for this milestone in miniature: one application, three
 		// agents, and the
-		// only thing that chooses between them is spring.acp.runtime.
+		// only thing that chooses between them is spring.ai.acp.harness.runtime.
 		runner.run(context -> assertThat(context.getBeansOfType(AcpAgentRuntime.class).values())
 			.extracting(AcpAgentRuntime::id)
 			.containsExactlyInAnyOrder("goose", "codex", "opencode"));
@@ -235,7 +248,7 @@ class AcpAutoConfigurationTests {
 	@Test
 	void selectsWhicheverRuntimeThePropertyNames() {
 		for (String id : List.of("goose", "codex", "opencode")) {
-			runner.withPropertyValues("spring.acp.runtime=" + id)
+			runner.withPropertyValues("spring.ai.acp.harness.runtime=" + id)
 				.run(context -> assertThat(context).hasNotFailed()
 					.getBean(SelectedRuntime.class)
 					.satisfies(selected -> assertThat(selected.runtime().id()).isEqualTo(id)));
@@ -247,7 +260,7 @@ class AcpAutoConfigurationTests {
 		// What a runtime starter gives an application: one adapter, and nothing to
 		// configure.
 		unnamed.withClassLoader(new FilteredClassLoader(GooseRuntime.class, OpenCodeRuntime.class))
-			.withPropertyValues("spring.acp.runtimes.codex.config-toml.model_reasoning_effort=high")
+			.withPropertyValues("spring.ai.acp.harness.runtimes.codex.config-toml.model_reasoning_effort=high")
 			.run(context -> {
 				assertThat(context).hasNotFailed();
 				assertThat(context.getBean(SelectedRuntime.class).runtime()).isInstanceOf(CodexRuntime.class);
@@ -273,7 +286,7 @@ class AcpAutoConfigurationTests {
 		// It can supply dozens, so being on the classpath says nothing about which one to
 		// run.
 		unnamed.withClassLoader(new FilteredClassLoader(GooseRuntime.class, CodexRuntime.class, OpenCodeRuntime.class))
-			.withPropertyValues("spring.acp.registry.offline=true")
+			.withPropertyValues("spring.ai.acp.harness.registry.offline=true")
 			.run(context -> {
 				assertThat(context).hasFailed();
 				assertThat(context.getStartupFailure()).rootCause()
@@ -286,8 +299,9 @@ class AcpAutoConfigurationTests {
 	@Test
 	void passesRuntimeSpecificOptionsToTheSelectedRuntimeOnly() {
 		runner
-			.withPropertyValues("spring.acp.runtime=goose", "spring.acp.runtimes.goose.builtins=developer,todo",
-					"spring.acp.runtimes.codex.package=ignored")
+			.withPropertyValues("spring.ai.acp.harness.runtime=goose",
+					"spring.ai.acp.harness.runtimes.goose.builtins=developer,todo",
+					"spring.ai.acp.harness.runtimes.codex.package=ignored")
 			.run(context -> {
 				RuntimeOptions options = context.getBean(AcpAgentSettings.class).runtimeOptions();
 				assertThat(options.textList("builtins")).containsExactly("developer", "todo");
@@ -300,9 +314,9 @@ class AcpAutoConfigurationTests {
 		// Tier 3 passes an agent's own configuration through untouched, and that is not
 		// always flat.
 		runner
-			.withPropertyValues("spring.acp.runtime=codex",
-					"spring.acp.runtimes.codex.config-toml.model_reasoning_effort=high",
-					"spring.acp.runtimes.codex.config-toml.sandbox.mode=read-only")
+			.withPropertyValues("spring.ai.acp.harness.runtime=codex",
+					"spring.ai.acp.harness.runtimes.codex.config-toml.model_reasoning_effort=high",
+					"spring.ai.acp.harness.runtimes.codex.config-toml.sandbox.mode=read-only")
 			.run(context -> {
 				RuntimeOptions options = context.getBean(AcpAgentSettings.class).runtimeOptions();
 				assertThat(options.section("config-toml")).containsKey("model_reasoning_effort");
@@ -316,7 +330,7 @@ class AcpAutoConfigurationTests {
 		// for it.
 		// What must still fail is an id nothing can supply, which is the typo this check
 		// exists for.
-		runner.withPropertyValues("spring.acp.runtimes.gooze.model=gpt-5.4-mini").run(context -> {
+		runner.withPropertyValues("spring.ai.acp.harness.runtimes.gooze.model=gpt-5.4-mini").run(context -> {
 			assertThat(context).hasFailed();
 			assertThat(context.getStartupFailure()).rootCause()
 				.hasMessageContaining("unregistered runtime(s) [gooze]")
@@ -326,7 +340,7 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void failsFastWhenTheSelectedRuntimeIsNotRegistered() {
-		runner.withPropertyValues("spring.acp.runtime=not-an-agent").run(context -> {
+		runner.withPropertyValues("spring.ai.acp.harness.runtime=not-an-agent").run(context -> {
 			assertThat(context).hasFailed();
 			assertThat(context.getStartupFailure()).rootCause()
 				.hasMessageContaining("No AcpAgentRuntime registered")
@@ -341,12 +355,13 @@ class AcpAutoConfigurationTests {
 		// Nothing is downloaded here — the entry is read from the bundled snapshot, and
 		// the agent
 		// itself would be fetched on the first turn.
-		runner.withPropertyValues("spring.acp.runtime=gemini", "spring.acp.registry.offline=true").run(context -> {
-			assertThat(context).hasNotFailed();
-			assertThat(context.getBean(SelectedRuntime.class).runtime().id()).isEqualTo("gemini");
-			assertThat(context.getBean(SelectedRuntime.class).runtime())
-				.isInstanceOf(org.springaicommunity.acp.registry.RegistryAcpAgentRuntime.class);
-		});
+		runner.withPropertyValues("spring.ai.acp.harness.runtime=gemini", "spring.ai.acp.harness.registry.offline=true")
+			.run(context -> {
+				assertThat(context).hasNotFailed();
+				assertThat(context.getBean(SelectedRuntime.class).runtime().id()).isEqualTo("gemini");
+				assertThat(context.getBean(SelectedRuntime.class).runtime())
+					.isInstanceOf(org.springaicommunity.acp.registry.RegistryAcpAgentRuntime.class);
+			});
 	}
 
 	@Test
@@ -355,17 +370,20 @@ class AcpAutoConfigurationTests {
 		// catalogue does not:
 		// where goose hides a tool name, that its provider option has no category, and
 		// how to serve.
-		runner.withPropertyValues("spring.acp.runtime=goose", "spring.acp.registry.offline=true")
+		runner.withPropertyValues("spring.ai.acp.harness.runtime=goose", "spring.ai.acp.harness.registry.offline=true")
 			.run(context -> assertThat(context.getBean(SelectedRuntime.class).runtime())
 				.isInstanceOf(GooseRuntime.class));
 	}
 
 	@Test
 	void doesNotConsultTheRegistryWhenItIsTurnedOff() {
-		runner.withPropertyValues("spring.acp.runtime=gemini", "spring.acp.registry.enabled=false").run(context -> {
-			assertThat(context).hasFailed();
-			assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("No AcpAgentRuntime registered");
-		});
+		runner
+			.withPropertyValues("spring.ai.acp.harness.runtime=gemini", "spring.ai.acp.harness.registry.enabled=false")
+			.run(context -> {
+				assertThat(context).hasFailed();
+				assertThat(context.getStartupFailure()).rootCause()
+					.hasMessageContaining("No AcpAgentRuntime registered");
+			});
 	}
 
 	@Test
@@ -374,7 +392,7 @@ class AcpAutoConfigurationTests {
 		// hold when
 		// the class is genuinely absent, and a @Bean-level one cannot.
 		runner.withClassLoader(new FilteredClassLoader(org.springaicommunity.acp.registry.AcpAgentRegistry.class))
-			.withPropertyValues("spring.acp.runtime=goose")
+			.withPropertyValues("spring.ai.acp.harness.runtime=goose")
 			.run(context -> {
 				assertThat(context).hasNotFailed();
 				assertThat(context).hasSingleBean(AcpAgentSettings.class);
@@ -390,7 +408,9 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void bindsTheProtocolFeatureFlag() {
-		runner.withPropertyValues("spring.acp.protocol.max-version=2", "spring.acp.protocol.strict=true")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.protocol.max-version=2",
+					"spring.ai.acp.harness.protocol.strict=true")
 			.run(context -> {
 				assertThat(context.getBean(AcpAgentSettings.class).protocol().maxVersion()).isEqualTo(2);
 				assertThat(context.getBean(AcpAgentSettings.class).protocol().strict()).isTrue();
@@ -407,7 +427,7 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void doesNotObserveWhenTheApplicationTurnsItOff() {
-		runner.withPropertyValues("spring.acp.observations.enabled=false")
+		runner.withPropertyValues("spring.ai.acp.harness.observations.enabled=false")
 			.run(context -> assertThat(context)
 				.doesNotHaveBean(org.springaicommunity.acp.observation.AcpAgentObservations.class));
 	}
@@ -424,9 +444,11 @@ class AcpAutoConfigurationTests {
 	@Test
 	void bindsTheProviderBlockAndKeepsTheKeyOutOfItsOwnToString() {
 		runner
-			.withPropertyValues("spring.acp.provider.id=acme-ai", "spring.acp.provider.api-type=openai",
-					"spring.acp.provider.base-url=https://ai.example.com/v1", "spring.acp.provider.api-key=sk-secret",
-					"spring.acp.provider.headers.X-Tenant=acme")
+			.withPropertyValues("spring.ai.acp.harness.provider.id=acme-ai",
+					"spring.ai.acp.harness.provider.api-type=openai",
+					"spring.ai.acp.harness.provider.base-url=https://ai.example.com/v1",
+					"spring.ai.acp.harness.provider.api-key=sk-secret",
+					"spring.ai.acp.harness.provider.headers.X-Tenant=acme")
 			.run(context -> {
 				ProviderSpec provider = context.getBean(AcpAgentSettings.class).provider();
 				assertThat(provider.id()).isEqualTo("acme-ai");
@@ -441,13 +463,13 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void rejectsAProviderEndpointOnPlainHttp() {
-		runner.withPropertyValues("spring.acp.provider.base-url=http://ai.example.com/v1")
+		runner.withPropertyValues("spring.ai.acp.harness.provider.base-url=http://ai.example.com/v1")
 			.run(context -> assertThat(context).hasFailed());
 	}
 
 	@Test
 	void rejectsAProviderHeaderCarryingALineBreak() {
-		runner.withPropertyValues("spring.acp.provider.headers.X-Bad=value\ninjected: yes")
+		runner.withPropertyValues("spring.ai.acp.harness.provider.headers.X-Bad=value\ninjected: yes")
 			.run(context -> assertThat(context).hasFailed());
 	}
 
@@ -463,7 +485,7 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void theRuntimeHomeCanBeNamed() {
-		runner.withPropertyValues("spring.acp.runtime-home=/var/lib/spring-ai-acp-harness-client")
+		runner.withPropertyValues("spring.ai.acp.harness.runtime-home=/var/lib/spring-ai-acp-harness-client")
 			.run(context -> assertThat(context.getBean(AcpAgentSettings.class).runtimeHome())
 				.isEqualTo(java.nio.file.Path.of("/var/lib/spring-ai-acp-harness-client")));
 	}
@@ -511,9 +533,11 @@ class AcpAutoConfigurationTests {
 	@Test
 	void bindsFilesystemAndTerminalAccess() {
 		runner
-			.withPropertyValues("spring.acp.filesystem.enabled=true", "spring.acp.filesystem.write=true",
-					"spring.acp.terminal.enabled=true", "spring.acp.terminal.allowed-commands=mvn,git",
-					"spring.acp.terminal.output-limit=64KB", "spring.acp.terminal.command-timeout=30s")
+			.withPropertyValues("spring.ai.acp.harness.filesystem.enabled=true",
+					"spring.ai.acp.harness.filesystem.write=true", "spring.ai.acp.harness.terminal.enabled=true",
+					"spring.ai.acp.harness.terminal.allowed-commands=mvn,git",
+					"spring.ai.acp.harness.terminal.output-limit=64KB",
+					"spring.ai.acp.harness.terminal.command-timeout=30s")
 			.run(context -> {
 				AcpAgentSettings settings = context.getBean(AcpAgentSettings.class);
 				assertThat(settings.filesystem()).isEqualTo(FileSystemAccess.readWrite());
@@ -530,7 +554,7 @@ class AcpAutoConfigurationTests {
 	 */
 	@Test
 	void writeImpliesRead() {
-		runner.withPropertyValues("spring.acp.filesystem.write=true")
+		runner.withPropertyValues("spring.ai.acp.harness.filesystem.write=true")
 			.run(context -> assertThat(context.getBean(AcpAgentSettings.class).filesystem())
 				.isEqualTo(FileSystemAccess.readWrite()));
 	}
@@ -538,8 +562,9 @@ class AcpAutoConfigurationTests {
 	@Test
 	void bindsThePool() {
 		runner
-			.withPropertyValues("spring.acp.pool.max-processes=4", "spring.acp.pool.max-sessions-per-process=8",
-					"spring.acp.pool.max-restarts=2", "spring.acp.pool.session-ttl=15m")
+			.withPropertyValues("spring.ai.acp.harness.pool.max-processes=4",
+					"spring.ai.acp.harness.pool.max-sessions-per-process=8",
+					"spring.ai.acp.harness.pool.max-restarts=2", "spring.ai.acp.harness.pool.session-ttl=15m")
 			.run(context -> {
 				AcpAgentSettings settings = context.getBean(AcpAgentSettings.class);
 				assertThat(settings.pool()).isEqualTo(new PoolSettings(4, 8, 2));
@@ -555,7 +580,7 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void backsOffEntirelyWhenDisabled() {
-		plain.withPropertyValues("spring.acp.enabled=false")
+		plain.withPropertyValues("spring.ai.acp.harness.enabled=false")
 			.run(context -> assertThat(context).hasNotFailed()
 				.doesNotHaveBean(AcpAgentSettings.class)
 				.doesNotHaveBean(AcpAgentClient.class));

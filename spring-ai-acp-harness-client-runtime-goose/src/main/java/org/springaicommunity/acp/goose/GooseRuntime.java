@@ -56,7 +56,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * be the problem it exists to solve.
  *
  * <p>
- * Tier-3 options, under {@code spring.acp.runtimes.goose}:
+ * Tier-3 options, under {@code spring.ai.acp.harness.runtimes.goose}:
  *
  * <pre>{@code
  * builtins: developer,todo     # --with-builtin, comma-separated or a YAML list

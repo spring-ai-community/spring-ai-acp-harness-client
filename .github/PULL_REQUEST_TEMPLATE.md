@@ -11,7 +11,7 @@ Thanks for contributing to Spring AI ACP Harness Client. Before submitting, plea
 
 ## Changes
 
-- [ ] Behaviour change (ported core `spring.acp.*`, not one agent's adapter)
+- [ ] Behaviour change (ported core `spring.ai.acp.harness.*`, not one agent's adapter)
 - [ ] Public API change (justify if so)
 - [ ] Documentation updated (README, user guide)
 - [ ] Tests added or updated for changed behavior

@@ -13,7 +13,7 @@
 
     <artifactId>spring-ai-acp-harness-client-boot-starter-registry</artifactId>
     <name>Spring AI ACP Harness Client Boot Starter (Registry)</name>
-    <description>Starter: spring-ai-acp-harness-client-boot-starter plus the registry runtime: any agent the ACP registry publishes, selected by spring.acp.runtime</description>
+    <description>Starter: spring-ai-acp-harness-client-boot-starter plus the registry runtime: any agent the ACP registry publishes, selected by spring.ai.acp.harness.runtime</description>
 
     <properties>
         <!-- No Java sources: attach empty -sources and -javadoc jars for Maven Central. -->

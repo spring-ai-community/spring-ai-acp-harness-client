@@ -123,7 +123,7 @@ class AcpAgentClientPoolTests {
 
 			assertThatThrownBy(() -> pool.openSession("c")).isInstanceOf(AcpAgentClientException.class)
 				.hasMessageContaining("maximum of 2 sessions")
-				.hasMessageContaining("spring.acp.pool");
+				.hasMessageContaining("spring.ai.acp.harness.pool");
 		}
 	}
 
@@ -262,7 +262,7 @@ class AcpAgentClientPoolTests {
 			pool.openSession("a", ALICE);
 
 			assertThatThrownBy(() -> pool.openSession("b", BOB)).isInstanceOf(AcpAgentClientException.class)
-				.hasMessageContaining("spring.acp.pool.max-processes");
+				.hasMessageContaining("spring.ai.acp.harness.pool.max-processes");
 			assertThat(created.get(0).registry.knows("b")).isFalse();
 		}
 	}

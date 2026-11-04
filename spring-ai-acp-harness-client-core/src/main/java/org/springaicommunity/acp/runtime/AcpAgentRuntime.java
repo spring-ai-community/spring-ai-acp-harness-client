@@ -33,7 +33,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  */
 public interface AcpAgentRuntime {
 
-	/** The value {@code spring.acp.runtime} selects this runtime by. */
+	/** The value {@code spring.ai.acp.harness.runtime} selects this runtime by. */
 	String id();
 
 	/** Builds the command line, arguments and environment to start the agent with. */
@@ -234,8 +234,8 @@ public interface AcpAgentRuntime {
 	}
 
 	/**
-	 * The options that {@code spring.acp.*} can express and ACP may or may not be able to
-	 * honor.
+	 * The options that {@code spring.ai.acp.harness.*} can express and ACP may or may not
+	 * be able to honor.
 	 */
 	enum PortableOption {
 

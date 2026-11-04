@@ -28,13 +28,13 @@ import org.springframework.util.StringUtils;
  *
  * <p>
  * The binding becomes the portable bring-your-own-endpoint configuration:
- * {@code spring.acp.provider.base-url} is the binding's {@code api_base} plus the wire
- * format its catalog names ({@code /openai}), {@code api-key} is its key, and {@code id}
- * and {@code api-type} are {@code openai}. Every runtime reaches it the way it reaches
- * any other endpoint, and the endpoint's own {@code /models} listing then decides which
- * models are valid. When no {@code spring.acp.model} is configured, the first model the
- * service's catalog marks {@code TOOLS}-capable is chosen, since an agent that cannot
- * call tools is not one.
+ * {@code spring.ai.acp.harness.provider.base-url} is the binding's {@code api_base} plus
+ * the wire format its catalog names ({@code /openai}), {@code api-key} is its key, and
+ * {@code id} and {@code api-type} are {@code openai}. Every runtime reaches it the way it
+ * reaches any other endpoint, and the endpoint's own {@code /models} listing then decides
+ * which models are valid. When no {@code spring.ai.acp.harness.model} is configured, the
+ * first model the service's catalog marks {@code TOOLS}-capable is chosen, since an agent
+ * that cannot call tools is not one.
  *
  * <p>
  * Explicit configuration wins, as a whole: a provider with its own {@code base-url} or
@@ -46,8 +46,9 @@ import org.springframework.util.StringUtils;
  * <p>
  * Runs after the application's own config data is loaded, so it can see what was
  * configured, and writes only keys that had no value. Off with
- * {@code spring.acp.tanzu-ai.enabled=false}; {@code spring.acp.tanzu-ai.service-name}
- * picks one binding when there are several.
+ * {@code spring.ai.acp.harness.tanzu-ai.enabled=false};
+ * {@code spring.ai.acp.harness.tanzu-ai.service-name} picks one binding when there are
+ * several.
  */
 public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
@@ -86,20 +87,21 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 
 	@Override
 	public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-		if (!environment.getProperty("spring.acp.tanzu-ai.enabled", Boolean.class, true)) {
+		if (!environment.getProperty("spring.ai.acp.harness.tanzu-ai.enabled", Boolean.class, true)) {
 			return;
 		}
 		List<TanzuAiBinding> bindings = TanzuAiBinding.all(environment.getProperty("VCAP_SERVICES"));
 		if (bindings.isEmpty()) {
 			return;
 		}
-		if (hasText(environment, "spring.acp.provider.base-url")
-				|| hasText(environment, "spring.acp.provider.api-key")) {
-			logger.info("A Tanzu AI Models service is bound, but spring.acp.provider sets its own base-url or api-key; "
-					+ "using the provider as configured");
+		if (hasText(environment, "spring.ai.acp.harness.provider.base-url")
+				|| hasText(environment, "spring.ai.acp.harness.provider.api-key")) {
+			logger.info(
+					"A Tanzu AI Models service is bound, but spring.ai.acp.harness.provider sets its own base-url or api-key; "
+							+ "using the provider as configured");
 			return;
 		}
-		for (String key : List.of("spring.acp.provider.id", "spring.acp.provider.api-type")) {
+		for (String key : List.of("spring.ai.acp.harness.provider.id", "spring.ai.acp.harness.provider.api-type")) {
 			String value = environment.getProperty(key);
 			if (StringUtils.hasText(value) && !"openai".equals(value.strip())) {
 				logger.warn("A Tanzu AI Models service is bound, but " + key + " is '" + value
@@ -107,11 +109,12 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 				return;
 			}
 		}
-		String serviceName = environment.getProperty("spring.acp.tanzu-ai.service-name");
+		String serviceName = environment.getProperty("spring.ai.acp.harness.tanzu-ai.service-name");
 		Optional<TanzuAiBinding> found = TanzuAiBinding.find(bindings, serviceName);
 		if (found.isEmpty()) {
-			logger.warn("spring.acp.tanzu-ai.service-name is '" + serviceName + "', but the bound Tanzu AI Models "
-					+ "service(s) are " + bindings.stream().map(TanzuAiBinding::name).toList());
+			logger.warn("spring.ai.acp.harness.tanzu-ai.service-name is '" + serviceName
+					+ "', but the bound Tanzu AI Models " + "service(s) are "
+					+ bindings.stream().map(TanzuAiBinding::name).toList());
 			return;
 		}
 		TanzuAiBinding binding = found.get();
@@ -129,22 +132,22 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 
 		Map<String, Object> properties = new LinkedHashMap<>();
 		URI baseUrl = binding.apiFor(wireFormat);
-		properties.put("spring.acp.provider.base-url", baseUrl.toString());
-		properties.put("spring.acp.provider.api-key", binding.apiKey());
-		if (!hasText(environment, "spring.acp.provider.id")) {
-			properties.put("spring.acp.provider.id", "openai");
+		properties.put("spring.ai.acp.harness.provider.base-url", baseUrl.toString());
+		properties.put("spring.ai.acp.harness.provider.api-key", binding.apiKey());
+		if (!hasText(environment, "spring.ai.acp.harness.provider.id")) {
+			properties.put("spring.ai.acp.harness.provider.id", "openai");
 		}
-		if (!hasText(environment, "spring.acp.provider.api-type")) {
-			properties.put("spring.acp.provider.api-type", "openai");
+		if (!hasText(environment, "spring.ai.acp.harness.provider.api-type")) {
+			properties.put("spring.ai.acp.harness.provider.api-type", "openai");
 		}
-		String model = environment.getProperty("spring.acp.model");
+		String model = environment.getProperty("spring.ai.acp.harness.model");
 		if (!StringUtils.hasText(model)) {
 			Optional<String> chosen = catalog.flatMap(TanzuAiBinding.Catalog::toolCapableModel);
 			if (catalog.isPresent() && chosen.isEmpty()) {
 				logger.warn("Tanzu AI Models service '" + binding.name() + "' advertises no TOOLS-capable model; "
-						+ "set spring.acp.model");
+						+ "set spring.ai.acp.harness.model");
 			}
-			chosen.ifPresent(name -> properties.put("spring.acp.model", name));
+			chosen.ifPresent(name -> properties.put("spring.ai.acp.harness.model", name));
 			model = chosen.orElse(null);
 		}
 		environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, properties));
@@ -161,7 +164,7 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 	private Optional<TanzuAiBinding.Catalog> readCatalog(TanzuAiBinding binding) {
 		if (binding.configUrl() == null) {
 			logger.warn("Tanzu AI Models service '" + binding.name() + "' publishes no config_url; assuming the "
-					+ "OpenAI API, and set spring.acp.model");
+					+ "OpenAI API, and set spring.ai.acp.harness.model");
 			return Optional.empty();
 		}
 		try {
@@ -175,7 +178,7 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 		}
 		catch (IOException | RuntimeException ex) {
 			logger.warn("Could not read the catalog of Tanzu AI Models service '" + binding.name() + "' ("
-					+ ex.getMessage() + "); assuming the OpenAI API, and set spring.acp.model");
+					+ ex.getMessage() + "); assuming the OpenAI API, and set spring.ai.acp.harness.model");
 			return Optional.empty();
 		}
 	}

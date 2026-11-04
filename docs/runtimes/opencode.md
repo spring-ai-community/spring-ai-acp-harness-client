@@ -4,17 +4,19 @@ The adapter launches `opencode acp` over stdio. OpenCode advertises exactly two 
 
 ```yaml title="application.yaml: every OpenCode key"
 spring:
-  acp:
-    runtimes:
-      opencode:
-        command: /opt/opencode/bin/opencode   # default: OPENCODE_CLI_PATH, else "opencode" on the PATH
-        args: [ --print-logs ]
-        config:                               # written as opencode.json, pointed at by OPENCODE_CONFIG
-          share: disabled
-          autoupdate: false
-        config-file: /etc/myapp/opencode.json # where to write it, instead of /opencode.json
-        env:
-          HTTPS_PROXY: http://proxy.internal:3128
+  ai:
+    acp:
+      harness:
+        runtimes:
+          opencode:
+            command: /opt/opencode/bin/opencode   # default: OPENCODE_CLI_PATH, else "opencode" on the PATH
+            args: [ --print-logs ]
+            config:                               # written as opencode.json, pointed at by OPENCODE_CONFIG
+              share: disabled
+              autoupdate: false
+            config-file: /etc/myapp/opencode.json # where to write it, instead of /opencode.json
+            env:
+              HTTPS_PROXY: http://proxy.internal:3128
 ```
 
 ## opencode.json
@@ -29,59 +31,63 @@ Measured against opencode 1.18.31: a `model` in the workspace's `opencode.json` 
 
 ## Per-tool permissions
 
-OpenCode's `permission` block sets, per tool, whether it may act (`allow`), must not (`deny`), or must ask (`ask`). An `ask` reaches your application as an ACP permission request and is answered by [`spring.acp.permissions`](../configuration/permissions.md). This gives you a review gate in the default `build` mode, finer than switching to `plan`:
+OpenCode's `permission` block sets, per tool, whether it may act (`allow`), must not (`deny`), or must ask (`ask`). An `ask` reaches your application as an ACP permission request and is answered by [`spring.ai.acp.harness.permissions`](../configuration/permissions.md). This gives you a review gate in the default `build` mode, finer than switching to `plan`:
 
 ```yaml
 spring:
-  acp:
-    runtimes:
-      opencode:
-        config:
-          permission:
-            edit: ask                  # every file change asks
-            bash:
-              "*": ask                 # shell commands ask…
-              "git status": allow      # …except these
-              "git diff*": allow
-            webfetch: deny
-            external_directory: deny   # nothing outside the workspace
-    permissions:
-      policy: deny                     # every ask is refused: the agent reads, and runs only git status/diff
+  ai:
+    acp:
+      harness:
+        runtimes:
+          opencode:
+            config:
+              permission:
+                edit: ask                  # every file change asks
+                bash:
+                  "*": ask                 # shell commands ask…
+                  "git status": allow      # …except these
+                  "git diff*": allow
+                webfetch: deny
+                external_directory: deny   # nothing outside the workspace
+        permissions:
+          policy: deny                     # every ask is refused: the agent reads, and runs only git status/diff
 ```
 
 Tools include `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `skill` and `external_directory`. A single value (`permission: ask`) applies to all of them.
 
 ## Modes and custom agents
 
-OpenCode's modes are its *primary agents*: `build` (the default) and `plan`. Define your own in `config.agent` and it becomes a mode that `spring.acp.mode` can select. Verified against 1.18.31, where a custom `review` agent appeared as a mode beside `build` and `plan` and could be set:
+OpenCode's modes are its *primary agents*: `build` (the default) and `plan`. Define your own in `config.agent` and it becomes a mode that `spring.ai.acp.harness.mode` can select. Verified against 1.18.31, where a custom `review` agent appeared as a mode beside `build` and `plan` and could be set:
 
 ```yaml
 spring:
-  acp:
-    runtime: opencode
-    mode: review                        # select the agent defined below
-    runtimes:
-      opencode:
-        config:
-          agent:
-            review:
-              mode: primary             # primary agents are ACP modes
-              description: Reviews changes without editing them
-              prompt: You review code for correctness and security. Never edit files.
-              permission:
-                edit: deny
-                bash: ask
+  ai:
+    acp:
+      harness:
+        runtime: opencode
+        mode: review                        # select the agent defined below
+        runtimes:
+          opencode:
+            config:
+              agent:
+                review:
+                  mode: primary             # primary agents are ACP modes
+                  description: Reviews changes without editing them
+                  prompt: You review code for correctness and security. Never edit files.
+                  permission:
+                    edit: deny
+                    bash: ask
 ```
 
-`default_agent` in `config` sets the mode new sessions start in. Prefer `spring.acp.mode`, which reports whether it was applied.
+`default_agent` in `config` sets the mode new sessions start in. Prefer `spring.ai.acp.harness.mode`, which reports whether it was applied.
 
 ## Processes, users and memory
 
 OpenCode keeps MCP clients per process rather than per session. It holds one client per server name, and every `session/new` replaces it, so all the sessions in a process call MCP through whichever session declared the servers last (see [Credentials the agent never sees](../configuration/mcp-servers.md#credentials-the-agent-never-sees)). To keep one user's tools from running with another user's credentials, the pool gives each OpenCode process to **one principal at a time**:
 
-- A user's sessions all share one process, up to `spring.acp.pool.max-sessions-per-process`.
+- A user's sessions all share one process, up to `spring.ai.acp.harness.pool.max-sessions-per-process`.
 - A user who needs a process gets an idle one. An idle process that last served someone else is restarted first, which takes a second or two and does not count against `max-restarts`.
-- When every process is serving other users, a new user's session is refused with an error that names `spring.acp.pool.max-processes`. A process becomes free when its user's last session closes, either explicitly or after `spring.acp.pool.session-ttl` of inactivity.
+- When every process is serving other users, a new user's session is refused with an error that names `spring.ai.acp.harness.pool.max-processes`. A process becomes free when its user's last session closes, either explicitly or after `spring.ai.acp.harness.pool.session-ttl` of inactivity.
 
 So `max-processes` is the number of users who can hold OpenCode sessions at the same time, and each of them costs a whole OpenCode process. Processes start lazily, so memory grows with concurrent users rather than being allocated at startup. The goose and Codex adapters keep MCP servers per session, so for them `max-processes` is only about parallelism.
 
@@ -102,12 +108,14 @@ memory ≥ JVM + max-processes × 650 MB
 
 ```yaml title="application.yaml: up to three concurrent users"
 spring:
-  acp:
-    runtime: opencode
-    pool:
-      max-processes: 3             # 3 users, ~2 GB of OpenCode
-      max-sessions-per-process: 8  # chats per user
-      session-ttl: 30m             # free idle users sooner
+  ai:
+    acp:
+      harness:
+        runtime: opencode
+        pool:
+          max-processes: 3             # 3 users, ~2 GB of OpenCode
+          max-sessions-per-process: 8  # chats per user
+          session-ttl: 30m             # free idle users sooner
 ```
 
 !!! note
@@ -127,4 +135,4 @@ spring:
 
 !!! note
 
-    With a bring-your-own endpoint, the adapter writes `provider`, `model` and `disabled_providers` into the same file. A top-level key of the same name in `config` replaces the adapter's value outright, so leave those three to `spring.acp.provider` unless you intend to describe the providers yourself.
+    With a bring-your-own endpoint, the adapter writes `provider`, `model` and `disabled_providers` into the same file. A top-level key of the same name in `config` replaces the adapter's value outright, so leave those three to `spring.ai.acp.harness.provider` unless you intend to describe the providers yourself.

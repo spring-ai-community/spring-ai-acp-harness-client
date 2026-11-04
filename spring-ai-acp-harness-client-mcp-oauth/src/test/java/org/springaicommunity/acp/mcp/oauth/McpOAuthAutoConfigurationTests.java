@@ -37,18 +37,18 @@ class McpOAuthAutoConfigurationTests {
 		return new ApplicationContextRunner()
 			.withConfiguration(AutoConfigurations.of(AcpAutoConfiguration.class, McpOAuthAutoConfiguration.class))
 			.withUserConfiguration(NoAcpAgent.class)
-			.withPropertyValues("spring.acp.runtime=test", "spring.acp.workspace=" + workspace);
+			.withPropertyValues("spring.ai.acp.harness.runtime=test", "spring.ai.acp.harness.workspace=" + workspace);
 	}
 
-	private static final String[] OAUTH_SERVER = { "spring.acp.mcp-servers[0].name=finops-mcp",
-			"spring.acp.mcp-servers[0].url=https://gateway.example.com/finops-mcp/mcp",
-			"spring.acp.mcp-servers[0].auth=oauth" };
+	private static final String[] OAUTH_SERVER = { "spring.ai.acp.harness.mcp-servers[0].name=finops-mcp",
+			"spring.ai.acp.harness.mcp-servers[0].url=https://gateway.example.com/finops-mcp/mcp",
+			"spring.ai.acp.harness.mcp-servers[0].auth=oauth" };
 
 	@Test
 	void staysOutOfTheWayWhenNoServerAsksForOAuth() {
 		runner()
-			.withPropertyValues("spring.acp.mcp-servers[0].name=open",
-					"spring.acp.mcp-servers[0].url=https://open.example.com/mcp")
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=open",
+					"spring.ai.acp.harness.mcp-servers[0].url=https://open.example.com/mcp")
 			.run(context -> {
 				assertThat(context).hasNotFailed();
 				assertThat(context).doesNotHaveBean(McpCredentialsProvider.class);
@@ -79,7 +79,7 @@ class McpOAuthAutoConfigurationTests {
 	@Test
 	void keepsStateInTheDatabaseWhenAskedTo() {
 		runner().withPropertyValues(OAUTH_SERVER)
-			.withPropertyValues("spring.acp.mcp.oauth.store=jdbc")
+			.withPropertyValues("spring.ai.acp.harness.mcp.oauth.store=jdbc")
 			.withBean(JdbcOperations.class, () -> new JdbcTemplate(
 					new EmbeddedDatabaseBuilder().setType(EmbeddedDatabaseType.H2).generateUniqueName(true).build()))
 			.run(context -> {
@@ -96,7 +96,7 @@ class McpOAuthAutoConfigurationTests {
 	@Test
 	void aDatabaseStoreWithoutADatabaseSaysWhatIsMissing() {
 		runner().withPropertyValues(OAUTH_SERVER)
-			.withPropertyValues("spring.acp.mcp.oauth.store=jdbc")
+			.withPropertyValues("spring.ai.acp.harness.mcp.oauth.store=jdbc")
 			.run(context -> assertThat(context).hasFailed()
 				.getFailure()
 				.rootCause()
@@ -106,8 +106,9 @@ class McpOAuthAutoConfigurationTests {
 	@Test
 	void oauthOnAStdioServerIsAConfigurationError() {
 		runner()
-			.withPropertyValues("spring.acp.mcp-servers[0].name=local", "spring.acp.mcp-servers[0].command=helper",
-					"spring.acp.mcp-servers[0].auth=oauth")
+			.withPropertyValues("spring.ai.acp.harness.mcp-servers[0].name=local",
+					"spring.ai.acp.harness.mcp-servers[0].command=helper",
+					"spring.ai.acp.harness.mcp-servers[0].auth=oauth")
 			.run(context -> assertThat(context).hasFailed()
 				.getFailure()
 				.rootCause()
@@ -126,7 +127,8 @@ class McpOAuthAutoConfigurationTests {
 	void aTerminalApplicationSignsInThroughTheBrowserAndKeepsItInAFile() {
 		Path file = workspace.resolve("state").resolve("mcp-oauth.json");
 		runner().withPropertyValues(OAUTH_SERVER)
-			.withPropertyValues("spring.acp.mcp.oauth.mode=local", "spring.acp.mcp.oauth.file=" + file)
+			.withPropertyValues("spring.ai.acp.harness.mcp.oauth.mode=local",
+					"spring.ai.acp.harness.mcp.oauth.file=" + file)
 			.run(context -> {
 				assertThat(context.getBean(FileMcpOAuthStore.class).location()).isEqualTo(file);
 				assertThat(context.getBean(McpSignIn.class)).isInstanceOf(LoopbackSignIn.class);
@@ -140,7 +142,8 @@ class McpOAuthAutoConfigurationTests {
 	@Test
 	void aTerminalApplicationWithAStoreThatCannotHoldItsSignInsSaysSo() {
 		runner().withPropertyValues(OAUTH_SERVER)
-			.withPropertyValues("spring.acp.mcp.oauth.mode=local", "spring.acp.mcp.oauth.store=memory")
+			.withPropertyValues("spring.ai.acp.harness.mcp.oauth.mode=local",
+					"spring.ai.acp.harness.mcp.oauth.store=memory")
 			.run(context -> assertThat(context).hasFailed()
 				.getFailure()
 				.rootCause()

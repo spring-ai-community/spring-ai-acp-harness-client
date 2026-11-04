@@ -527,7 +527,7 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 	 * default; and only then the request. A dashboard grouped by the model an application
 	 * asked for, while {@code on-unsupported: warn} quietly ran it on another, would be
 	 * worse than having no dashboard — and one that said "unknown" for every application
-	 * that never set {@code spring.acp.model} would be worse still.
+	 * that never set {@code spring.ai.acp.harness.model} would be worse still.
 	 */
 	private static AcpAgentObservations.TurnContext turnContext(AcpAgentSession session, AcpAgentSettings effective,
 			boolean ephemeral) {

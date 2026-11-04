@@ -72,7 +72,7 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 
 	public enum TurnLowCardinalityKeys implements KeyName {
 
-		/** The value of {@code spring.acp.runtime}. */
+		/** The value of {@code spring.ai.acp.harness.runtime}. */
 		RUNTIME {
 			@Override
 			public String asString() {

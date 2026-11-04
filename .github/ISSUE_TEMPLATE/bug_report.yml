@@ -24,7 +24,7 @@ body:
       description: Minimal, concrete steps. A small code snippet or test is ideal.
       placeholder: |
         1. Add spring-ai-acp-harness-client-boot-starter-goose
-        2. Configure spring.acp.runtime=goose
+        2. Configure spring.ai.acp.harness.runtime=goose
         3. Call agentClient.prompt().user("...").call()
     validations:
       required: true

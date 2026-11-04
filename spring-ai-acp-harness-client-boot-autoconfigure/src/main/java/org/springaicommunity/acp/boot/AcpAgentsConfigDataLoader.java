@@ -17,15 +17,16 @@ import org.springframework.core.env.PropertySource;
 
 /**
  * Reads a standalone file imported as {@code acp:<path>} as if every key in it had been
- * written under {@code spring.acp}.
+ * written under {@code spring.ai.acp.harness}.
  *
  * <p>
  * One binding model, two entry points. An application that lives in
- * {@code application.yaml} writes {@code spring.acp.runtime: goose} and gets relaxed
- * binding, profiles and {@code ${}} resolution; a buildpack or an operator that has to
- * drop a file next to the jar writes {@code runtime: goose} in, say, {@code agents.yaml},
- * imports it as {@code optional:acp:agents.yaml}, and gets all of the same, because this
- * loader only changes the keys and hands the result back to Boot's own machinery.
+ * {@code application.yaml} writes {@code spring.ai.acp.harness.runtime: goose} and gets
+ * relaxed binding, profiles and {@code ${}} resolution; a buildpack or an operator that
+ * has to drop a file next to the jar writes {@code runtime: goose} in, say,
+ * {@code agents.yaml}, imports it as {@code optional:acp:agents.yaml}, and gets all of
+ * the same, because this loader only changes the keys and hands the result back to Boot's
+ * own machinery.
  *
  * <pre>{@code
  * # agents.yaml
@@ -46,7 +47,7 @@ import org.springframework.core.env.PropertySource;
  */
 public class AcpAgentsConfigDataLoader implements ConfigDataLoader<AcpAgentsConfigDataResource> {
 
-	static final String PREFIX = "spring.acp.";
+	static final String PREFIX = "spring.ai.acp.harness.";
 
 	private final YamlPropertySourceLoader yaml = new YamlPropertySourceLoader();
 

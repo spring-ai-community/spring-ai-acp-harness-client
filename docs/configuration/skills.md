@@ -19,9 +19,11 @@ src/main/resources/
 
 ```yaml title="application.yaml"
 spring:
-  acp:
-    skills:
-      - path: skills/release-checks          # classpath directory; installed as "release-checks"
+  ai:
+    acp:
+      harness:
+        skills:
+          - path: skills/release-checks          # classpath directory; installed as "release-checks"
 ```
 
 This works from an IDE (`target/classes`) and from an executable jar. Scripts that start with a shebang are marked executable when copied out of a jar.
@@ -30,16 +32,18 @@ This works from an IDE (`target/classes`) and from an executable jar. Scripts th
 
 ```yaml
 spring:
-  acp:
-    skills:
-      - url: https://github.com/acme/agent-skills
-        path: plugins/mailgun/skills/mailgun        # directory inside the repository
-        ref: 8ae7aaf85bd1283dedb449d7fdb2192e05e27b5a  # full commit pins it; a branch or tag also works
-        sha256: 3f9c…                               # optional: expected SHA-256 of SKILL.md
+  ai:
+    acp:
+      harness:
+        skills:
+          - url: https://github.com/acme/agent-skills
+            path: plugins/mailgun/skills/mailgun        # directory inside the repository
+            ref: 8ae7aaf85bd1283dedb449d7fdb2192e05e27b5a  # full commit pins it; a branch or tag also works
+            sha256: 3f9c…                               # optional: expected SHA-256 of SKILL.md
 
-      - url: https://github.com/acme/private-skills
-        path: review-rubric
-        token: ${GITHUB_TOKEN}                      # for a private repository
+          - url: https://github.com/acme/private-skills
+            path: review-rubric
+            token: ${GITHUB_TOKEN}                      # for a private repository
 ```
 
 - Fetched with the system `git`, so `git` must be on the `PATH`. HTTPS only.
@@ -86,7 +90,7 @@ The `description` is what the agent matches a task against, so write it as *when
 
 !!! warning
 
-    A skill that runs scripts needs the agent to have a shell tool, and runs that script with the agent's environment, which it inherits from your JVM. On goose that is the `developer` extension, which goose enables by default; name it in `spring.acp.runtimes.goose.builtins` to keep it on whatever goose's own config says ([Built-in extensions](../runtimes/goose.md#built-in-extensions)). A secret the script reads (say `MAILGUN_API_KEY`) must be in your application's environment. The `spring.acp.terminal` settings do not govern the agent's own shell.
+    A skill that runs scripts needs the agent to have a shell tool, and runs that script with the agent's environment, which it inherits from your JVM. On goose that is the `developer` extension, which goose enables by default; name it in `spring.ai.acp.harness.runtimes.goose.builtins` to keep it on whatever goose's own config says ([Built-in extensions](../runtimes/goose.md#built-in-extensions)). A secret the script reads (say `MAILGUN_API_KEY`) must be in your application's environment. The `spring.ai.acp.harness.terminal` settings do not govern the agent's own shell.
 
 !!! tip
 

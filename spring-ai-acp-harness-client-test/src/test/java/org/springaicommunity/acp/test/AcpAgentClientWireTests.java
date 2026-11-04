@@ -127,7 +127,8 @@ class AcpAgentClientWireTests {
 
 	@Test
 	void namesTheModelTheAgentIsActuallySetToEvenWhenNothingAskedForOne() {
-		// An application that never set spring.acp.model is the common case, and a metric
+		// An application that never set spring.ai.acp.harness.model is the common case,
+		// and a metric
 		// tagged
 		// "unknown" for all of them would be no use. The agent advertises what it is set
 		// to; that

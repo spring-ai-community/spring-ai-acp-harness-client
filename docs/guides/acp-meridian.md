@@ -4,12 +4,12 @@
 
 | What | Where |
 | --- | --- |
-| The agent runtime | `spring.acp.runtime: goose`, or `opencode`, or the `codex` profile |
-| The model and the endpoint behind it | `spring.acp.model` and `spring.acp.provider.*` |
-| Two MCP servers, with per-user OAuth | `spring.acp.mcp-servers`, `spring.acp.mcp.oauth` |
+| The agent runtime | `spring.ai.acp.harness.runtime: goose`, or `opencode`, or the `codex` profile |
+| The model and the endpoint behind it | `spring.ai.acp.harness.model` and `spring.ai.acp.harness.provider.*` |
+| Two MCP servers, with per-user OAuth | `spring.ai.acp.harness.mcp-servers`, `spring.ai.acp.harness.mcp.oauth` |
 | The system prompt | `workspace/AGENTS.md` |
-| A skill that sends email | `spring.acp.skills`, fetched from Git into `workspace/.agents/skills/` |
-| The terminal UI | `spring-ai-acp-harness-client-console`, titled and greeted by `spring.acp.console.*` |
+| A skill that sends email | `spring.ai.acp.harness.skills`, fetched from Git into `workspace/.agents/skills/` |
+| The terminal UI | `spring-ai-acp-harness-client-console`, titled and greeted by `spring.ai.acp.harness.console.*` |
 
 ## Project layout
 
@@ -20,14 +20,14 @@ acp-meridian/
 ├── src/main/java/org/springaicommunity/acp/meridian/
 │   └── MeridianApplication.java  # main() and nothing else
 ├── src/main/resources/application.yaml
-└── workspace/                    # spring.acp.workspace
+└── workspace/                    # spring.ai.acp.harness.workspace
     ├── AGENTS.md                 # the system prompt (checked in)
     └── .agents/skills/mailgun/   # installed at startup (git-ignored)
 ```
 
 ## Dependencies
 
-All three runtime starters are on the classpath, so `spring.acp.runtime` must be set and is the only thing that picks one. `spring-ai-acp-harness-client-mcp-oauth` signs the user in to the MCP servers, and `spring-ai-acp-harness-client-console` is the whole user interface.
+All three runtime starters are on the classpath, so `spring.ai.acp.harness.runtime` must be set and is the only thing that picks one. `spring-ai-acp-harness-client-mcp-oauth` signs the user in to the MCP servers, and `spring-ai-acp-harness-client-console` is the whole user interface.
 
 ```xml title="pom.xml"
 <properties>
@@ -74,54 +74,56 @@ All three runtime starters are on the classpath, so `spring.acp.runtime` must be
 spring:
   application:
     name: acp-meridian              # also names ~/.config/acp-meridian/ for the MCP sign-ins
-  acp:
-    runtime: goose                  # the only line that picks the agent
-    workspace: ${WORKSPACE_DIR:./workspace}   # AGENTS.md lives here
+  ai:
+    acp:
+      harness:
+        runtime: goose                  # the only line that picks the agent
+        workspace: ${WORKSPACE_DIR:./workspace}   # AGENTS.md lives here
 
-    model: deepseek-ai/DeepSeek-V4-Flash-0731
-    provider:                       # a platform's OpenAI-compatible endpoint
-      id: openai
-      api-type: openai
-      base-url: ${GENAI_API_BASE}
-      api-key: ${GENAI_API_KEY}
-    on-unsupported: warn
+        model: deepseek-ai/DeepSeek-V4-Flash-0731
+        provider:                       # a platform's OpenAI-compatible endpoint
+          id: openai
+          api-type: openai
+          base-url: ${GENAI_API_BASE}
+          api-key: ${GENAI_API_KEY}
+        on-unsupported: warn
 
-    mcp-servers:                    # each user signs in; the agent never sees a token
-      - name: finops-mcp
-        url: https://mcp-gateway.example.com/finops-mcp/mcp
-        auth: oauth
-      - name: servicedesk-mcp
-        url: https://mcp-gateway.example.com/servicedesk-mcp/mcp
-        auth: oauth
-    mcp:
-      oauth:
-        mode: local                 # terminal app: browser sign-in, tokens in a mode-600 file
-        client-name: Meridian Capacity & Cost Agent
-
-    skills:                         # fetched into workspace/.agents/skills before the agent starts
-      - url: https://github.com/cpage-pivotal/claude-plugin-marketplace
-        path: plugins/mailgun/skills/mailgun
-
-    runtimes:                       # read only by the runtime it names
-      goose:
+        mcp-servers:                    # each user signs in; the agent never sees a token
+          - name: finops-mcp
+            url: https://mcp-gateway.example.com/finops-mcp/mcp
+            auth: oauth
+          - name: servicedesk-mcp
+            url: https://mcp-gateway.example.com/servicedesk-mcp/mcp
+            auth: oauth
         mcp:
-          answer-discover: true     # this gateway breaks goose's discovery probe
+          oauth:
+            mode: local                 # terminal app: browser sign-in, tokens in a mode-600 file
+            client-name: Meridian Capacity & Cost Agent
 
-    permissions:
-      policy: auto-approve          # the real gate is in AGENTS.md: confirm before createTicket
-    console:                        # spring-ai-acp-harness-client-console
-      title: Meridian Logistics — Capacity & Cost Agent
-      greeting: Ask about your capacity and cost findings, or what they are costing you.
-      session: meridian-console
-    filesystem:
-      enabled: false
-    terminal:
-      enabled: false
-    timeout: 5m
-    pool:
-      max-processes: 1
-      max-sessions-per-process: 4
-      session-ttl: 60m
+        skills:                         # fetched into workspace/.agents/skills before the agent starts
+          - url: https://github.com/cpage-pivotal/claude-plugin-marketplace
+            path: plugins/mailgun/skills/mailgun
+
+        runtimes:                       # read only by the runtime it names
+          goose:
+            mcp:
+              answer-discover: true     # this gateway breaks goose's discovery probe
+
+        permissions:
+          policy: auto-approve          # the real gate is in AGENTS.md: confirm before createTicket
+        console:                        # spring-ai-acp-harness-client-console
+          title: Meridian Logistics — Capacity & Cost Agent
+          greeting: Ask about your capacity and cost findings, or what they are costing you.
+          session: meridian-console
+        filesystem:
+          enabled: false
+        terminal:
+          enabled: false
+        timeout: 5m
+        pool:
+          max-processes: 1
+          max-sessions-per-process: 4
+          session-ttl: 60m
 
   main:
     web-application-type: none
@@ -173,7 +175,7 @@ set -a && source .envrc && set +a
 mvn package
 
 java -jar target/acp-meridian-0.1.0-SNAPSHOT.jar                              # goose
-java -jar target/acp-meridian-0.1.0-SNAPSHOT.jar --spring.acp.runtime=opencode   # same endpoint, same result
+java -jar target/acp-meridian-0.1.0-SNAPSHOT.jar --spring.ai.acp.harness.runtime=opencode   # same endpoint, same result
 java -jar target/acp-meridian-0.1.0-SNAPSHOT.jar --spring.profiles.active=codex  # OpenAI itself
 ```
 
@@ -185,14 +187,16 @@ spring:
   config:
     activate:
       on-profile: codex
-  acp:
-    runtime: codex
-    model: gpt-5.6-terra
-    provider:
-      id: openai
-      api-type: openai
-      base-url: ""                  # clear the platform endpoint
-      api-key: ${OPENAI_API_KEY}    # reaches Codex via ACP authenticate; never written to disk
+  ai:
+    acp:
+      harness:
+        runtime: codex
+        model: gpt-5.6-terra
+        provider:
+          id: openai
+          api-type: openai
+          base-url: ""                  # clear the platform endpoint
+          api-key: ${OPENAI_API_KEY}    # reaches Codex via ACP authenticate; never written to disk
 ```
 
 MCP servers, sign-in, skill and `AGENTS.md` are identical on all three.

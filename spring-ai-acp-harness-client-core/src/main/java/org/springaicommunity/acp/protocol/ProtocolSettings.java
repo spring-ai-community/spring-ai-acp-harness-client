@@ -17,8 +17,8 @@ public record ProtocolSettings(int maxVersion, boolean strict) {
 
 	public ProtocolSettings {
 		if (maxVersion < AcpProtocol.V1) {
-			throw new IllegalArgumentException(
-					"spring.acp.protocol.max-version must be at least " + AcpProtocol.V1 + " but was " + maxVersion);
+			throw new IllegalArgumentException("spring.ai.acp.harness.protocol.max-version must be at least "
+					+ AcpProtocol.V1 + " but was " + maxVersion);
 		}
 	}
 

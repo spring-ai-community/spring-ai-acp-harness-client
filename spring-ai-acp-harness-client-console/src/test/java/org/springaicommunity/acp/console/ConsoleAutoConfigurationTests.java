@@ -29,11 +29,11 @@ class ConsoleAutoConfigurationTests {
 		.withConfiguration(AutoConfigurations.of(AcpAutoConfiguration.class, ConsoleAutoConfiguration.class))
 		.withUserConfiguration(StubClient.class)
 		.withBean(Terminal.class, () -> TestTerminals.typing("").terminal())
-		.withPropertyValues("spring.acp.runtime=goose");
+		.withPropertyValues("spring.ai.acp.harness.runtime=goose");
 
 	@Test
 	void registersTheConsoleWhenEnabled() {
-		runner.withPropertyValues("spring.acp.console.enabled=true", "spring.application.name=meridian")
+		runner.withPropertyValues("spring.ai.acp.harness.console.enabled=true", "spring.application.name=meridian")
 			.run(context -> {
 				assertThat(context).hasSingleBean(ConsoleChat.class)
 					.hasSingleBean(ConsoleRenderer.class)
@@ -44,13 +44,15 @@ class ConsoleAutoConfigurationTests {
 
 	@Test
 	void bindsTheSessionName() {
-		runner.withPropertyValues("spring.acp.console.enabled=true", "spring.acp.console.session=meridian-console")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.console.enabled=true",
+					"spring.ai.acp.harness.console.session=meridian-console")
 			.run(context -> assertThat(context.getBean(ConsoleChat.class).session()).isEqualTo("meridian-console"));
 	}
 
 	@Test
 	void registersNothingWhenDisabled() {
-		runner.withPropertyValues("spring.acp.console.enabled=false")
+		runner.withPropertyValues("spring.ai.acp.harness.console.enabled=false")
 			.run(context -> assertThat(context).doesNotHaveBean(ConsoleChat.class)
 				.doesNotHaveBean(ConsoleRenderer.class)
 				.doesNotHaveBean(PermissionPrompt.class));
@@ -67,13 +69,15 @@ class ConsoleAutoConfigurationTests {
 	void backsOffWhenTheAgentIsDisabled() {
 		new ApplicationContextRunner()
 			.withConfiguration(AutoConfigurations.of(AcpAutoConfiguration.class, ConsoleAutoConfiguration.class))
-			.withPropertyValues("spring.acp.enabled=false", "spring.acp.console.enabled=true")
+			.withPropertyValues("spring.ai.acp.harness.enabled=false", "spring.ai.acp.harness.console.enabled=true")
 			.run(context -> assertThat(context).hasNotFailed().doesNotHaveBean(ConsoleChat.class));
 	}
 
 	@Test
 	void theConsoleIsWhoPolicyAskAsks() {
-		runner.withPropertyValues("spring.acp.console.enabled=true", "spring.acp.permissions.policy=ask")
+		runner
+			.withPropertyValues("spring.ai.acp.harness.console.enabled=true",
+					"spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> {
 				assertThat(context).hasNotFailed();
 				TerminalPermissionPrompt prompt = context.getBean(TerminalPermissionPrompt.class);
@@ -87,7 +91,8 @@ class ConsoleAutoConfigurationTests {
 				AcpSchema.PermissionOptionKind.ALLOW_ONCE);
 		PermissionPrompt own = question -> Optional.of(allow);
 		runner.withBean(PermissionPrompt.class, () -> own)
-			.withPropertyValues("spring.acp.console.enabled=true", "spring.acp.permissions.policy=ask")
+			.withPropertyValues("spring.ai.acp.harness.console.enabled=true",
+					"spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> {
 				assertThat(context).doesNotHaveBean(TerminalPermissionPrompt.class);
 				assertThat(

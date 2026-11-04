@@ -27,8 +27,8 @@ import org.springaicommunity.acp.session.UnsupportedAcpAgentOperationException;
 import reactor.core.publisher.Flux;
 
 /**
- * An optional HTTP face for the agent, off unless {@code spring.acp.controller.enabled}
- * says otherwise.
+ * An optional HTTP face for the agent, off unless
+ * {@code spring.ai.acp.harness.controller.enabled} says otherwise.
  *
  * <p>
  * Opt-in because exposing an agent over HTTP is not a small decision: a caller who
@@ -63,7 +63,7 @@ public class AcpController {
 	}
 
 	/** Runs a turn and returns the whole answer. */
-	@PostMapping("${spring.acp.controller.path:/api/acp}/prompt")
+	@PostMapping("${spring.ai.acp.harness.controller.path:/api/acp}/prompt")
 	public ResponseEntity<PromptResponse> prompt(@RequestBody PromptRequest request, Principal principal) {
 		requireAuthorized(principal);
 		validate(request);
@@ -91,7 +91,8 @@ public class AcpController {
 	 * that decides those are safe to publish. An application that wants them has
 	 * {@code AcpAgentClient}.
 	 */
-	@PostMapping(value = "${spring.acp.controller.path:/api/acp}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	@PostMapping(value = "${spring.ai.acp.harness.controller.path:/api/acp}/stream",
+			produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 	public Flux<String> stream(@RequestBody PromptRequest request, Principal principal) {
 		requireAuthorized(principal);
 		validate(request);
@@ -105,7 +106,7 @@ public class AcpController {
 	/**
 	 * The conversations the agent has stored, when it implements {@code session/list}.
 	 */
-	@GetMapping("${spring.acp.controller.path:/api/acp}/sessions")
+	@GetMapping("${spring.ai.acp.harness.controller.path:/api/acp}/sessions")
 	public ResponseEntity<List<StoredSession>> sessions(Principal principal) {
 		requireAuthorized(principal);
 		try {
@@ -117,7 +118,7 @@ public class AcpController {
 	}
 
 	/** Ends a named session. Always succeeds, whether or not the agent knew about it. */
-	@DeleteMapping("${spring.acp.controller.path:/api/acp}/sessions/{name}")
+	@DeleteMapping("${spring.ai.acp.harness.controller.path:/api/acp}/sessions/{name}")
 	public ResponseEntity<Void> closeSession(@PathVariable String name, Principal principal) {
 		requireAuthorized(principal);
 		agent.sessions().close(name);
@@ -128,7 +129,7 @@ public class AcpController {
 	 * Unauthenticated on purpose: it says whether the agent is up and nothing about what
 	 * it does.
 	 */
-	@GetMapping("${spring.acp.controller.path:/api/acp}/health")
+	@GetMapping("${spring.ai.acp.harness.controller.path:/api/acp}/health")
 	public ResponseEntity<HealthResponse> health() {
 		boolean available = agent.isAlive();
 		return ResponseEntity.status(available ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
@@ -184,7 +185,7 @@ public class AcpController {
 		if (!properties.allowRequestOverrides()
 				&& (request.model() != null || request.provider() != null || request.mode() != null)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					"model, provider and mode overrides are disabled; see spring.acp.controller"
+					"model, provider and mode overrides are disabled; see spring.ai.acp.harness.controller"
 							+ ".allow-request-overrides");
 		}
 	}

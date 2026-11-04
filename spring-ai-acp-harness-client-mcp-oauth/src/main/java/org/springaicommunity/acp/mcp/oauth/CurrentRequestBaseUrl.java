@@ -16,7 +16,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * triggered the registration is the best evidence of what that is. Behind a proxy that
  * means the application must honour {@code X-Forwarded-*}
  * ({@code server.forward-headers-strategy}); where it cannot know, set
- * {@code spring.acp.mcp.oauth.base-url}, which wins.
+ * {@code spring.ai.acp.harness.mcp.oauth.base-url}, which wins.
  */
 final class CurrentRequestBaseUrl implements Supplier<Optional<String>> {
 

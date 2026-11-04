@@ -7,6 +7,12 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ### Changed
 
+- **Breaking:** configuration properties move from `spring.acp.*` to `spring.ai.acp.harness.*`,
+  and environment variables from `SPRING_ACP_*` to `SPRING_AI_ACP_HARNESS_*`. The old root is shared
+  with `acp-autoconfig` (`spring.acp.client.*`, `spring.acp.agent.*`), and the new one follows the
+  `spring.ai.*` convention of the Spring AI Community projects. Update your configuration: the old
+  keys are no longer read, and nothing reports them, so a `spring.acp.*.enabled=false` stops taking
+  effect. The `acp:` config import prefix, metric names and Java packages are unchanged.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
 

@@ -199,7 +199,7 @@ final class Archives {
 			throw new IOException("Could not unpack " + name + ": the system tar exited " + process.exitValue()
 					+ (output.isEmpty() ? "" : " saying '" + output + "'")
 					+ ". This format needs a tar on the PATH, or install the agent yourself and point"
-					+ " spring.acp.runtimes at it");
+					+ " spring.ai.acp.harness.runtimes at it");
 		}
 	}
 

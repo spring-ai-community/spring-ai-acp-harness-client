@@ -23,9 +23,9 @@
 
     <dependencies>
         <!--
-          Three agents on one classpath, and nothing but spring.acp.runtime chooses between them —
+          Three agents on one classpath, and nothing but spring.ai.acp.harness.runtime chooses between them —
           which is also why application.yaml has to name one. The registry starter makes
-          spring.acp.runtime accept an agent none of the three adapters claims.
+          spring.ai.acp.harness.runtime accept an agent none of the three adapters claims.
         -->
         <dependency>
             <groupId>org.springaicommunity</groupId>

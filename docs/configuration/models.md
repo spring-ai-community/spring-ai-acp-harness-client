@@ -4,12 +4,14 @@
 
 ```yaml
 spring:
-  acp:
-    model: gpt-5.6-terra
-    on-unsupported: fail       # fail | warn (default) | ignore
+  ai:
+    acp:
+      harness:
+        model: gpt-5.6-terra
+        on-unsupported: fail       # fail | warn (default) | ignore
 ```
 
-`spring.acp.model` is a **request**. When a session opens, Spring AI ACP Harness Client reads the options the agent advertises and matches the request against them, in order: exact id, display name, `<provider>/<model>`, then a suffix match that must be unique. Only then does it send `session/set_config_option`. It never sends a value the agent did not advertise, because some agents (goose) accept an unknown model id and fail later, inside the turn.
+`spring.ai.acp.harness.model` is a **request**. When a session opens, Spring AI ACP Harness Client reads the options the agent advertises and matches the request against them, in order: exact id, display name, `<provider>/<model>`, then a suffix match that must be unique. Only then does it send `session/set_config_option`. It never sends a value the agent did not advertise, because some agents (goose) accept an unknown model id and fail later, inside the turn.
 
 When nothing matches, `on-unsupported` decides:
 
@@ -33,18 +35,20 @@ Override per turn with `.options(o -> o.model("gpt-5.6-sol"))`. Options are nego
 
 ## Provider credentials
 
-An agent either already has credentials (its own login or config file), or you give it one through `spring.acp.provider`. The provider block is fixed at process start and never per request.
+An agent either already has credentials (its own login or config file), or you give it one through `spring.ai.acp.harness.provider`. The provider block is fixed at process start and never per request.
 
 ```yaml
 spring:
-  acp:
-    model: gpt-5.6-terra
-    provider:
-      id: openai                  # negotiated: the provider as the agent names it
-      api-type: openai            # the API dialect; also names the env vars (OPENAI_API_KEY, …)
-      api-key: ${OPENAI_API_KEY}  # never logged
-      # base-url: …               # only for an endpoint of your own; see below
-      # headers: { X-Team: platform }
+  ai:
+    acp:
+      harness:
+        model: gpt-5.6-terra
+        provider:
+          id: openai                  # negotiated: the provider as the agent names it
+          api-type: openai            # the API dialect; also names the env vars (OPENAI_API_KEY, …)
+          api-key: ${OPENAI_API_KEY}  # never logged
+          # base-url: …               # only for an endpoint of your own; see below
+          # headers: { X-Team: platform }
 ```
 
 | Property | Meaning |
@@ -63,14 +67,16 @@ Point the agent at a platform gateway, a proxy, or a model server you run, with 
 
 ```yaml
 spring:
-  acp:
-    runtime: goose
-    model: deepseek-ai/DeepSeek-V4-Flash-0731
-    provider:
-      id: openai
-      api-type: openai
-      base-url: https://gateway.example.com/team-x/openai   # "/v1" is added when there is no version segment
-      api-key: ${GENAI_API_KEY}
+  ai:
+    acp:
+      harness:
+        runtime: goose
+        model: deepseek-ai/DeepSeek-V4-Flash-0731
+        provider:
+          id: openai
+          api-type: openai
+          base-url: https://gateway.example.com/team-x/openai   # "/v1" is added when there is no version segment
+          api-key: ${GENAI_API_KEY}
 ```
 
 With `base-url` set, the **endpoint's own `/models` listing** decides which models exist, not the agent's built-in catalogue, and the model is applied even though the agent never advertised it (`Mechanism.ENDPOINT`). An endpoint that publishes no listing refuses nothing. This applies to `model` only; `mode` and `provider.id` are still checked against the agent.
@@ -84,7 +90,7 @@ With `base-url` set, the **endpoint's own `/models` listing** decides which mode
 
 !!! danger "Important"
 
-    The endpoint has to speak the agent's dialect. codex-acp 1.12+ supports only the OpenAI **Responses** API, so a gateway that serves only `/chat/completions` fails inside Codex's first turn. Goose and OpenCode work with either. When one runtime needs a different endpoint, give it its own profile ([Swapping the runtime](../runtimes/index.md#swapping-the-runtime)). To pin goose to one dialect, set `OPENAI_BASE_PATH` in `spring.acp.runtimes.goose.env`.
+    The endpoint has to speak the agent's dialect. codex-acp 1.12+ supports only the OpenAI **Responses** API, so a gateway that serves only `/chat/completions` fails inside Codex's first turn. Goose and OpenCode work with either. When one runtime needs a different endpoint, give it its own profile ([Swapping the runtime](../runtimes/index.md#swapping-the-runtime)). To pin goose to one dialect, set `OPENAI_BASE_PATH` in `spring.ai.acp.harness.runtimes.goose.env`.
 
 ## Tanzu AI Models on Cloud Foundry
 
@@ -95,16 +101,16 @@ cf create-service genai tanzu-all-models my-models
 cf bind-service my-app my-models
 ```
 
-- The binding sets `spring.acp.provider.base-url` to its `api_base` plus the wire format its catalog names (`<api_base>/openai`, as java-cfenv builds it), and `api-key` to its key. It sets `provider.id` and `api-type` to `openai` if they are unset. A service whose catalog names another wire format is not used.
+- The binding sets `spring.ai.acp.harness.provider.base-url` to its `api_base` plus the wire format its catalog names (`<api_base>/openai`, as java-cfenv builds it), and `api-key` to its key. It sets `provider.id` and `api-type` to `openai` if they are unset. A service whose catalog names another wire format is not used.
 - A binding is recognised by a label starting `genai` or `ai-models`, or a `genai` tag, and needs a `credentials.endpoint` with `api_base` and `api_key`.
-- Without a configured `spring.acp.model`, the first model the service's catalog (`config_url`) marks `TOOLS`-capable is chosen. If the catalog cannot be read, no model is chosen, and a warning says to set one.
-- **Your own configuration wins, as a whole.** If `spring.acp.provider` sets a `base-url` or `api-key`, the binding is not used, so a key is never paired with another service's endpoint. A blank value (`${OPENAI_API_KEY:}` with the variable unset) counts as unset, so one `application.yaml` can serve both a laptop and the platform.
+- Without a configured `spring.ai.acp.harness.model`, the first model the service's catalog (`config_url`) marks `TOOLS`-capable is chosen. If the catalog cannot be read, no model is chosen, and a warning says to set one.
+- **Your own configuration wins, as a whole.** If `spring.ai.acp.harness.provider` sets a `base-url` or `api-key`, the binding is not used, so a key is never paired with another service's endpoint. A blank value (`${OPENAI_API_KEY:}` with the variable unset) counts as unset, so one `application.yaml` can serve both a laptop and the platform.
 - A provider `id` or `api-type` other than `openai` also leaves the binding unused.
 
 | Property | Default | Meaning |
 | --- | --- | --- |
-| `spring.acp.tanzu-ai.enabled` | `true` | Use a bound Tanzu AI Models service as the provider. |
-| `spring.acp.tanzu-ai.service-name` | — | Which bound service to use when there are several; the first by default. |
+| `spring.ai.acp.harness.tanzu-ai.enabled` | `true` | Use a bound Tanzu AI Models service as the provider. |
+| `spring.ai.acp.harness.tanzu-ai.service-name` | — | Which bound service to use when there are several; the first by default. |
 
 !!! note
 
@@ -112,7 +118,7 @@ cf bind-service my-app my-models
 
 ## Mode
 
-`spring.acp.mode` selects the agent's session mode, and is negotiated exactly like `model`. Its values are the agent's own:
+`spring.ai.acp.harness.mode` selects the agent's session mode, and is negotiated exactly like `model`. Its values are the agent's own:
 
 | Runtime | Default | Asks before acting | Option id |
 | --- | --- | --- | --- |
@@ -120,4 +126,4 @@ cf bind-service my-app my-models
 | codex | `agent` | `plan` | `collaboration_mode`; sandbox presets are `mode` ([details](../runtimes/codex.md#sandbox-and-approvals)) |
 | opencode | `build` | `plan` | `mode`; custom agents add values ([details](../runtimes/opencode.md#modes-and-custom-agents)) |
 
-Mode matters for safety: see [Permissions](permissions.md). Other agent-specific tuning, such as reasoning effort, belongs in tier 3: `spring.acp.runtimes.codex.config-toml.model_reasoning_effort: high`.
+Mode matters for safety: see [Permissions](permissions.md). Other agent-specific tuning, such as reasoning effort, belongs in tier 3: `spring.ai.acp.harness.runtimes.codex.config-toml.model_reasoning_effort: high`.

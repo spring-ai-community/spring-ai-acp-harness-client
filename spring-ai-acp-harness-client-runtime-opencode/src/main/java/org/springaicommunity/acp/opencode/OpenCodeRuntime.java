@@ -41,12 +41,12 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * models are named {@code openai/gpt-5.4-mini}. A portable {@code model: gpt-5.4-mini}
  * would therefore match nothing on a literal comparison. The core handles this —
  * {@code SelectMatcher} tries {@code <provider>/<model>} and then a unique suffix match —
- * so {@code spring.acp.model} means the same thing here as everywhere else, with
- * {@code spring.acp.provider.id} disambiguating when two providers offer a model of the
- * same name.
+ * so {@code spring.ai.acp.harness.model} means the same thing here as everywhere else,
+ * with {@code spring.ai.acp.harness.provider.id} disambiguating when two providers offer
+ * a model of the same name.
  *
  * <p>
- * Tier-3 options, under {@code spring.acp.runtimes.opencode}:
+ * Tier-3 options, under {@code spring.ai.acp.harness.runtimes.opencode}:
  *
  * <pre>{@code
  * command: /opt/opencode/bin/opencode

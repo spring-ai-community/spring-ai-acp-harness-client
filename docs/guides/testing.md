@@ -5,7 +5,7 @@
 Switch the auto-configuration off and mock the client. No agent process, no provider key:
 
 ```java
-@SpringBootTest(properties = "spring.acp.enabled=false")
+@SpringBootTest(properties = "spring.ai.acp.harness.enabled=false")
 class ReviewControllerTests {
 
     @MockitoBean

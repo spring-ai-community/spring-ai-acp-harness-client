@@ -13,8 +13,8 @@ import org.springaicommunity.acp.config.AcpAgentOptions;
  * Signature-for-signature what that interface had, so the migration is a rename and a
  * change of option type rather than a rewrite: {@code GooseExecutor} becomes
  * {@code AcpAgentExecutor} and {@code GooseOptions} becomes {@link AcpAgentOptions}. What
- * an application gets in return for the rename is that {@code spring.acp.runtime} now
- * decides which agent answers.
+ * an application gets in return for the rename is that
+ * {@code spring.ai.acp.harness.runtime} now decides which agent answers.
  *
  * <p>
  * Two methods did not come across, both because they were Goose's rather than the

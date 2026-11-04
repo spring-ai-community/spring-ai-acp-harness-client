@@ -67,12 +67,12 @@ class TanzuAiEnvironmentPostProcessorTests {
 
 		// One segment below api_base, named by the catalog's wire format, as java-cfenv
 		// builds it.
-		assertThat(environment.getProperty("spring.acp.provider.base-url"))
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url"))
 			.isEqualTo("https://genai.example.com/tanzu-models/openai");
-		assertThat(environment.getProperty("spring.acp.provider.api-key")).isEqualTo("key-for-tanzu-models");
-		assertThat(environment.getProperty("spring.acp.provider.id")).isEqualTo("openai");
-		assertThat(environment.getProperty("spring.acp.provider.api-type")).isEqualTo("openai");
-		assertThat(environment.getProperty("spring.acp.model")).isEqualTo("gemma-4-31b");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.api-key")).isEqualTo("key-for-tanzu-models");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.id")).isEqualTo("openai");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.api-type")).isEqualTo("openai");
+		assertThat(environment.getProperty("spring.ai.acp.harness.model")).isEqualTo("gemma-4-31b");
 		assertThat(catalogRequests)
 			.containsExactly("https://models.example.com/tanzu-models/config key-for-tanzu-models");
 	}
@@ -80,12 +80,12 @@ class TanzuAiEnvironmentPostProcessorTests {
 	@Test
 	void aConfiguredModelIsKept() {
 		bind(binding("genai", "tanzu-models", "https://genai.example.com/tanzu-models"));
-		environment.setProperty("spring.acp.model", "deepseek-v4");
+		environment.setProperty("spring.ai.acp.harness.model", "deepseek-v4");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.model")).isEqualTo("deepseek-v4");
-		assertThat(environment.getProperty("spring.acp.provider.base-url"))
+		assertThat(environment.getProperty("spring.ai.acp.harness.model")).isEqualTo("deepseek-v4");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url"))
 			.isEqualTo("https://genai.example.com/tanzu-models/openai");
 	}
 
@@ -95,7 +95,7 @@ class TanzuAiEnvironmentPostProcessorTests {
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url"))
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url"))
 			.isEqualTo("https://genai.example.com/tanzu-models/openai");
 	}
 
@@ -107,31 +107,31 @@ class TanzuAiEnvironmentPostProcessorTests {
 				{"wireFormat":"ANTHROPIC","advertisedModels":[{"name":"m","capabilities":["TOOLS"]}]}""")
 			.postProcessEnvironment(environment, new SpringApplication());
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url")).isNull();
 	}
 
 	@Test
 	void blankProviderValuesCountAsNotConfigured() {
 		bind(binding("genai", "tanzu-models", "https://genai.example.com/openai"));
-		environment.setProperty("spring.acp.provider.api-key", "");
-		environment.setProperty("spring.acp.provider.base-url", " ");
-		environment.setProperty("spring.acp.model", "");
+		environment.setProperty("spring.ai.acp.harness.provider.api-key", "");
+		environment.setProperty("spring.ai.acp.harness.provider.base-url", " ");
+		environment.setProperty("spring.ai.acp.harness.model", "");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.api-key")).isEqualTo("key-for-tanzu-models");
-		assertThat(environment.getProperty("spring.acp.model")).isEqualTo("gemma-4-31b");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.api-key")).isEqualTo("key-for-tanzu-models");
+		assertThat(environment.getProperty("spring.ai.acp.harness.model")).isEqualTo("gemma-4-31b");
 	}
 
 	@Test
 	void aProviderTheApplicationConfiguredIsLeftAlone() {
 		bind(binding("genai", "tanzu-models", "https://genai.example.com/openai"));
-		environment.setProperty("spring.acp.provider.api-key", "sk-my-own");
+		environment.setProperty("spring.ai.acp.harness.provider.api-key", "sk-my-own");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.api-key")).isEqualTo("sk-my-own");
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.api-key")).isEqualTo("sk-my-own");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url")).isNull();
 		assertThat(environment.getPropertySources().contains(TanzuAiEnvironmentPostProcessor.PROPERTY_SOURCE_NAME))
 			.isFalse();
 	}
@@ -139,33 +139,33 @@ class TanzuAiEnvironmentPostProcessorTests {
 	@Test
 	void aProviderThatIsNotOpenAiIsLeftAlone() {
 		bind(binding("genai", "tanzu-models", "https://genai.example.com/openai"));
-		environment.setProperty("spring.acp.provider.id", "anthropic");
+		environment.setProperty("spring.ai.acp.harness.provider.id", "anthropic");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url")).isNull();
 	}
 
 	@Test
 	void theServiceNameChoosesAmongSeveralBindings() {
 		bind(binding("genai", "first", "https://genai.example.com/first/openai"),
 				binding("ai-models", "second", "https://genai.example.com/second/openai"));
-		environment.setProperty("spring.acp.tanzu-ai.service-name", "second");
+		environment.setProperty("spring.ai.acp.harness.tanzu-ai.service-name", "second");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url"))
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url"))
 			.isEqualTo("https://genai.example.com/second/openai");
 	}
 
 	@Test
 	void anUnknownServiceNameUsesNothing() {
 		bind(binding("genai", "first", "https://genai.example.com/first/openai"));
-		environment.setProperty("spring.acp.tanzu-ai.service-name", "missing");
+		environment.setProperty("spring.ai.acp.harness.tanzu-ai.service-name", "missing");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url")).isNull();
 	}
 
 	@Test
@@ -177,7 +177,8 @@ class TanzuAiEnvironmentPostProcessorTests {
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isEqualTo("https://m.example.com/openai");
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url"))
+			.isEqualTo("https://m.example.com/openai");
 		assertThat(catalogRequests).containsExactly("https://m.example.com/config k");
 	}
 
@@ -189,17 +190,17 @@ class TanzuAiEnvironmentPostProcessorTests {
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url")).isNull();
 	}
 
 	@Test
 	void canBeTurnedOff() {
 		bind(binding("genai", "tanzu-models", "https://genai.example.com/openai"));
-		environment.setProperty("spring.acp.tanzu-ai.enabled", "false");
+		environment.setProperty("spring.ai.acp.harness.tanzu-ai.enabled", "false");
 
 		process();
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url")).isNull();
 	}
 
 	@Test
@@ -210,9 +211,9 @@ class TanzuAiEnvironmentPostProcessorTests {
 			throw new IOException("HTTP 503");
 		}).postProcessEnvironment(environment, new SpringApplication());
 
-		assertThat(environment.getProperty("spring.acp.provider.base-url"))
+		assertThat(environment.getProperty("spring.ai.acp.harness.provider.base-url"))
 			.isEqualTo("https://genai.example.com/openai");
-		assertThat(environment.getProperty("spring.acp.model")).isNull();
+		assertThat(environment.getProperty("spring.ai.acp.harness.model")).isNull();
 	}
 
 	@Test

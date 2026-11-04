@@ -17,9 +17,9 @@ import org.springaicommunity.acp.workspace.TerminalAccess;
  * The resolved, runtime-neutral configuration an {@code AcpAgentClient} runs with.
  *
  * <p>
- * Deliberately free of Spring types. The Boot module binds {@code spring.acp.*} into
- * this, but the core library stays usable — and testable — with Spring absent from the
- * classpath.
+ * Deliberately free of Spring types. The Boot module binds
+ * {@code spring.ai.acp.harness.*} into this, but the core library stays usable — and
+ * testable — with Spring absent from the classpath.
  *
  * <p>
  * All three configuration tiers appear here, and the type of each field says which tier

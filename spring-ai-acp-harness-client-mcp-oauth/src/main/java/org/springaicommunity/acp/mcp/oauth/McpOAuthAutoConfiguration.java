@@ -93,8 +93,8 @@ public class McpOAuthAutoConfiguration {
 			ObjectProvider<FileMcpOAuthStore> file) {
 		return switch (properties.effectiveStore()) {
 			case FILE -> file.getObject().registrations();
-			case JDBC ->
-				throw new IllegalStateException("spring.acp.mcp.oauth.store=jdbc needs spring-jdbc on the classpath");
+			case JDBC -> throw new IllegalStateException(
+					"spring.ai.acp.harness.mcp.oauth.store=jdbc needs spring-jdbc on the classpath");
 			case MEMORY -> new InMemoryMcpClientRegistrationRepository();
 		};
 	}
@@ -159,8 +159,8 @@ public class McpOAuthAutoConfiguration {
 		}
 		FileMcpOAuthStore store = file.getIfAvailable();
 		if (store == null) {
-			throw new IllegalStateException("spring.acp.mcp.oauth.mode=local keeps its sign-ins in a file; "
-					+ "leave spring.acp.mcp.oauth.store unset or set it to file");
+			throw new IllegalStateException("spring.ai.acp.harness.mcp.oauth.mode=local keeps its sign-ins in a file; "
+					+ "leave spring.ai.acp.harness.mcp.oauth.store unset or set it to file");
 		}
 		return new LoopbackSignIn(store.registrations(), authorizedClients,
 				prompt.getIfAvailable(() -> AuthorizationPrompt.browser(System.out)), properties.getSignInTimeout());
@@ -208,7 +208,7 @@ public class McpOAuthAutoConfiguration {
 	 */
 	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnClass(name = "org.springframework.jdbc.core.JdbcOperations")
-	@ConditionalOnProperty(name = "spring.acp.mcp.oauth.store", havingValue = "jdbc")
+	@ConditionalOnProperty(name = "spring.ai.acp.harness.mcp.oauth.store", havingValue = "jdbc")
 	static class Jdbc {
 
 		@Bean
@@ -239,8 +239,9 @@ public class McpOAuthAutoConfiguration {
 				if (operations instanceof JdbcTemplate template && template.getDataSource() != null) {
 					return new DataSourceTransactionManager(template.getDataSource());
 				}
-				throw new IllegalStateException("spring.acp.mcp.oauth.store=jdbc needs a PlatformTransactionManager "
-						+ "to lock refreshes across instances");
+				throw new IllegalStateException(
+						"spring.ai.acp.harness.mcp.oauth.store=jdbc needs a PlatformTransactionManager "
+								+ "to lock refreshes across instances");
 			});
 			return new JdbcRefreshLock(new TransactionTemplate(manager), operations);
 		}
@@ -248,8 +249,9 @@ public class McpOAuthAutoConfiguration {
 		private static JdbcOperations requireJdbc(ObjectProvider<JdbcOperations> jdbc) {
 			JdbcOperations operations = jdbc.getIfAvailable();
 			if (operations == null) {
-				throw new IllegalStateException("spring.acp.mcp.oauth.store=jdbc needs a JdbcOperations bean; "
-						+ "add spring-boot-starter-jdbc and a DataSource");
+				throw new IllegalStateException(
+						"spring.ai.acp.harness.mcp.oauth.store=jdbc needs a JdbcOperations bean; "
+								+ "add spring-boot-starter-jdbc and a DataSource");
 			}
 			return operations;
 		}
@@ -262,7 +264,7 @@ public class McpOAuthAutoConfiguration {
 		@Override
 		public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
 			McpOAuthProperties properties = Binder.get(context.getEnvironment())
-				.bind("spring.acp.mcp.oauth", McpOAuthProperties.class)
+				.bind("spring.ai.acp.harness.mcp.oauth", McpOAuthProperties.class)
 				.orElseGet(McpOAuthProperties::new);
 			return properties.effectiveStore() == McpOAuthProperties.Store.FILE
 					? ConditionOutcome.match("MCP sign-ins are kept in a file")
@@ -277,7 +279,7 @@ public class McpOAuthAutoConfiguration {
 		@Override
 		public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
 			List<AcpProperties.McpServer> servers = Binder.get(context.getEnvironment())
-				.bind("spring.acp.mcp-servers", Bindable.listOf(AcpProperties.McpServer.class))
+				.bind("spring.ai.acp.harness.mcp-servers", Bindable.listOf(AcpProperties.McpServer.class))
 				.orElse(List.of());
 			boolean any = servers.stream().anyMatch(server -> server.auth() == AcpProperties.McpAuth.OAUTH);
 			return any ? ConditionOutcome.match("an MCP server is configured with auth: oauth")

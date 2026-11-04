@@ -27,5 +27,5 @@ body:
     attributes:
       label: Scope
       options:
-        - label: This feature belongs in the portable core (spring.acp.*), not a single agent's adapter
+        - label: This feature belongs in the portable core (spring.ai.acp.harness.*), not a single agent's adapter
         - label: I can help implement this

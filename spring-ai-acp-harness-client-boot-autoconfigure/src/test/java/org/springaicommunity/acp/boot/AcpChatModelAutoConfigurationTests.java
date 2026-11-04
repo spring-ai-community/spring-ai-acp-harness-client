@@ -23,7 +23,7 @@ class AcpChatModelAutoConfigurationTests {
 	private final ApplicationContextRunner runner = new ApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(AcpAutoConfiguration.class, AcpChatModelAutoConfiguration.class))
 		.withUserConfiguration(StubClient.class)
-		.withPropertyValues("spring.acp.runtime=goose");
+		.withPropertyValues("spring.ai.acp.harness.runtime=goose");
 
 	@Test
 	void registersTheAgentAsAChatModel() {
@@ -31,17 +31,19 @@ class AcpChatModelAutoConfigurationTests {
 	}
 
 	@Test
-	@DisplayName("the model and mode from spring.acp.* become the chat model's defaults")
+	@DisplayName("the model and mode from spring.ai.acp.harness.* become the chat model's defaults")
 	void carriesThePortableOptionsIntoTheDefaults() {
-		runner.withPropertyValues("spring.acp.model=gpt-5.4-mini", "spring.acp.mode=plan").run(context -> {
-			AcpChatOptions options = (AcpChatOptions) context.getBean(AcpChatModel.class).getOptions();
-			assertThat(options.getModel()).isEqualTo("gpt-5.4-mini");
-			assertThat(options.getMode()).isEqualTo("plan");
-			// Deliberately not a session: one bean naming one session would make the
-			// whole
-			// application share a conversation, invisibly, until two callers interfered.
-			assertThat(options.getSession()).isNull();
-		});
+		runner.withPropertyValues("spring.ai.acp.harness.model=gpt-5.4-mini", "spring.ai.acp.harness.mode=plan")
+			.run(context -> {
+				AcpChatOptions options = (AcpChatOptions) context.getBean(AcpChatModel.class).getOptions();
+				assertThat(options.getModel()).isEqualTo("gpt-5.4-mini");
+				assertThat(options.getMode()).isEqualTo("plan");
+				// Deliberately not a session: one bean naming one session would make the
+				// whole
+				// application share a conversation, invisibly, until two callers
+				// interfered.
+				assertThat(options.getSession()).isNull();
+			});
 	}
 
 	@Test
@@ -54,7 +56,7 @@ class AcpChatModelAutoConfigurationTests {
 
 	@Test
 	void canBeTurnedOffWithoutRemovingTheDependency() {
-		runner.withPropertyValues("spring.acp.chat-model.enabled=false")
+		runner.withPropertyValues("spring.ai.acp.harness.chat-model.enabled=false")
 			.run(context -> assertThat(context).doesNotHaveBean(AcpChatModel.class));
 	}
 

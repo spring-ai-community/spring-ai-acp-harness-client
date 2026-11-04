@@ -31,7 +31,7 @@ import io.micrometer.observation.ObservationRegistry;
  */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass(ObservationRegistry.class)
-@ConditionalOnProperty(prefix = "spring.acp.observations", name = "enabled", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "spring.ai.acp.harness.observations", name = "enabled", matchIfMissing = true)
 class AcpObservationConfiguration {
 
 	@Bean

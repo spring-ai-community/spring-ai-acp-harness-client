@@ -37,7 +37,7 @@ public interface AcpAgentObservations {
 	/**
 	 * What a turn is, for something that is counting turns.
 	 *
-	 * @param runtimeId the value of {@code spring.acp.runtime}
+	 * @param runtimeId the value of {@code spring.ai.acp.harness.runtime}
 	 * @param sessionName the caller's name for the conversation, or a generated one
 	 * @param model the model the session is really using, where the negotiated tier knows
 	 * it

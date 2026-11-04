@@ -30,7 +30,7 @@ class AcpAgentsConfigDataLoaderTests {
 	Path directory;
 
 	@Test
-	@DisplayName("an acp: import is read as if every key were under spring.acp")
+	@DisplayName("an acp: import is read as if every key were under spring.ai.acp.harness")
 	void prefixesTheDocument() throws IOException {
 		Path file = write("agents.yaml", """
 				runtime: goose
@@ -45,10 +45,10 @@ class AcpAgentsConfigDataLoaderTests {
 
 		try (ConfigurableApplicationContext context = start("optional:acp:" + file)) {
 			Environment environment = context.getEnvironment();
-			assertThat(environment.getProperty("spring.acp.runtime")).isEqualTo("goose");
-			assertThat(environment.getProperty("spring.acp.timeout")).isEqualTo("90s");
-			assertThat(environment.getProperty("spring.acp.permissions.policy")).isEqualTo("allowlist");
-			assertThat(environment.getProperty("spring.acp.runtimes.goose.builtins")).isEqualTo("developer");
+			assertThat(environment.getProperty("spring.ai.acp.harness.runtime")).isEqualTo("goose");
+			assertThat(environment.getProperty("spring.ai.acp.harness.timeout")).isEqualTo("90s");
+			assertThat(environment.getProperty("spring.ai.acp.harness.permissions.policy")).isEqualTo("allowlist");
+			assertThat(environment.getProperty("spring.ai.acp.harness.runtimes.goose.builtins")).isEqualTo("developer");
 		}
 	}
 
@@ -68,7 +68,7 @@ class AcpAgentsConfigDataLoaderTests {
 
 		try (ConfigurableApplicationContext context = start("optional:acp:" + file)) {
 			assertThat(context.getEnvironment().getProperty("spring.application.name")).isEqualTo("from-agents-yaml");
-			assertThat(context.getEnvironment().getProperty("spring.acp.runtime")).isEqualTo("goose");
+			assertThat(context.getEnvironment().getProperty("spring.ai.acp.harness.runtime")).isEqualTo("goose");
 		}
 	}
 
@@ -82,7 +82,7 @@ class AcpAgentsConfigDataLoaderTests {
 		Path file = write("agents.yaml", "runtime: opencode\n");
 
 		try (ConfigurableApplicationContext context = start("optional:" + file)) {
-			assertThat(context.getEnvironment().getProperty("spring.acp.runtime")).isNull();
+			assertThat(context.getEnvironment().getProperty("spring.ai.acp.harness.runtime")).isNull();
 			assertThat(context.getEnvironment().getProperty("runtime")).isEqualTo("opencode");
 		}
 	}
@@ -91,7 +91,7 @@ class AcpAgentsConfigDataLoaderTests {
 	@DisplayName("an optional file that is not there is not a failure")
 	void optionalAndAbsent() {
 		try (ConfigurableApplicationContext context = start("optional:acp:" + directory.resolve("agents.yaml"))) {
-			assertThat(context.getEnvironment().getProperty("spring.acp.runtime")).isNull();
+			assertThat(context.getEnvironment().getProperty("spring.ai.acp.harness.runtime")).isNull();
 		}
 	}
 
@@ -117,7 +117,7 @@ class AcpAgentsConfigDataLoaderTests {
 			.web(WebApplicationType.NONE)
 			.properties("spring.config.import=optional:acp:" + file, "chosen-runtime=codex")
 			.run()) {
-			assertThat(context.getEnvironment().getProperty("spring.acp.runtime")).isEqualTo("codex");
+			assertThat(context.getEnvironment().getProperty("spring.ai.acp.harness.runtime")).isEqualTo("codex");
 		}
 	}
 
@@ -127,7 +127,7 @@ class AcpAgentsConfigDataLoaderTests {
 
 	private static ConfigurableApplicationContext start(String location) {
 		return new SpringApplicationBuilder(Empty.class).web(WebApplicationType.NONE)
-			.properties("spring.config.import=" + location, "spring.acp.enabled=false")
+			.properties("spring.config.import=" + location, "spring.ai.acp.harness.enabled=false")
 			.run();
 	}
 

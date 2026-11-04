@@ -46,8 +46,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * abstraction.</strong> An interface only constrains signatures; three adapters can
  * implement it and still behave differently enough that an application cannot move
  * between them, which is the failure this library exists to prevent. What is asserted
- * here is exactly what {@code spring.acp.runtime} promises: change that one line and the
- * application keeps working.
+ * here is exactly what {@code spring.ai.acp.harness.runtime} promises: change that one
+ * line and the application keeps working.
  *
  * <p>
  * It therefore asserts only what ACP genuinely standardizes — sessions, turns, the
@@ -150,8 +150,8 @@ public abstract class AcpAgentRuntimeContract {
 	 *
 	 * <p>
 	 * This is a testing economy, not a recommendation: nothing here reaches
-	 * {@code spring.acp.model} or any runtime default. An application picks its own
-	 * model.
+	 * {@code spring.ai.acp.harness.model} or any runtime default. An application picks
+	 * its own model.
 	 */
 	protected List<String> preferredModels() {
 		return List.of();
@@ -559,9 +559,9 @@ public abstract class AcpAgentRuntimeContract {
 	 * splits it across two variables, Codex will only read it out of a
 	 * {@code [model_providers.*]} table, OpenCode wants a provider declared in its own
 	 * JSON — but that naming one is never silently dropped. An adapter that ignored
-	 * {@code spring.acp.provider.base-url} would leave the application talking to a
-	 * vendor it did not choose, with a key that does not work there, and nothing in the
-	 * configuration to say so.
+	 * {@code spring.ai.acp.harness.provider.base-url} would leave the application talking
+	 * to a vendor it did not choose, with a key that does not work there, and nothing in
+	 * the configuration to say so.
 	 *
 	 * <p>
 	 * The second assertion is the one that keeps {@code on-unsupported} honest:

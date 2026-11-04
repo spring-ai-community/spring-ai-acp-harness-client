@@ -15,13 +15,13 @@ import org.springaicommunity.acp.runtime.AcpAgentRuntime;
 import org.springaicommunity.acp.runtime.AcpAgentRuntimeProvider;
 
 /**
- * The runtime {@code spring.acp.runtime} chose, resolved and validated before anything is
- * launched.
+ * The runtime {@code spring.ai.acp.harness.runtime} chose, resolved and validated before
+ * anything is launched.
  *
  * <p>
  * A separate bean so that selecting a runtime and starting one are separate failures. A
- * typo in {@code spring.acp.runtime} should be a context-refresh error naming the
- * alternatives, not a process that fails to spawn.
+ * typo in {@code spring.ai.acp.harness.runtime} should be a context-refresh error naming
+ * the alternatives, not a process that fails to spawn.
  *
  * <p>
  * Registered adapters are searched first and {@link AcpAgentRuntimeProvider}s only after,
@@ -31,8 +31,8 @@ import org.springaicommunity.acp.runtime.AcpAgentRuntimeProvider;
  * same binary.
  *
  * <p>
- * Left unset, {@code spring.acp.runtime} means the one adapter on the classpath. There is
- * no default agent: an application that added
+ * Left unset, {@code spring.ai.acp.harness.runtime} means the one adapter on the
+ * classpath. There is no default agent: an application that added
  * {@code spring-ai-acp-harness-client-boot-starter-codex} has said which agent it wants,
  * and one with several adapters, or only the registry, has to say which.
  */
@@ -76,17 +76,20 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 			List<String> adapterIds) {
 		if (available.size() == 1) {
 			AcpAgentRuntime only = available.getFirst();
-			logger.info("spring.acp.runtime is not set; using '{}', the only runtime adapter on the classpath",
+			logger.info(
+					"spring.ai.acp.harness.runtime is not set; using '{}', the only runtime adapter on the classpath",
 					only.id());
 			return only;
 		}
 		if (available.isEmpty()) {
-			throw new IllegalStateException("spring.acp.runtime is not set and no runtime adapter is on the classpath;"
-					+ " add a runtime starter such as spring-ai-acp-harness-client-boot-starter-goose, or set spring.acp.runtime"
-					+ " to an agent a runtime provider supplies" + suggestion(providers));
+			throw new IllegalStateException(
+					"spring.ai.acp.harness.runtime is not set and no runtime adapter is on the classpath;"
+							+ " add a runtime starter such as spring-ai-acp-harness-client-boot-starter-goose, or set spring.ai.acp.harness.runtime"
+							+ " to an agent a runtime provider supplies" + suggestion(providers));
 		}
-		throw new IllegalStateException("spring.acp.runtime is not set and more than one runtime adapter is on the"
-				+ " classpath; set it to one of " + adapterIds);
+		throw new IllegalStateException(
+				"spring.ai.acp.harness.runtime is not set and more than one runtime adapter is on the"
+						+ " classpath; set it to one of " + adapterIds);
 	}
 
 	private static AcpAgentRuntime fromProviders(List<AcpAgentRuntimeProvider> providers, String id,
@@ -97,7 +100,7 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 				return resolved.get();
 			}
 		}
-		throw new IllegalStateException("No AcpAgentRuntime registered for spring.acp.runtime='" + id
+		throw new IllegalStateException("No AcpAgentRuntime registered for spring.ai.acp.harness.runtime='" + id
 				+ "'; registered runtimes are " + adapterIds + suggestion(providers));
 	}
 
@@ -126,11 +129,11 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 	 *
 	 * <p>
 	 * What counts as known widened in M4 and had to be bounded carefully. Accepting any
-	 * id a provider enumerates would let {@code spring.acp.runtimes.gemini} pass on a
-	 * machine with the registry jar and fail on one without it, which is a difference no
-	 * application wants to discover in production. So the id of the runtime actually
-	 * selected always passes, whatever supplied it, and the rest must be an adapter or an
-	 * id a provider will vouch for now.
+	 * id a provider enumerates would let {@code spring.ai.acp.harness.runtimes.gemini}
+	 * pass on a machine with the registry jar and fail on one without it, which is a
+	 * difference no application wants to discover in production. So the id of the runtime
+	 * actually selected always passes, whatever supplied it, and the rest must be an
+	 * adapter or an id a provider will vouch for now.
 	 */
 	private static void requireKnownTierThreeRuntimes(AcpProperties properties, List<String> adapterIds,
 			List<AcpAgentRuntimeProvider> providers, AcpAgentRuntime selected) {
@@ -147,8 +150,8 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 			unknown.add(id);
 		}
 		if (!unknown.isEmpty()) {
-			throw new IllegalStateException("spring.acp.runtimes has options for unregistered runtime(s) " + unknown
-					+ "; registered runtimes are " + adapterIds + suggestion(providers));
+			throw new IllegalStateException("spring.ai.acp.harness.runtimes has options for unregistered runtime(s) "
+					+ unknown + "; registered runtimes are " + adapterIds + suggestion(providers));
 		}
 	}
 

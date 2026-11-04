@@ -25,7 +25,7 @@ import org.springaicommunity.acp.workspace.FileSystemAccess;
 import org.springaicommunity.acp.workspace.TerminalAccess;
 
 /**
- * Binds {@code spring.acp.*}.
+ * Binds {@code spring.ai.acp.harness.*}.
  *
  * <p>
  * The three tiers of the configuration model show up here as three shapes. Portable
@@ -61,7 +61,7 @@ import org.springaicommunity.acp.workspace.TerminalAccess;
  */
 // @param mode stays above @param model: the configuration processor finds a parameter's
 // description by prefix, so below it mode would be described as model.
-@ConfigurationProperties(prefix = "spring.acp")
+@ConfigurationProperties(prefix = "spring.ai.acp.harness")
 public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @DefaultValue("5m") Duration timeout,
 		String model, @DefaultValue Provider provider, String mode, @DefaultValue("warn") OnUnsupported onUnsupported,
 		@DefaultValue List<McpServer> mcpServers, @DefaultValue Mcp mcp, @DefaultValue List<Skill> skills,
@@ -249,7 +249,7 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 * so the properties are documented and validated with the rest.
 	 *
 	 * @param enabled Use a bound Tanzu AI Models service as the provider when
-	 * {@code spring.acp.provider} sets no base-url or api-key of its own.
+	 * {@code spring.ai.acp.harness.provider} sets no base-url or api-key of its own.
 	 * @param serviceName Which bound service to use when there are several; the first by
 	 * default.
 	 */
@@ -275,8 +275,9 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 * The ACP agent registry: where the catalogue comes from, and what may be downloaded.
 	 *
 	 * <p>
-	 * Only consulted for a {@code spring.acp.runtime} that no adapter on the classpath
-	 * claims. An application running goose, codex or opencode never touches any of this.
+	 * Only consulted for a {@code spring.ai.acp.harness.runtime} that no adapter on the
+	 * classpath claims. An application running goose, codex or opencode never touches any
+	 * of this.
 	 *
 	 * <p>
 	 * Nothing here names a type from
@@ -318,10 +319,10 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 *
 	 * <p>
 	 * Setting {@code base-url} says the application has an endpoint of its own, and that
-	 * endpoint becomes the authority on which models exist: {@code spring.acp.model} is
-	 * checked against its {@code /models} listing rather than against the catalogue the
-	 * agent shipped with, and is applied even though the agent never advertised it.
-	 * Nothing else has to be configured for that.
+	 * endpoint becomes the authority on which models exist:
+	 * {@code spring.ai.acp.harness.model} is checked against its {@code /models} listing
+	 * rather than against the catalogue the agent shipped with, and is applied even
+	 * though the agent never advertised it. Nothing else has to be configured for that.
 	 *
 	 * @param id The provider's name as the agent knows it, e.g. openai.
 	 * @param apiType The API dialect, which also names the environment variables the
@@ -358,9 +359,10 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 				case ALLOWLIST -> PermissionPolicy.allowlist(allowedTools);
 				case ASK -> {
 					if (prompt == null) {
-						throw new IllegalStateException("spring.acp.permissions.policy=ask needs someone to ask: "
-								+ "a PermissionPrompt bean, which spring-ai-acp-harness-client-console registers whenever its console "
-								+ "runs (in an interactive terminal, or with spring.acp.console.enabled=true)");
+						throw new IllegalStateException(
+								"spring.ai.acp.harness.permissions.policy=ask needs someone to ask: "
+										+ "a PermissionPrompt bean, which spring-ai-acp-harness-client-console registers whenever its console "
+										+ "runs (in an interactive terminal, or with spring.ai.acp.harness.console.enabled=true)");
 					}
 					yield PermissionPolicy.ask(prompt);
 				}

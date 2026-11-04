@@ -37,7 +37,7 @@ class AcpProtocolTests {
 		assertThatThrownBy(() -> AcpProtocol.negotiated("goose", 1, 2, true))
 			.isInstanceOf(UnsupportedProtocolVersionException.class)
 			.hasMessageContaining("answered ACP v2 to an offer of v1")
-			.hasMessageContaining("spring.acp.protocol.strict=false");
+			.hasMessageContaining("spring.ai.acp.harness.protocol.strict=false");
 	}
 
 	@Test
@@ -54,7 +54,7 @@ class AcpProtocolTests {
 		assertThatThrownBy(() -> AcpProtocol.negotiated("goose", 2, 2, false))
 			.isInstanceOf(UnsupportedProtocolVersionException.class)
 			.hasMessageContaining("negotiated ACP v2")
-			.hasMessageContaining("spring.acp.protocol.max-version=1");
+			.hasMessageContaining("spring.ai.acp.harness.protocol.max-version=1");
 	}
 
 	@Test

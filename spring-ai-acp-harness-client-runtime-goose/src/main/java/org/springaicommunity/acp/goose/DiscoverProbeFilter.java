@@ -29,9 +29,9 @@ import tools.jackson.databind.node.ObjectNode;
  * header the gateway refuses outright is not passed upstream on anything else either.
  *
  * <p>
- * Opt-in ({@code spring.acp.runtimes.goose.mcp.answer-discover}) because it costs a
- * server that <em>does</em> implement discovery its newer protocol. Delete it the day
- * either side is fixed.
+ * Opt-in ({@code spring.ai.acp.harness.runtimes.goose.mcp.answer-discover}) because it
+ * costs a server that <em>does</em> implement discovery its newer protocol. Delete it the
+ * day either side is fixed.
  */
 final class DiscoverProbeFilter implements McpRequestFilter {
 

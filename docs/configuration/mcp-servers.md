@@ -8,20 +8,22 @@ Each server sets **either** `url` (HTTP) **or** `command` (stdio). Both, or neit
 
 ```yaml title="application.yaml"
 spring:
-  acp:
-    mcp-servers:
-      # Remote server over streamable HTTP.
-      - name: inventory
-        url: https://mcp.example.com/inventory/mcp
-        headers:
-          Authorization: "Bearer ${INVENTORY_TOKEN}"
+  ai:
+    acp:
+      harness:
+        mcp-servers:
+          # Remote server over streamable HTTP.
+          - name: inventory
+            url: https://mcp.example.com/inventory/mcp
+            headers:
+              Authorization: "Bearer ${INVENTORY_TOKEN}"
 
-      # Local server the agent launches as a child process.
-      - name: filesystem
-        command: npx
-        args: [ "-y", "@modelcontextprotocol/server-filesystem", "/srv/agent-workspace" ]
-        env:
-          LOG_LEVEL: info
+          # Local server the agent launches as a child process.
+          - name: filesystem
+            command: npx
+            args: [ "-y", "@modelcontextprotocol/server-filesystem", "/srv/agent-workspace" ]
+            env:
+              LOG_LEVEL: info
 ```
 
 | Field | Transport | Notes |
@@ -46,10 +48,12 @@ An MCP server the agent cannot reach is reported nowhere in ACP: the session ope
 
 ```yaml
 spring:
-  acp:
-    mcp:
-      on-server-failure: fail    # warn (default): log it and carry on; fail: refuse the session
-      detect-timeout: 2s         # how long session opening waits for a report (fail only)
+  ai:
+    acp:
+      harness:
+        mcp:
+          on-server-failure: fail    # warn (default): log it and carry on; fail: refuse the session
+          detect-timeout: 2s         # how long session opening waits for a report (fail only)
 ```
 
 ```java
@@ -75,7 +79,7 @@ McpCredentialsProvider mcpCredentials(TokenService tokens) {
 
 Each server the provider answers for is routed through a loopback proxy on `127.0.0.1`. The agent is given `http://127.0.0.1:<port>/<random-token>/<server>`; the proxy adds the headers on every forwarded request (so a token refresh lands between two tool calls) and drops the agent's own `Authorization`. Each session gets its own unguessable route, released when the session ends. A provider that throws refuses the session before the agent hears of it.
 
-An agent that shares MCP servers across its sessions changes that (`AcpAgentRuntime.mcpScope()` returns `PROCESS`; OpenCode does). Such an agent keeps one client per server name for the whole process, and every `session/new` replaces it, so all of its sessions call through the route declared last. The client therefore keeps each agent process to one principal at a time and gives that principal a single route, shared by all of their sessions and released when the last of them ends. A process that last served another principal is restarted before it is handed over. `spring.acp.pool.max-processes` is then the number of users who can hold sessions at once; beyond it a new user's session is refused with a message that says so. See [Processes, users and memory](../runtimes/opencode.md#processes-users-and-memory) for what that costs.
+An agent that shares MCP servers across its sessions changes that (`AcpAgentRuntime.mcpScope()` returns `PROCESS`; OpenCode does). Such an agent keeps one client per server name for the whole process, and every `session/new` replaces it, so all of its sessions call through the route declared last. The client therefore keeps each agent process to one principal at a time and gives that principal a single route, shared by all of their sessions and released when the last of them ends. A process that last served another principal is restarted before it is handed over. `spring.ai.acp.harness.pool.max-processes` is then the number of users who can hold sessions at once; beyond it a new user's session is refused with a message that says so. See [Processes, users and memory](../runtimes/opencode.md#processes-users-and-memory) for what that costs.
 
 ### URL from the provider
 
@@ -83,10 +87,12 @@ Some servers are only located when their credential is issued: a credential brok
 
 ```yaml
 spring:
-  acp:
-    mcp-servers:
-      - name: github
-        auth: provided             # credentials, and here the url, come from your McpCredentialsProvider
+  ai:
+    acp:
+      harness:
+        mcp-servers:
+          - name: github
+            auth: provided             # credentials, and here the url, come from your McpCredentialsProvider
 ```
 
 ```java
@@ -110,16 +116,18 @@ For MCP servers that implement the MCP authorization spec, add `spring-ai-acp-ha
 
 ```yaml title="application.yaml"
 spring:
-  acp:
-    mcp-servers:
-      - name: finops-mcp
-        url: https://gateway.example.com/finops-mcp/mcp
-        auth: oauth
-    mcp:
-      oauth:
-        mode: web                  # web (default) | local
-        client-name: Capacity Agent
-        store: jdbc                # memory (web default) | jdbc | file (local default)
+  ai:
+    acp:
+      harness:
+        mcp-servers:
+          - name: finops-mcp
+            url: https://gateway.example.com/finops-mcp/mcp
+            auth: oauth
+        mcp:
+          oauth:
+            mode: web                  # web (default) | local
+            client-name: Capacity Agent
+            store: jdbc                # memory (web default) | jdbc | file (local default)
 ```
 
 ### Web applications
@@ -145,4 +153,4 @@ The signed-in user becomes the `SessionPrincipal` of every prompt described on a
 
 ## Goose and MCP gateways
 
-Goose 1.51 opens an HTTP MCP connection with a `server/discover` probe. Some gateways answer it with an error goose cannot correlate, so goose never falls back to `initialize` and the server silently never loads. `spring.acp.runtimes.goose.mcp.answer-discover: true` answers the probe correctly on the gateway's behalf. Enable it only for gateways that need it, and remove it once either side is fixed.
+Goose 1.51 opens an HTTP MCP connection with a `server/discover` probe. Some gateways answer it with an error goose cannot correlate, so goose never falls back to `initialize` and the server silently never loads. `spring.ai.acp.harness.runtimes.goose.mcp.answer-discover: true` answers the probe correctly on the gateway's behalf. Enable it only for gateways that need it, and remove it once either side is fixed.

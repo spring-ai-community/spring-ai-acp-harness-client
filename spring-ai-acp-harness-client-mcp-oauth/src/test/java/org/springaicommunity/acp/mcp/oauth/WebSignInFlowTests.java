@@ -69,13 +69,13 @@ class WebSignInFlowTests {
 	@DynamicPropertySource
 	static void properties(DynamicPropertyRegistry registry) throws IOException {
 		Path workspace = Files.createTempDirectory("acp-mcp-oauth");
-		registry.add("spring.acp.runtime", () -> "test");
-		registry.add("spring.acp.workspace", workspace::toString);
-		registry.add("spring.acp.mcp-servers[0].name", () -> "finops-mcp");
-		registry.add("spring.acp.mcp-servers[0].url", () -> fake.mcpUrl().toString());
-		registry.add("spring.acp.mcp-servers[0].auth", () -> "oauth");
-		registry.add("spring.acp.mcp.oauth.client-name", () -> "Capacity Agent");
-		registry.add("spring.acp.mcp.oauth.allow-loopback", () -> "true");
+		registry.add("spring.ai.acp.harness.runtime", () -> "test");
+		registry.add("spring.ai.acp.harness.workspace", workspace::toString);
+		registry.add("spring.ai.acp.harness.mcp-servers[0].name", () -> "finops-mcp");
+		registry.add("spring.ai.acp.harness.mcp-servers[0].url", () -> fake.mcpUrl().toString());
+		registry.add("spring.ai.acp.harness.mcp-servers[0].auth", () -> "oauth");
+		registry.add("spring.ai.acp.harness.mcp.oauth.client-name", () -> "Capacity Agent");
+		registry.add("spring.ai.acp.harness.mcp.oauth.allow-loopback", () -> "true");
 	}
 
 	@AfterAll

@@ -6,14 +6,15 @@ import java.nio.file.Paths;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * {@code spring.acp.console.*}: the terminal chat over the application's agent.
+ * {@code spring.ai.acp.harness.console.*}: the terminal chat over the application's
+ * agent.
  *
  * <p>
  * Everything here is presentation. What the agent is — runtime, model, MCP servers,
- * skills — stays under {@code spring.acp.*}, so the same configuration serves this
- * console, a web front end and a test.
+ * skills — stays under {@code spring.ai.acp.harness.*}, so the same configuration serves
+ * this console, a web front end and a test.
  */
-@ConfigurationProperties("spring.acp.console")
+@ConfigurationProperties("spring.ai.acp.harness.console")
 public class ConsoleProperties {
 
 	/**
