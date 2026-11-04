@@ -7,6 +7,12 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ### Changed
 
+- **Breaking:** `AcpAgentClient` becomes `AcpHarnessClient`, along with `DefaultAcpHarnessClient`,
+  `AcpHarnessClientPool`, `AcpHarnessClientFactory` and `AcpHarnessClientException`, and the bean
+  `acpAgentClient` becomes `acpHarnessClient`. ACP's two roles are client and agent, so a client type
+  named for both was ambiguous, and it matched neither the project's artifacts nor its properties.
+  Replace `AcpAgentClient` with `AcpHarnessClient` to migrate. Types that describe the agent keep
+  their `AcpAgent` names, as do `AcpHarnessClient.AcpAgentResponse` and `AcpAgentStream`.
 - **Breaking:** configuration properties move from `spring.acp.*` to `spring.ai.acp.harness.*`,
   and environment variables from `SPRING_ACP_*` to `SPRING_AI_ACP_HARNESS_*`. The old root is shared
   with `acp-autoconfig` (`spring.acp.client.*`, `spring.acp.agent.*`), and the new one follows the

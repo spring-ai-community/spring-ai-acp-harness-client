@@ -36,7 +36,7 @@ import org.springaicommunity.acp.session.StoredSession;
 import reactor.core.publisher.Flux;
 
 /**
- * Several agent connections behind one {@link AcpAgentClient}.
+ * Several agent connections behind one {@link AcpHarnessClient}.
  *
  * <p>
  * An agent runs one turn at a time per session, and the thing it spends that turn doing
@@ -59,7 +59,7 @@ import reactor.core.publisher.Flux;
  * dead is closed and rebuilt on next use, up to the restart budget — and note the honest
  * limit here: a stdio agent cannot report anything, so for that transport this recovers
  * from a connection that never opened rather than one that died. See
- * {@link AcpAgentClient#isAlive()}.
+ * {@link AcpHarnessClient#isAlive()}.
  *
  * <p>
  * <strong>A runtime that shares MCP servers across its sessions gets one principal per
@@ -70,9 +70,9 @@ import reactor.core.publisher.Flux;
  * is handed over, so nothing it held carries across. {@code max-processes} is then the
  * number of users who can hold sessions at once.
  */
-public final class AcpAgentClientPool implements AcpAgentClient {
+public final class AcpHarnessClientPool implements AcpHarnessClient {
 
-	private static final Logger logger = LoggerFactory.getLogger(AcpAgentClientPool.class);
+	private static final Logger logger = LoggerFactory.getLogger(AcpHarnessClientPool.class);
 
 	/**
 	 * Sweeping four times per TTL means an evicted session is at most a quarter-TTL late.
@@ -85,7 +85,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 
 	private final PoolSettings pool;
 
-	private final Supplier<AcpAgentClient> connect;
+	private final Supplier<AcpHarnessClient> connect;
 
 	/**
 	 * Asked eagerly, on the caller's thread, since connections are chosen later on
@@ -117,15 +117,15 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	private final AtomicBoolean closed = new AtomicBoolean();
 
 	/**
-	 * A pool over the given runtime, connecting through {@link AcpAgentClientFactory}.
+	 * A pool over the given runtime, connecting through {@link AcpHarnessClientFactory}.
 	 */
-	public AcpAgentClientPool(AcpAgentRuntime runtime, AcpAgentSettings settings) {
+	public AcpHarnessClientPool(AcpAgentRuntime runtime, AcpAgentSettings settings) {
 		this(runtime, settings, AcpAgentObservations.NONE);
 	}
 
 	/** Same, with every turn on every connection reported to {@code observations}. */
-	public AcpAgentClientPool(AcpAgentRuntime runtime, AcpAgentSettings settings, AcpAgentObservations observations) {
-		this(runtime.id(), settings, () -> AcpAgentClientFactory.create(runtime, settings, observations),
+	public AcpHarnessClientPool(AcpAgentRuntime runtime, AcpAgentSettings settings, AcpAgentObservations observations) {
+		this(runtime.id(), settings, () -> AcpHarnessClientFactory.create(runtime, settings, observations),
 				runtime.mcpScope());
 	}
 
@@ -133,7 +133,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 * A pool over an arbitrary supplier of connections.
 	 * @param connect called once per connection, and again when one is replaced
 	 */
-	public AcpAgentClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpAgentClient> connect) {
+	public AcpHarnessClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpHarnessClient> connect) {
 		this(runtimeId, settings, connect, McpScope.SESSION);
 	}
 
@@ -142,7 +142,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 * @param mcpScope where the runtime keeps a session's MCP servers; see
 	 * {@link AcpAgentRuntime#mcpScope()}
 	 */
-	public AcpAgentClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpAgentClient> connect,
+	public AcpHarnessClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpHarnessClient> connect,
 			McpScope mcpScope) {
 		this.runtimeId = runtimeId;
 		this.mcpScope = mcpScope == null ? McpScope.SESSION : mcpScope;
@@ -177,7 +177,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 */
 	@Override
 	public Optional<AcpAgentInfo> agentInfo() {
-		return connected().map(AcpAgentClient::agentInfo).flatMap(Optional::stream).findFirst();
+		return connected().map(AcpHarnessClient::agentInfo).flatMap(Optional::stream).findFirst();
 	}
 
 	@Override
@@ -195,7 +195,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 */
 	@Override
 	public int protocolVersion() {
-		return connected().findFirst().map(AcpAgentClient::protocolVersion).orElse(AcpProtocol.V1);
+		return connected().findFirst().map(AcpHarnessClient::protocolVersion).orElse(AcpProtocol.V1);
 	}
 
 	@Override
@@ -266,7 +266,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 */
 	private void sweep() {
 		try {
-			slots.forEach(slot -> slot.connected().ifPresent(AcpAgentClient::evictIdleSessions));
+			slots.forEach(slot -> slot.connected().ifPresent(AcpHarnessClient::evictIdleSessions));
 			assignment.entrySet().removeIf(entry -> gone(entry) && !missedLastSweep.add(entry.getKey()));
 			missedLastSweep.retainAll(assignment.keySet());
 		}
@@ -291,7 +291,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 * opened the session. The conversation would then exist twice, on two processes,
 	 * under one name.
 	 */
-	private AcpAgentClient clientFor(String name, SessionPrincipal principal) {
+	private AcpHarnessClient clientFor(String name, SessionPrincipal principal) {
 		if (mcpScope == McpScope.PROCESS) {
 			Slot slot;
 			synchronized (placement) {
@@ -301,12 +301,12 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 					assignment.put(name, slot);
 				}
 			}
-			AcpAgentClient client = slot.client();
+			AcpHarnessClient client = slot.client();
 			assignment.putIfAbsent(name, slot);
 			return client;
 		}
 		Slot slot = assignment.computeIfAbsent(name, n -> leastLoaded());
-		AcpAgentClient client = slot.client();
+		AcpHarnessClient client = slot.client();
 		assignment.putIfAbsent(name, slot);
 		return client;
 	}
@@ -356,7 +356,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 			slot = placeOrNull(who);
 		}
 		if (slot == null) {
-			throw new AcpAgentClientException("Runtime '" + runtimeId + "' shares MCP servers across the sessions of "
+			throw new AcpHarnessClientException("Runtime '" + runtimeId + "' shares MCP servers across the sessions of "
 					+ "a process, so each process serves one user at a time, and all " + pool.maxProcesses()
 					+ " are serving others; close some sessions, or raise spring.ai.acp.harness.pool.max-processes");
 		}
@@ -428,7 +428,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 			}
 		}
 		if (best == null) {
-			throw new AcpAgentClientException("Every connection to runtime '" + runtimeId
+			throw new AcpHarnessClientException("Every connection to runtime '" + runtimeId
 					+ "' has exhausted its restart budget of " + pool.maxRestarts());
 		}
 		if (bestLoad >= pool.maxSessionsPerProcess()) {
@@ -436,7 +436,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 			// plainly.
 			sweep();
 			if (best.load() >= pool.maxSessionsPerProcess()) {
-				throw new AcpAgentClientException("Runtime '" + runtimeId + "' is holding its maximum of "
+				throw new AcpHarnessClientException("Runtime '" + runtimeId + "' is holding its maximum of "
 						+ pool.capacity() + " sessions (" + pool.maxProcesses() + " process(es) × "
 						+ pool.maxSessionsPerProcess() + "); close some, or raise spring.ai.acp.harness.pool");
 			}
@@ -444,7 +444,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 		return best;
 	}
 
-	private Stream<AcpAgentClient> connected() {
+	private Stream<AcpHarnessClient> connected() {
 		return slots.stream().map(Slot::connected).filter(Optional::isPresent).map(Optional::get);
 	}
 
@@ -452,12 +452,12 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	 * Any usable connection, for the operations that are not about one session in
 	 * particular.
 	 */
-	private AcpAgentClient any() {
+	private AcpHarnessClient any() {
 		return connected().findFirst().orElseGet(() -> leastLoaded().client());
 	}
 
 	/**
-	 * One connection's worth of the pool: at most one live {@link AcpAgentClient}, and
+	 * One connection's worth of the pool: at most one live {@link AcpHarnessClient}, and
 	 * the budget for replacing it.
 	 */
 	private final class Slot {
@@ -466,7 +466,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 
 		private final Object lock = new Object();
 
-		private AcpAgentClient client;
+		private AcpHarnessClient client;
 
 		private int restarts;
 
@@ -484,13 +484,13 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 			this.index = index;
 		}
 
-		private Optional<AcpAgentClient> connected() {
-			AcpAgentClient current = client;
+		private Optional<AcpHarnessClient> connected() {
+			AcpHarnessClient current = client;
 			return Optional.ofNullable(current);
 		}
 
 		private int load() {
-			AcpAgentClient current = client;
+			AcpHarnessClient current = client;
 			return current == null ? 0 : current.sessions().open().size();
 		}
 
@@ -506,7 +506,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 		 * would otherwise start two agents and keep one, and the one they discarded would
 		 * be a process nobody closes.
 		 */
-		private AcpAgentClient client() {
+		private AcpHarnessClient client() {
 			synchronized (lock) {
 				if (client != null && client.isAlive()) {
 					return client;
@@ -516,7 +516,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 					discard();
 					restarts++;
 					if (exhausted()) {
-						throw new AcpAgentClientException("Connection " + index + " to runtime '" + runtimeId
+						throw new AcpHarnessClientException("Connection " + index + " to runtime '" + runtimeId
 								+ "' has been replaced " + pool.maxRestarts() + " times and is being left down");
 					}
 				}
@@ -536,7 +536,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 		}
 
 		private void discard() {
-			AcpAgentClient current = client;
+			AcpHarnessClient current = client;
 			client = null;
 			if (current == null) {
 				return;
@@ -641,7 +641,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 			});
 		}
 
-		private PromptSpec delegate(AcpAgentClient client, SessionPrincipal owner) {
+		private PromptSpec delegate(AcpHarnessClient client, SessionPrincipal owner) {
 			PromptSpec spec = client.prompt().principal(owner);
 			if (sessionName != null) {
 				spec = spec.session(sessionName);
@@ -653,7 +653,7 @@ public final class AcpAgentClientPool implements AcpAgentClient {
 	}
 
 	/** A connection chosen for one turn, and what to run once the turn is over. */
-	private record Lease(AcpAgentClient client, Runnable release) {
+	private record Lease(AcpHarnessClient client, Runnable release) {
 	}
 
 	/** Session operations across every connection in the pool. */

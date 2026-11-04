@@ -85,14 +85,14 @@ public class ReviewApplication {
     }
 
     @Bean
-    ApplicationRunner demo(AcpAgentClient agent) {
+    ApplicationRunner demo(AcpHarnessClient acpHarnessClient) {
         return args -> System.out.println(
-                agent.prompt("Summarize what is in this directory").call().content());
+                acpHarnessClient.prompt("Summarize what is in this directory").call().content());
     }
 }
 ```
 
-`AcpAgentClient` is a thread-safe singleton. The agent process is started on the **first prompt**, not at context refresh: an application whose agent is misconfigured still starts, and reports the problem the first time it is used. The process is stopped when the context closes.
+`AcpHarnessClient` is a thread-safe singleton. The agent process is started on the **first prompt**, not at context refresh: an application whose agent is misconfigured still starts, and reports the problem the first time it is used. The process is stopped when the context closes.
 
 !!! tip
 

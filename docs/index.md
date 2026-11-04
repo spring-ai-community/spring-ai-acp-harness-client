@@ -2,9 +2,11 @@
 
 Spring AI ACP Harness Client drives any [Agent Client Protocol](https://agentclientprotocol.com) coding agent (Goose, Codex, OpenCode, or any of the agents in the ACP registry) from a Spring Boot application, behind one API and one configuration model.
 
+A *harness* is the coding agent runtime you drive, such as Goose, Codex or OpenCode. `AcpHarnessClient` is your application's client for it. ACP calls the two ends of the connection the client and the agent, so types that describe the far end are named `AcpAgent…`.
+
 Spring AI ACP Harness Client relates to coding agents the way Spring Data relates to databases:
 
-- application code talks to one abstraction, `AcpAgentClient`;
+- application code talks to one abstraction, `AcpHarnessClient`;
 - configuration carries options that work on **every** agent, plus a per-agent escape hatch;
 - the agent behind it is chosen by one property, `spring.ai.acp.harness.runtime`.
 
@@ -18,7 +20,7 @@ spring:
 ```
 
 ```java
-String answer = agentClient.prompt()
+String answer = acpHarnessClient.prompt()
         .session("review-123")
         .user("Inspect this change")
         .call()
@@ -45,7 +47,7 @@ config:
     wrappingWidth: 640
 ---
 flowchart TD
-    app["<b>Your application</b><br/>AcpAgentClient · AcpAgentSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
+    app["<b>Your application</b><br/>AcpHarnessClient · AcpAgentSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
     core["<b>spring-ai-acp-harness-client-core</b><br/>connection pool · session registry · config negotiation · permission policy<br/>MCP credential proxy · skill installer · workspace jail · observations"]
     subgraph adapters["Runtime adapters"]
         direction LR

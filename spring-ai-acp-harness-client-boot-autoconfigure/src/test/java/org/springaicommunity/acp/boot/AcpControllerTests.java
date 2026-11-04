@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.client.AcpAgentInfo;
 import org.springaicommunity.acp.config.AcpAgentOptions;
 import org.springaicommunity.acp.event.AcpAgentEvent;
@@ -192,7 +192,7 @@ class AcpControllerTests {
 	static class StubAcpAgent {
 
 		@Bean
-		AcpAgentClient acpAgentClient() {
+		AcpHarnessClient acpHarnessClient() {
 			return new FakeClient();
 		}
 
@@ -202,7 +202,7 @@ class AcpControllerTests {
 	 * Answers every turn with "ok" and implements none of the optional session
 	 * operations.
 	 */
-	private static final class FakeClient implements AcpAgentClient {
+	private static final class FakeClient implements AcpHarnessClient {
 
 		@Override
 		public PromptSpec prompt() {

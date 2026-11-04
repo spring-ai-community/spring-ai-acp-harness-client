@@ -9,14 +9,14 @@ Switch the auto-configuration off and mock the client. No agent process, no prov
 class ReviewControllerTests {
 
     @MockitoBean
-    AcpAgentClient agent;
+    AcpHarnessClient acpHarnessClient;
 
     @Test
     void summarizes() {
-        AcpAgentClient.PromptSpec spec = mock(AcpAgentClient.PromptSpec.class, RETURNS_SELF);
-        AcpAgentClient.AcpAgentResponse response = mock(AcpAgentClient.AcpAgentResponse.class);
-        given(agent.prompt()).willReturn(spec);
-        given(agent.prompt(anyString())).willReturn(spec);   // prompt(text) is a default method
+        AcpHarnessClient.PromptSpec spec = mock(AcpHarnessClient.PromptSpec.class, RETURNS_SELF);
+        AcpHarnessClient.AcpAgentResponse response = mock(AcpHarnessClient.AcpAgentResponse.class);
+        given(acpHarnessClient.prompt()).willReturn(spec);
+        given(acpHarnessClient.prompt(anyString())).willReturn(spec);   // prompt(text) is a default method
         given(spec.call()).willReturn(response);
         given(response.content()).willReturn("Looks good");
         // …

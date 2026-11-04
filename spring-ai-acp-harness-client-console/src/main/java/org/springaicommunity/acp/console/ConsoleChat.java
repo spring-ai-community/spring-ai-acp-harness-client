@@ -25,7 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.runtime.AcpAgentNotice;
 import org.springaicommunity.acp.session.AcpAgentSession;
 import org.springaicommunity.acp.session.AcpAgentSessions;
@@ -46,8 +46,8 @@ import reactor.core.Disposables;
  * Turns are streamed rather than called, because the interesting part of an agent is the
  * work it does before it answers, and a blocking call would show a blank terminal for a
  * minute and then a paragraph. Ctrl-C during a turn cancels that turn — disposing the
- * subscription is what {@code AcpAgentClient} documents as cancelling it — and leaves the
- * conversation where it was.
+ * subscription is what {@code AcpHarnessClient} documents as cancelling it — and leaves
+ * the conversation where it was.
  */
 public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 
@@ -59,7 +59,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	private static final DateTimeFormatter WHEN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 		.withZone(ZoneId.systemDefault());
 
-	private final AcpAgentClient agent;
+	private final AcpHarnessClient agent;
 
 	private final Terminal terminal;
 
@@ -98,8 +98,8 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	 * @param onExit what to do once the user leaves; the auto-configuration closes the
 	 * application
 	 */
-	public ConsoleChat(AcpAgentClient agent, Terminal terminal, ConsoleRenderer renderer, String title, String greeting,
-			String session, Path historyFile, Runnable onExit) {
+	public ConsoleChat(AcpHarnessClient agent, Terminal terminal, ConsoleRenderer renderer, String title,
+			String greeting, String session, Path historyFile, Runnable onExit) {
 		this.agent = agent;
 		this.terminal = terminal;
 		this.out = renderer;

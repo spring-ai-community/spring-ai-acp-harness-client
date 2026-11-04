@@ -10,7 +10,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springaicommunity.acp.boot.AcpAutoConfiguration;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.permission.PermissionPrompt;
 
@@ -105,8 +105,8 @@ class ConsoleAutoConfigurationTests {
 	static class StubClient {
 
 		@Bean
-		AcpAgentClient acpAgentClient() {
-			return mock(AcpAgentClient.class);
+		AcpHarnessClient acpHarnessClient() {
+			return mock(AcpHarnessClient.class);
 		}
 
 	}

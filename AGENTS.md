@@ -52,11 +52,13 @@ Java 21 is required. Use the Maven wrapper:
 
 ## Architecture
 
-Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spring-ai-acp-harness-client-core` →
+Naming: types on the client side say `AcpHarnessClient`; types that describe the ACP agent say `AcpAgent`.
+
+Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `spring-ai-acp-harness-client-core` →
 `acp-core` SDK → agent subprocess (stdio) or supervised `goose serve` (our own
 `SupervisedWebSocketTransport`).
 
-- **spring-ai-acp-harness-client-core**: `client` (fluent `AcpAgentClient`, pool), `session` (optional session
+- **spring-ai-acp-harness-client-core**: `client` (fluent `AcpHarnessClient`, pool), `session` (optional session
   ops, gated by capability), `turn` + `event` (demultiplexing session updates into
   `AcpAgentEvent`; exactly one terminal event per turn), `config` (`ConfigResolver`),
   `permission`, `mcp` (credential-holding loopback proxy), `workspace` (jail for fs/terminal),
@@ -80,7 +82,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   Security stays out of apps that don't add it. `mode: web` redirects via Spring Security;
   `mode: local` (terminal apps) runs a loopback browser sign-in (`LoopbackSignIn`) and keeps
   state in a mode-600 file.
-- **spring-ai-acp-harness-client-console**: terminal chat over the application's `AcpAgentClient` (JLine 3), with
+- **spring-ai-acp-harness-client-console**: terminal chat over the application's `AcpHarnessClient` (JLine 3), with
   its own auto-configuration like mcp-oauth so JLine stays out of other apps. Registers nothing
   unless the console will run: `spring.ai.acp.harness.console.enabled` unset means only when
   `System.console()` is a real terminal, so tests and CI never block on stdin. `ConsoleChat`
@@ -129,7 +131,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
 - **An MCP server the agent cannot load is reported nowhere on the wire.** `session/new`
   succeeds, no `session/update` arrives, and goose writes nothing to stdout or stderr — only to
   its own log file. Hence `AcpAgentRuntime.logDirectory`/`noticeOf` (declarations;
-  `AcpAgentLogWatcher` does the reading), `AcpAgentClient.notices()`, and
+  `AcpAgentLogWatcher` does the reading), `AcpHarnessClient.notices()`, and
   `spring.ai.acp.harness.mcp.on-server-failure`. Goose-only, and only for an agent this client started.
   `tools/mcp-silence-check.py` re-measures it after a goose upgrade. See "When a server fails to
   load" in `docs/configuration/mcp-servers.md`.
@@ -145,7 +147,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
 - **Some agents share MCP servers across their sessions.** OpenCode keeps one MCP client per
   server name for the process and each `session/new` replaces it, so every session would call
   through the newest session's route: another user's, or a closed one's.
-  `AcpAgentRuntime.mcpScope()` = `PROCESS` makes `AcpAgentClientPool` keep a process to one principal
+  `AcpAgentRuntime.mcpScope()` = `PROCESS` makes `AcpHarnessClientPool` keep a process to one principal
   (restarting an idle one before handing it to another) and `McpAccess` give that principal one
   reference-counted route. `max-processes` is then the concurrent-user cap.
 - **`permissions.policy: ask` blocks on a person.** `PermissionPolicy.decide(request, toolName)`

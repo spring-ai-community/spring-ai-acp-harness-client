@@ -34,7 +34,7 @@ import reactor.core.publisher.Flux;
  * A prompt without an explicit {@code session} runs in a throwaway session that is closed
  * when the turn ends.
  */
-public interface AcpAgentClient extends AutoCloseable {
+public interface AcpHarnessClient extends AutoCloseable {
 
 	/** Starts a prompt. Nothing is sent until {@code call()} or {@code stream()}. */
 	PromptSpec prompt();

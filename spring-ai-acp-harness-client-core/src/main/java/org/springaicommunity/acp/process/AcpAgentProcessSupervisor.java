@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.client.AcpAgentClientException;
+import org.springaicommunity.acp.client.AcpHarnessClientException;
 import org.springaicommunity.acp.runtime.AcpAgentLaunchSpec;
 
 /**
@@ -115,7 +115,7 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 	/** Spawns the process and blocks until it is ready. */
 	public synchronized void start() {
 		if (closed.get()) {
-			throw new AcpAgentClientException("Supervisor for '" + runtimeId + "' has been closed");
+			throw new AcpHarnessClientException("Supervisor for '" + runtimeId + "' has been closed");
 		}
 		spawn();
 		installShutdownHook();
@@ -163,7 +163,7 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 			started = builder.start();
 		}
 		catch (IOException ex) {
-			throw new AcpAgentClientException(
+			throw new AcpHarnessClientException(
 					"Could not start '" + spec.command() + "' for runtime '" + runtimeId + "'", ex);
 		}
 		this.process = started;
@@ -172,7 +172,7 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 
 		if (!awaitReady(started)) {
 			started.destroyForcibly();
-			throw new AcpAgentClientException(
+			throw new AcpHarnessClientException(
 					"Runtime '" + runtimeId + "' did not become ready within " + spec.startupTimeout() + lastWords());
 		}
 		healthy = true;

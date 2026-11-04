@@ -1,4 +1,4 @@
-# AcpAgentClient API
+# AcpHarnessClient API
 
 Every call starts with `prompt()` and describes one *turn*. Nothing is sent until `call()` or `stream()`.
 
@@ -6,7 +6,7 @@ Every call starts with `prompt()` and describes one *turn*. Nothing is sent unti
 
 ```java
 // Blocking: wait for the finished answer.
-AcpAgentClient.AcpAgentResponse response = agent.prompt()
+AcpHarnessClient.AcpAgentResponse response = acpHarnessClient.prompt()
         .session("review-123")                          // a named, reusable conversation
         .user("Inspect the pending change")
         .options(o -> o.timeout(Duration.ofMinutes(10)))
@@ -16,14 +16,14 @@ String text = response.content();                        // assistant text only
 AcpSchema.StopReason why = response.completion().reason();
 
 // Streaming: every event as it happens.
-Flux<AcpAgentEvent> events = agent.prompt()
+Flux<AcpAgentEvent> events = acpHarnessClient.prompt()
         .session("review-123")
         .user("Now focus on security")
         .stream()
         .events();
 
 // Or just the text, e.g. for a server-sent-events endpoint.
-Flux<String> text = agent.prompt("Explain the build").stream().content();
+Flux<String> text = acpHarnessClient.prompt("Explain the build").stream().content();
 ```
 
 | Method | Meaning |
@@ -44,7 +44,7 @@ Flux<String> text = agent.prompt("Explain the build").stream().content();
 `AcpAgentEvent` is a sealed interface of records, so a `switch` over it can be exhaustive:
 
 ```java
-agent.prompt().session("review-123").user("Review the diff").stream().events()
+acpHarnessClient.prompt().session("review-123").user("Review the diff").stream().events()
         .doOnNext(event -> {
             switch (event) {
                 case AcpAgentEvent.Text t            -> ui.append(t.text());
@@ -79,8 +79,8 @@ Every turn emits **exactly one** terminal event, whatever happens, so a UI can c
 ## Named sessions
 
 ```java
-agent.prompt().session("pr-482").user("What does this PR change?").call();
-agent.prompt().session("pr-482").user("Any security concerns in it?").call();   // remembers the first turn
+acpHarnessClient.prompt().session("pr-482").user("What does this PR change?").call();
+acpHarnessClient.prompt().session("pr-482").user("Any security concerns in it?").call();   // remembers the first turn
 ```
 
 Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (60 minutes by default). Scope names to a unit of work, such as a PR, a ticket or a chat, so context does not grow without bound. Only one turn runs in a session at a time.
@@ -90,7 +90,7 @@ Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (6
 ```java
 import org.springaicommunity.acp.runtime.AcpAgentRuntime.PortableOption;
 
-SessionConfiguration config = agent.openSession("review-123").configuration();
+SessionConfiguration config = acpHarnessClient.openSession("review-123").configuration();
 config.applied(PortableOption.MODEL);          // Optional: the model this session is really using
 config.unsupported();                          // what was asked for and could not be honoured
 config.resolutions().values().forEach(r ->     // requested, applied, and by which mechanism
@@ -99,10 +99,10 @@ config.resolutions().values().forEach(r ->     // requested, applied, and by whi
 
 ## Stored conversations
 
-`agent.sessions()` manages the conversations the agent keeps. Every operation is optional in ACP, and the runtimes implement different subsets, so ask first:
+`acpHarnessClient.sessions()` manages the conversations the agent keeps. Every operation is optional in ACP, and the runtimes implement different subsets, so ask first:
 
 ```java
-AcpAgentSessions sessions = agent.sessions();
+AcpAgentSessions sessions = acpHarnessClient.sessions();
 if (sessions.supports(AcpAgentSessions.Operation.LIST)) {
     List<StoredSession> stored = sessions.list();
 }

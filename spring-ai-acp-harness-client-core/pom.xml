@@ -13,7 +13,7 @@
 
     <artifactId>spring-ai-acp-harness-client-core</artifactId>
     <name>Spring AI ACP Harness Client Core</name>
-    <description>Runtime-neutral AcpAgentClient, session registry, process supervision and configuration model</description>
+    <description>Runtime-neutral AcpHarnessClient, session registry, process supervision and configuration model</description>
 
     <dependencies>
         <dependency>

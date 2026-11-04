@@ -16,6 +16,8 @@ configuration surface.
 - application code always uses the same abstracted interface;
 - the agent on the backend is swapped by changing one property.
 
+A *harness* is the coding agent runtime you drive; `AcpHarnessClient` is your application's client for it.
+
 ```yaml
 spring:
   ai:
@@ -26,12 +28,12 @@ spring:
 ```
 
 ```java
-String out = agentClient.prompt()
+String out = acpHarnessClient.prompt()
         .session("review-123")
         .user("Inspect this change")
         .call().content();
 
-Flux<AcpAgentEvent> events = agentClient.prompt()
+Flux<AcpAgentEvent> events = acpHarnessClient.prompt()
         .user("Now focus on security")
         .stream().events();     // Text, Thought, ToolCallStarted, PlanUpdated, Completed…
 ```
@@ -229,8 +231,8 @@ why `sessions().supports(...)` is part of the API rather than a convenience:
 | opencode 2.2.4 | yes | yes | yes | yes | yes |
 
 ```java
-if (agentClient.sessions().supports(Operation.LOAD)) {
-    agentClient.sessions().load("review-123", storedId);   // same conversation, not a new one
+if (acpHarnessClient.sessions().supports(Operation.LOAD)) {
+    acpHarnessClient.sessions().load("review-123", storedId);   // same conversation, not a new one
 }
 ```
 

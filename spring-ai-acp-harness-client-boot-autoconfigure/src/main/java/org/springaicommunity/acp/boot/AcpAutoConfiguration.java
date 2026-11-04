@@ -15,8 +15,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientPool;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientPool;
 import org.springaicommunity.acp.codex.CodexRuntime;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.executor.AcpAgentExecutor;
@@ -31,7 +31,7 @@ import org.springaicommunity.acp.runtime.AcpAgentRuntimeProvider;
 import org.springaicommunity.acp.session.SessionPrincipalResolver;
 
 /**
- * Wires an {@link AcpAgentClient} from {@code spring.ai.acp.harness.*}.
+ * Wires an {@link AcpHarnessClient} from {@code spring.ai.acp.harness.*}.
  *
  * <p>
  * Registering a runtime means contributing an {@link AcpAgentRuntime} bean; the one whose
@@ -42,7 +42,7 @@ import org.springaicommunity.acp.session.SessionPrincipalResolver;
  * the bean, because every registration backs off by name.
  */
 @AutoConfiguration
-@ConditionalOnClass(AcpAgentClient.class)
+@ConditionalOnClass(AcpHarnessClient.class)
 @ConditionalOnProperty(prefix = "spring.ai.acp.harness", name = "enabled", matchIfMissing = true)
 @EnableConfigurationProperties(AcpProperties.class)
 @Import({ AcpAutoConfiguration.GooseRuntimeConfiguration.class, AcpAutoConfiguration.CodexRuntimeConfiguration.class,
@@ -199,14 +199,14 @@ public class AcpAutoConfiguration {
 	 */
 	@Bean(destroyMethod = "close")
 	@ConditionalOnMissingBean
-	AcpAgentClient acpAgentClient(SelectedRuntime selected, AcpAgentSettings settings,
+	AcpHarnessClient acpHarnessClient(SelectedRuntime selected, AcpAgentSettings settings,
 			ObjectProvider<AcpAgentObservations> observations) {
 		logger.info("ACP runtime '{}' selected, workspace {}, up to {} process(es)", selected.runtime().id(),
 				settings.workspace(), settings.pool().maxProcesses());
 		// ObjectProvider rather than an optional parameter: the observations bean only
 		// exists when
 		// Micrometer does, and this bean must be constructible either way.
-		return new AcpAgentClientPool(selected.runtime(), settings,
+		return new AcpHarnessClientPool(selected.runtime(), settings,
 				observations.getIfAvailable(() -> AcpAgentObservations.NONE));
 	}
 
@@ -217,7 +217,7 @@ public class AcpAutoConfiguration {
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	AcpAgentExecutor acpAgentExecutor(AcpAgentClient client) {
+	AcpAgentExecutor acpAgentExecutor(AcpHarnessClient client) {
 		return new DefaultAcpAgentExecutor(client);
 	}
 

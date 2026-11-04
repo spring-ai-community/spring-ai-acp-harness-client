@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.client.AcpAgentClientException;
+import org.springaicommunity.acp.client.AcpHarnessClientException;
 import org.springaicommunity.acp.client.SessionConfigRecorder;
 import org.springaicommunity.acp.config.AdvertisedSessionConfig;
 import org.springaicommunity.acp.config.AcpAgentSettings;
@@ -185,7 +185,8 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 			.loadSession(new AcpSchema.LoadSessionRequest(sessionId, settings.workspace().toString(), servers))
 			.block(settings.timeout());
 		if (response == null) {
-			throw new AcpAgentClientException("Agent '" + runtimeId + "' did not answer session/load for " + sessionId);
+			throw new AcpHarnessClientException(
+					"Agent '" + runtimeId + "' did not answer session/load for " + sessionId);
 		}
 		return new AdvertisedSessionConfig(recorder.claimUnattributed(), response.modes(), response.models());
 	}
@@ -196,7 +197,7 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 			.resumeSession(new AcpSchema.ResumeSessionRequest(sessionId, settings.workspace().toString(), servers))
 			.block(settings.timeout());
 		if (response == null) {
-			throw new AcpAgentClientException(
+			throw new AcpHarnessClientException(
 					"Agent '" + runtimeId + "' did not answer session/resume for " + sessionId);
 		}
 		return new AdvertisedSessionConfig(recorder.claimUnattributed(), response.modes(), response.models());
@@ -208,7 +209,7 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 	 * <p>
 	 * {@code session/load} and {@code session/resume} carry them exactly as
 	 * {@code session/new} does, and fail to connect just as silently; see the note on
-	 * {@code DefaultAcpAgentClient}. Logged as configured, since a proxy URL would tell
+	 * {@code DefaultAcpHarnessClient}. Logged as configured, since a proxy URL would tell
 	 * the reader nothing about what was asked for.
 	 */
 	private List<AcpSchema.McpServer> mcpServers(McpAccess.Grant grant) {

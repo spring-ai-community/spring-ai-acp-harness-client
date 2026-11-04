@@ -1,6 +1,6 @@
 package org.springaicommunity.acp.protocol;
 
-import org.springaicommunity.acp.client.AcpAgentClientException;
+import org.springaicommunity.acp.client.AcpHarnessClientException;
 
 /**
  * The agent and this library did not end up on a version both can speak.
@@ -10,7 +10,7 @@ import org.springaicommunity.acp.client.AcpAgentClientException;
  * alternative is a conversation that decodes into the wrong shapes and fails somewhere
  * further on, where nothing names the cause.
  */
-public class UnsupportedProtocolVersionException extends AcpAgentClientException {
+public class UnsupportedProtocolVersionException extends AcpHarnessClientException {
 
 	public UnsupportedProtocolVersionException(String message) {
 		super(message);

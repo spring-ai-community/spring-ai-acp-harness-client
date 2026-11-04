@@ -7,8 +7,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientFactory;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.config.McpServerSpec;
 import org.springaicommunity.acp.config.OnUnsupported;
@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * gaps this library works around are format gaps, invisible to a mock and reproducible
  * here.
  */
-class AcpAgentClientWireTests {
+class AcpHarnessClientWireTests {
 
 	@TempDir
 	Path workspace;
@@ -49,13 +49,13 @@ class AcpAgentClientWireTests {
 		return AcpAgentSettings.builder("scripted", workspace).timeout(LIMIT);
 	}
 
-	private AcpAgentClient connect(ScriptedAcpAgent agent, AcpAgentSettings settings) {
-		return AcpAgentClientFactory.connect(new ScriptedRuntime(), settings, agent.transport());
+	private AcpHarnessClient connect(ScriptedAcpAgent agent, AcpAgentSettings settings) {
+		return AcpHarnessClientFactory.connect(new ScriptedRuntime(), settings, agent.transport());
 	}
 
-	private AcpAgentClient connect(ScriptedAcpAgent agent, AcpAgentSettings settings,
+	private AcpHarnessClient connect(ScriptedAcpAgent agent, AcpAgentSettings settings,
 			org.springaicommunity.acp.process.AcpAgentLogWatcher watcher) {
-		return AcpAgentClientFactory.connect(new ScriptedRuntime(), settings, agent.transport(),
+		return AcpHarnessClientFactory.connect(new ScriptedRuntime(), settings, agent.transport(),
 				org.springaicommunity.acp.observation.AcpAgentObservations.NONE, watcher);
 	}
 
@@ -76,7 +76,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void reportsTheVersionTheConversationIsReallyIn() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 			assertThat(client.protocolVersion()).isEqualTo(org.springaicommunity.acp.protocol.AcpProtocol.V1);
 		}
 	}
@@ -87,7 +87,7 @@ class AcpAgentClientWireTests {
 		// evidence of
 		// anything. A mock of AcpAsyncClient cannot demonstrate this; a wire agent can.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().echoesProtocolVersion(true).build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						settings().protocol(org.springaicommunity.acp.protocol.ProtocolSettings.of(1)).build())) {
 			assertThat(client.protocolVersion()).isEqualTo(1);
 		}
@@ -116,7 +116,7 @@ class AcpAgentClientWireTests {
 		// The case the ACP announcement says will be common for a long time: offer the
 		// draft, get v1.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						settings()
 							.protocol(org.springaicommunity.acp.protocol.ProtocolSettings
 								.of(org.springaicommunity.acp.protocol.AcpProtocol.DRAFT_V2))
@@ -135,7 +135,7 @@ class AcpAgentClientWireTests {
 		// is the honest answer, and it is not the same as what was requested.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
 			.select("model", "model", "gpt-5.4-mini", "gpt-5.4-mini", "gpt-6-astra")
-			.build(); AcpAgentClient client = connect(agent, settings().build())) {
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
 
 			assertThat(client.openSession("s").advertised().select("model", "model")).get()
 				.extracting(AcpSchema.SessionConfigSelect::currentValue)
@@ -150,14 +150,14 @@ class AcpAgentClientWireTests {
 	 * A runtime whose adapter names an auth method, the way the Codex adapter does for a
 	 * key.
 	 */
-	private AcpAgentClient connectSigningInWith(ScriptedAcpAgent agent, String method) {
+	private AcpHarnessClient connectSigningInWith(ScriptedAcpAgent agent, String method) {
 		ScriptedRuntime runtime = new ScriptedRuntime() {
 			@Override
 			public java.util.Optional<String> authMethod(AcpAgentSettings settings) {
 				return java.util.Optional.of(method);
 			}
 		};
-		return AcpAgentClientFactory.connect(runtime, settings().build(), agent.transport());
+		return AcpHarnessClientFactory.connect(runtime, settings().build(), agent.transport());
 	}
 
 	@Test
@@ -167,7 +167,7 @@ class AcpAgentClientWireTests {
 		// authenticate names api-key; nothing on the wire says so until a session is
 		// asked for.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().authMethods("api-key", "chat-gpt").build();
-				AcpAgentClient client = connectSigningInWith(agent, "api-key")) {
+				AcpHarnessClient client = connectSigningInWith(agent, "api-key")) {
 			client.openSession("s");
 
 			assertThat(agent.authentications()).containsExactly("api-key");
@@ -178,7 +178,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void sendsNoAuthenticateWhenTheAdapterNamesNoMethod() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 			client.openSession("s");
 
 			assertThat(agent.methods()).doesNotContain("authenticate");
@@ -189,7 +189,7 @@ class AcpAgentClientWireTests {
 	void aMethodTheAgentDoesNotOfferIsNotSent() {
 		// The agent may be signed in another way; if it is not, its own refusal says so.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connectSigningInWith(agent, "api-key")) {
+				AcpHarnessClient client = connectSigningInWith(agent, "api-key")) {
 			client.openSession("s");
 
 			assertThat(agent.authentications()).isEmpty();
@@ -201,7 +201,7 @@ class AcpAgentClientWireTests {
 		ScriptedAcpAgent agent = ScriptedAcpAgent.builder().authMethods("api-key").refusesAuthentication(true).build();
 
 		assertThatThrownBy(() -> connectSigningInWith(agent, "api-key"))
-			.isInstanceOf(org.springaicommunity.acp.client.AcpAgentClientException.class)
+			.isInstanceOf(org.springaicommunity.acp.client.AcpHarnessClientException.class)
 			.hasMessageContaining("refused authentication with 'api-key'");
 		agent.close();
 	}
@@ -217,7 +217,7 @@ class AcpAgentClientWireTests {
 		// cannot tell a
 		// model the agent has from one it does not.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a", "b").build();
-				AcpAgentClient client = connect(agent, settings().model("b").build())) {
+				AcpHarnessClient client = connect(agent, settings().model("b").build())) {
 
 			client.prompt().session("s").user("hi").call();
 
@@ -236,7 +236,7 @@ class AcpAgentClientWireTests {
 		// raw handler and decodes leniently, so the unknown one is dropped and the turn
 		// is unaffected.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().emitsUnknownUpdate(true).reply("one", "two").build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			List<AcpAgentEvent> events = client.prompt("hi").stream().events().collectList().block(LIMIT);
 
@@ -254,7 +254,7 @@ class AcpAgentClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
 			.select("model", "model", "a", "a")
 			.acceptsUnknownValues(true)
-			.build(); AcpAgentClient client = connect(agent, settings().model("made-up").build())) {
+			.build(); AcpHarnessClient client = connect(agent, settings().model("made-up").build())) {
 
 			client.prompt().session("s").user("hi").call();
 
@@ -268,7 +268,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void onUnsupportedFailStopsTheTurnBeforeItStarts() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a").build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
 
 			assertThatThrownBy(() -> client.prompt("hi").call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
@@ -279,7 +279,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void setModeIsUsedWhenTheAgentOffersModesButNoModeOption() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().modes("auto", "plan").build();
-				AcpAgentClient client = connect(agent, settings().mode("plan").build())) {
+				AcpHarnessClient client = connect(agent, settings().mode("plan").build())) {
 
 			client.prompt().session("s").user("hi").call();
 
@@ -293,7 +293,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void providersSetIsUsedWhenTheAgentAdvertisesTheCapability() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().providers("openai").build();
-				AcpAgentClient client = connect(agent, settings().provider("openai").build())) {
+				AcpHarnessClient client = connect(agent, settings().provider("openai").build())) {
 
 			client.prompt().session("s").user("hi").call();
 
@@ -307,7 +307,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void aProviderIsNotAttemptedOverTheWireWhenTheAgentDoesNotAdvertiseIt() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().provider("openai").build())) {
+				AcpHarnessClient client = connect(agent, settings().provider("openai").build())) {
 
 			client.prompt().session("s").user("hi").call();
 
@@ -357,7 +357,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void aCredentialedMcpServerReachesTheAgentAsALoopbackRouteWithNoSecretsInIt() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						withProtectedServer(tokensPerUser(new java.util.ArrayList<>()), null).build())) {
 
 			client.prompt()
@@ -378,7 +378,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void aSessionsRouteStopsAnsweringWhenTheSessionCloses() throws Exception {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().sessionOperations("close").build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						withProtectedServer(tokensPerUser(new java.util.ArrayList<>()), null).build())) {
 
 			client.prompt().session("s").user("hi").call();
@@ -396,7 +396,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void anEphemeralTurnsRouteEndsWithTheTurn() throws Exception {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						withProtectedServer(tokensPerUser(new java.util.ArrayList<>()), null).build())) {
 
 			client.prompt("hi").call();
@@ -409,7 +409,7 @@ class AcpAgentClientWireTests {
 	void closingTheClientStopsTheProxy() {
 		String url;
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						withProtectedServer(tokensPerUser(new java.util.ArrayList<>()), null).build())) {
 			client.prompt().session("s").user("hi").call();
 			url = declaredUrl(agent.newSessions().get(0));
@@ -421,7 +421,7 @@ class AcpAgentClientWireTests {
 	void aSessionNameOpenForOneUserIsRefusedToAnother() {
 		List<org.springaicommunity.acp.session.SessionPrincipal> askedFor = new java.util.concurrent.CopyOnWriteArrayList<>();
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
-				AcpAgentClient client = connect(agent, withProtectedServer(tokensPerUser(askedFor), null).build())) {
+				AcpHarnessClient client = connect(agent, withProtectedServer(tokensPerUser(askedFor), null).build())) {
 
 			client.prompt()
 				.session("ticket-42")
@@ -456,11 +456,11 @@ class AcpAgentClientWireTests {
 			.map(org.springaicommunity.acp.session.SessionPrincipal::of);
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
-				AcpAgentClient client = connect(agent,
+				AcpHarnessClient client = connect(agent,
 						withProtectedServer(tokensPerUser(askedFor), resolver).build())) {
 
 			signedIn.set("alice");
-			AcpAgentClient.AcpAgentStream stream = client.prompt().session("s").user("hi").stream();
+			AcpHarnessClient.AcpAgentStream stream = client.prompt().session("s").user("hi").stream();
 			signedIn.remove();
 
 			StepVerifier
@@ -486,11 +486,11 @@ class AcpAgentClientWireTests {
 		AcpAgentSettings settings = withProtectedServer(tokensPerUser(askedFor), resolver).build();
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
-				AcpAgentClient pool = new org.springaicommunity.acp.client.AcpAgentClientPool("scripted", settings,
+				AcpHarnessClient pool = new org.springaicommunity.acp.client.AcpHarnessClientPool("scripted", settings,
 						() -> connect(agent, settings))) {
 
 			signedIn.set("alice");
-			AcpAgentClient.AcpAgentStream stream = pool.prompt().session("s").user("hi").stream();
+			AcpHarnessClient.AcpAgentStream stream = pool.prompt().session("s").user("hi").stream();
 			signedIn.remove();
 			StepVerifier
 				.create(stream.events()
@@ -510,7 +510,7 @@ class AcpAgentClientWireTests {
 	void aLoadedSessionsServersAreRoutedForItsPrincipalToo() {
 		List<org.springaicommunity.acp.session.SessionPrincipal> askedFor = new java.util.concurrent.CopyOnWriteArrayList<>();
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().sessionOperations("load", "resume").build();
-				AcpAgentClient client = connect(agent, withProtectedServer(tokensPerUser(askedFor), null).build())) {
+				AcpHarnessClient client = connect(agent, withProtectedServer(tokensPerUser(askedFor), null).build())) {
 
 			client.sessions().load("a", "stored-1", org.springaicommunity.acp.session.SessionPrincipal.of("alice"));
 			client.sessions().resume("b", "stored-2", org.springaicommunity.acp.session.SessionPrincipal.of("bob"));
@@ -539,7 +539,7 @@ class AcpAgentClientWireTests {
 		McpServerSpec server = new McpServerSpec.Http("tools", java.net.URI.create("https://tools.example.com/mcp"),
 				Map.of());
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = AcpAgentClientFactory.connect(withWorkaround,
+				AcpHarnessClient client = AcpHarnessClientFactory.connect(withWorkaround,
 						settings().mcpServers(List.of(server)).build(), agent.transport())) {
 
 			client.prompt().session("s").user("hi").call();
@@ -556,7 +556,7 @@ class AcpAgentClientWireTests {
 			throw new IllegalStateException(server.name() + " needs a sign-in first");
 		};
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, withProtectedServer(notSignedIn, null).build())) {
+				AcpHarnessClient client = connect(agent, withProtectedServer(notSignedIn, null).build())) {
 
 			assertThatThrownBy(
 					() -> client.openSession("s", org.springaicommunity.acp.session.SessionPrincipal.of("alice")))
@@ -575,7 +575,7 @@ class AcpAgentClientWireTests {
 				Map.of("Authorization", "Bearer secret"));
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().mcpServers(List.of(server)).build())) {
+				AcpHarnessClient client = connect(agent, settings().mcpServers(List.of(server)).build())) {
 
 			client.prompt("hi").call();
 
@@ -608,7 +608,7 @@ class AcpAgentClientWireTests {
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
 				org.springaicommunity.acp.process.AcpAgentLogWatcher watcher = watcher(logs);
-				AcpAgentClient client = connect(agent, settings, watcher)) {
+				AcpHarnessClient client = connect(agent, settings, watcher)) {
 
 			assertThatThrownBy(() -> client.prompt().session("s").user("hi").call()).hasMessageContaining("finops-mcp")
 				.hasMessageContaining("refused the connection");
@@ -630,7 +630,7 @@ class AcpAgentClientWireTests {
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("done").build();
 				org.springaicommunity.acp.process.AcpAgentLogWatcher watcher = watcher(logs);
-				AcpAgentClient client = connect(agent, settings, watcher)) {
+				AcpHarnessClient client = connect(agent, settings, watcher)) {
 
 			assertThat(client.prompt().session("s").user("hi").call().content()).isEqualTo("done");
 		}
@@ -646,7 +646,7 @@ class AcpAgentClientWireTests {
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("done").build();
 				org.springaicommunity.acp.process.AcpAgentLogWatcher watcher = watcher(logs);
-				AcpAgentClient client = connect(agent, settings().mcpServers(List.of(server)).build(), watcher)) {
+				AcpHarnessClient client = connect(agent, settings().mcpServers(List.of(server)).build(), watcher)) {
 			watcher.poll();
 
 			assertThat(client.prompt().session("s").user("hi").call().content()).isEqualTo("done");
@@ -668,7 +668,7 @@ class AcpAgentClientWireTests {
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("done").build();
 				org.springaicommunity.acp.process.AcpAgentLogWatcher watcher = watcher(logs);
-				AcpAgentClient client = connect(agent, settings, watcher)) {
+				AcpHarnessClient client = connect(agent, settings, watcher)) {
 
 			// Silence is the normal case, and nothing here infers a failure from it.
 			assertThat(client.prompt().session("s").user("hi").call().content()).isEqualTo("done");
@@ -679,7 +679,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void toolCallsAreReportedAsEventsWithTheirIdentifiers() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().toolCall("developer__shell").reply("done").build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			List<AcpAgentEvent> events = client.prompt("hi").stream().events().collectList().block(LIMIT);
 
@@ -693,7 +693,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void cancellingTheStreamSendsSessionCancel() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().promptDelay(Duration.ofSeconds(30)).build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			StepVerifier.create(client.prompt("hi").stream().events())
 				.thenAwait(Duration.ofMillis(200))
@@ -709,7 +709,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void aNamedSessionIsOpenedOnceAndReusedAcrossTurns() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			client.prompt().session("reused").user("one").call();
 			client.prompt().session("reused").user("two").call();
@@ -722,7 +722,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void anEphemeralSessionIsClosedWhenItsTurnEnds() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			client.prompt("hi").call();
 
@@ -740,7 +740,7 @@ class AcpAgentClientWireTests {
 		// milliseconds, and
 		// the bug made each of them take five seconds.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(Duration.ofSeconds(4), () -> {
 				client.prompt("one").call();
@@ -760,7 +760,7 @@ class AcpAgentClientWireTests {
 		// subsets, so "not here" has to be a typed answer rather than a JSON-RPC error
 		// code.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			AcpAgentSessions sessions = client.sessions();
 
@@ -779,7 +779,7 @@ class AcpAgentClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
 			.sessionOperations("list")
 			.storedSessions("sid-1", "sid-2", "sid-3")
-			.build(); AcpAgentClient client = connect(agent, settings().build())) {
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
 
 			assertThat(client.sessions().list()).extracting(StoredSession::sessionId)
 				.containsExactly("sid-1", "sid-2", "sid-3");
@@ -800,7 +800,7 @@ class AcpAgentClientWireTests {
 			.sessionOperations("load", "list")
 			.storedSessions("sid-1")
 			.select("model", "model", "a", "a", "b")
-			.build(); AcpAgentClient client = connect(agent, settings().model("b").build())) {
+			.build(); AcpHarnessClient client = connect(agent, settings().model("b").build())) {
 
 			client.sessions().load("restored", "sid-1");
 
@@ -817,7 +817,7 @@ class AcpAgentClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
 			.sessionOperations("resume")
 			.storedSessions("sid-1")
-			.build(); AcpAgentClient client = connect(agent, settings().build())) {
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
 
 			assertThat(client.sessions().resume("restored", "sid-1").sessionId()).isEqualTo("sid-1");
 			assertThat(agent.methods()).contains("session/resume").doesNotContain("session/load");
@@ -829,7 +829,7 @@ class AcpAgentClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
 			.sessionOperations("load", "delete", "list")
 			.storedSessions("sid-1", "sid-2")
-			.build(); AcpAgentClient client = connect(agent, settings().build())) {
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
 			client.sessions().load("restored", "sid-1");
 
 			client.sessions().delete("sid-1");
@@ -842,7 +842,7 @@ class AcpAgentClientWireTests {
 	@Test
 	void theAgentsOwnVersionSurvivesTheHandshake() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().agentInfo("pretend", "9.9.9").build();
-				AcpAgentClient client = connect(agent, settings().build())) {
+				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			assertThat(client.agentInfo()).get().hasToString("pretend 9.9.9");
 		}

@@ -35,7 +35,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.config.McpServerSpec;
 import org.springaicommunity.acp.mcp.McpAccess;
@@ -207,8 +207,8 @@ class WebSignInFlowTests {
 		}
 
 		@Bean
-		AcpAgentClient acpAgentClient() {
-			return org.mockito.Mockito.mock(AcpAgentClient.class);
+		AcpHarnessClient acpHarnessClient() {
+			return org.mockito.Mockito.mock(AcpHarnessClient.class);
 		}
 
 	}

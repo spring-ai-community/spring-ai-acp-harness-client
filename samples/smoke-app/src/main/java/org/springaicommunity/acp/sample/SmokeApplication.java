@@ -7,7 +7,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 import org.springaicommunity.acp.session.AcpAgentSessions;
 
@@ -17,7 +17,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 /**
  * Everything an application needs to talk to an ACP agent: a dependency, a property, and
- * an injected {@link AcpAgentClient}.
+ * an injected {@link AcpHarnessClient}.
  *
  * <p>
  * Nothing in this file names an agent. Goose, Codex and OpenCode are all on the
@@ -50,7 +50,7 @@ public class SmokeApplication {
 	}
 
 	@Bean
-	ApplicationRunner demo(AcpAgentClient agent, ChatModel chatModel, MeterRegistry meters) {
+	ApplicationRunner demo(AcpHarnessClient agent, ChatModel chatModel, MeterRegistry meters) {
 		return args -> {
 			logger.info("Runtime: {}", agent.runtimeId());
 

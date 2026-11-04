@@ -9,8 +9,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientFactory;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 import org.springaicommunity.acp.test.AcpAgentProbe;
@@ -50,7 +50,7 @@ class GooseServeTests {
 	@Test
 	@DisplayName("a served agent handshakes and runs a turn that terminates exactly once")
 	void aTurnOverWebSocket() {
-		try (AcpAgentClient client = AcpAgentClientFactory.create(new GooseRuntime(), served())) {
+		try (AcpHarnessClient client = AcpHarnessClientFactory.create(new GooseRuntime(), served())) {
 			assertThat(client.agentInfo()).get().extracting(info -> info.name()).isEqualTo("goose");
 
 			List<AcpAgentEvent> events = client.prompt("Reply with exactly the word READY. Do not use tools.")
@@ -68,7 +68,7 @@ class GooseServeTests {
 	@Test
 	@DisplayName("a named session keeps context over the socket, as it does over the pipe")
 	void namedSessionsOverWebSocket() {
-		try (AcpAgentClient client = AcpAgentClientFactory.create(new GooseRuntime(), served())) {
+		try (AcpHarnessClient client = AcpHarnessClientFactory.create(new GooseRuntime(), served())) {
 			client.prompt()
 				.session("served-memory")
 				.user("Remember the number 8675309. Reply with just OK. Do not use tools.")
@@ -91,7 +91,7 @@ class GooseServeTests {
 	@Test
 	@DisplayName("closing the client stops the server it started")
 	void closingStopsTheServer() {
-		AcpAgentClient client = AcpAgentClientFactory.create(new GooseRuntime(), served());
+		AcpHarnessClient client = AcpHarnessClientFactory.create(new GooseRuntime(), served());
 		assertThat(client.isAlive()).isTrue();
 
 		client.close();

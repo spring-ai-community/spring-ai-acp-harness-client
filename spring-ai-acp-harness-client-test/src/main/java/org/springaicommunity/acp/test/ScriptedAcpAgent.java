@@ -39,7 +39,7 @@ import reactor.core.publisher.Mono;
  *         .select("model", "model", "gpt-5.4-mini", "gpt-5.4", "gpt-5.4-mini")
  *         .reply("hello")
  *         .build()) {
- *     AcpAgentClient client = AcpAgentClientFactory.connect(runtime, settings, agent.transport());
+ *     AcpHarnessClient client = AcpHarnessClientFactory.connect(runtime, settings, agent.transport());
  * }
  * }</pre>
  */
@@ -98,7 +98,7 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		return new Builder();
 	}
 
-	/** Hand this to {@code AcpAgentClientFactory.connect}. */
+	/** Hand this to {@code AcpHarnessClientFactory.connect}. */
 	public AcpClientTransport transport() {
 		return pair.clientTransport();
 	}

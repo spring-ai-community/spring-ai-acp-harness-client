@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springaicommunity.acp.ai.AcpChatModel;
 import org.springaicommunity.acp.ai.AcpChatOptions;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 
 import org.springframework.ai.chat.model.ChatModel;
 
@@ -39,9 +39,9 @@ import org.springframework.ai.chat.model.ChatModel;
 public class AcpChatModelAutoConfiguration {
 
 	@Bean
-	@ConditionalOnBean(AcpAgentClient.class)
+	@ConditionalOnBean(AcpHarnessClient.class)
 	@ConditionalOnMissingBean
-	AcpChatModel acpChatModel(AcpAgentClient client, AcpProperties properties) {
+	AcpChatModel acpChatModel(AcpHarnessClient client, AcpProperties properties) {
 		return new AcpChatModel(client,
 				AcpChatOptions.builder()
 					.model(properties.model())

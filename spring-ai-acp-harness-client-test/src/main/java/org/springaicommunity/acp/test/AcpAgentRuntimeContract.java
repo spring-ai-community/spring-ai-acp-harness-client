@@ -16,8 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientFactory;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.config.McpServerSpec;
 import org.springaicommunity.acp.config.OnUnsupported;
@@ -100,7 +100,7 @@ public abstract class AcpAgentRuntimeContract {
 	@TempDir
 	protected Path runtimeHome;
 
-	private AcpAgentClient client;
+	private AcpHarnessClient client;
 
 	/** The adapter under test. A fresh instance per test. */
 	protected abstract AcpAgentRuntime runtime();
@@ -196,9 +196,9 @@ public abstract class AcpAgentRuntimeContract {
 		return builder;
 	}
 
-	protected AcpAgentClient client() {
+	protected AcpHarnessClient client() {
 		if (client == null) {
-			client = AcpAgentClientFactory.create(runtime(), settings().build());
+			client = AcpHarnessClientFactory.create(runtime(), settings().build());
 		}
 		return client;
 	}
@@ -239,7 +239,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("a blocking call returns the assistant's text and nothing else")
 	void blockingCall() {
-		AcpAgentClient.AcpAgentResponse response = client()
+		AcpHarnessClient.AcpAgentResponse response = client()
 			.prompt("Reply with exactly the word READY. Do not use any tools.")
 			.call();
 
@@ -295,7 +295,8 @@ public abstract class AcpAgentRuntimeContract {
 		org.junit.jupiter.api.Assumptions.assumeTrue(alternative != null,
 				"this agent advertises only one model, so there is nothing to switch to");
 
-		try (AcpAgentClient switched = AcpAgentClientFactory.create(runtime(), settings().model(alternative).build())) {
+		try (AcpHarnessClient switched = AcpHarnessClientFactory.create(runtime(),
+				settings().model(alternative).build())) {
 			OptionResolution model = switched.openSession("contract-switch").configuration().of(PortableOption.MODEL);
 
 			assertThat(model.mechanism()).isIn(OptionResolution.Mechanism.CONFIG_OPTION,
@@ -311,7 +312,7 @@ public abstract class AcpAgentRuntimeContract {
 			.onUnsupported(OnUnsupported.FAIL)
 			.build();
 
-		try (AcpAgentClient strict = AcpAgentClientFactory.create(runtime(), settings)) {
+		try (AcpHarnessClient strict = AcpHarnessClientFactory.create(runtime(), settings)) {
 			assertThatThrownBy(() -> strict.prompt("Reply with OK.").call())
 				.satisfies(thrown -> assertThat(chain(thrown))
 					.hasAtLeastOneElementOfType(UnsupportedAcpAgentOptionException.class));
@@ -325,7 +326,7 @@ public abstract class AcpAgentRuntimeContract {
 			.onUnsupported(OnUnsupported.WARN)
 			.build();
 
-		try (AcpAgentClient lenient = AcpAgentClientFactory.create(runtime(), settings)) {
+		try (AcpHarnessClient lenient = AcpHarnessClientFactory.create(runtime(), settings)) {
 			lenient.prompt().session("contract-warn").user("Reply with OK. Do not use tools.").call();
 
 			OptionResolution model = configurationOf(lenient, "contract-warn").of(PortableOption.MODEL);
@@ -376,7 +377,7 @@ public abstract class AcpAgentRuntimeContract {
 		org.junit.jupiter.api.Assumptions.assumeTrue(mode != null,
 				"this agent has no mode in which it asks before acting");
 
-		try (AcpAgentClient reviewed = AcpAgentClientFactory.create(runtime(), settings().mode(mode).build())) {
+		try (AcpHarnessClient reviewed = AcpHarnessClientFactory.create(runtime(), settings().mode(mode).build())) {
 			List<AcpAgentEvent> events = reviewed.prompt()
 				.session("contract-deny")
 				.user("Create a file called contract.txt containing the word NO, then reply DONE.")
@@ -439,7 +440,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("closing a named session works on every runtime, told or not")
 	void closingANamedSessionAlwaysWorks() {
-		AcpAgentClient agent = client();
+		AcpHarnessClient agent = client();
 		String first = agent.openSession("contract-close").sessionId();
 
 		agent.sessions().close("contract-close");
@@ -462,7 +463,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("a closed session loaded again is still the same conversation")
 	void loadingRestoresContext() {
-		AcpAgentClient agent = client();
+		AcpHarnessClient agent = client();
 		org.junit.jupiter.api.Assumptions.assumeTrue(agent.sessions().supports(AcpAgentSessions.Operation.LOAD),
 				"this agent does not implement session/load");
 
@@ -519,7 +520,7 @@ public abstract class AcpAgentRuntimeContract {
 		String name = "spring-ai-acp-harness-client-contract-mcp";
 		McpServerSpec unreachable = new McpServerSpec.Http(name, URI.create("http://127.0.0.1:9/mcp"), Map.of());
 
-		try (AcpAgentClient agent = AcpAgentClientFactory.create(runtime(),
+		try (AcpHarnessClient agent = AcpHarnessClientFactory.create(runtime(),
 				settings().mcpServers(List.of(unreachable)).build())) {
 			agent.openSession("contract-mcp");
 
@@ -534,7 +535,7 @@ public abstract class AcpAgentRuntimeContract {
 	 * Polls, because the agent writes its log on its own schedule and the watcher reads
 	 * it on another.
 	 */
-	private static boolean noticeAbout(AcpAgentClient agent, String server, Duration timeout) {
+	private static boolean noticeAbout(AcpHarnessClient agent, String server, Duration timeout) {
 		long deadline = System.nanoTime() + timeout.toNanos();
 		while (System.nanoTime() < deadline) {
 			if (agent.notices().stream().anyMatch(notice -> notice.concerns(server))) {
@@ -611,7 +612,7 @@ public abstract class AcpAgentRuntimeContract {
 		return carried;
 	}
 
-	private SessionConfiguration configurationOf(AcpAgentClient agent, String session) {
+	private SessionConfiguration configurationOf(AcpHarnessClient agent, String session) {
 		return agent.session(session).map(s -> s.configuration()).orElse(SessionConfiguration.empty());
 	}
 

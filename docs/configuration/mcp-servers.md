@@ -57,7 +57,7 @@ spring:
 ```
 
 ```java
-agent.notices().forEach(n -> log.warn("{} {}: {}", n.severity(), n.subject(), n.detail()));
+acpHarnessClient.notices().forEach(n -> log.warn("{} {}: {}", n.severity(), n.subject(), n.detail()));
 ```
 
 !!! note

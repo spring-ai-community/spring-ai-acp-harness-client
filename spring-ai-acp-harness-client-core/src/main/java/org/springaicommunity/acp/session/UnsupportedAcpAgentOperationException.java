@@ -1,6 +1,6 @@
 package org.springaicommunity.acp.session;
 
-import org.springaicommunity.acp.client.AcpAgentClientException;
+import org.springaicommunity.acp.client.AcpHarnessClientException;
 
 /**
  * An operation this library offers that the agent in front of it does not implement.
@@ -13,7 +13,7 @@ import org.springaicommunity.acp.client.AcpAgentClientException;
  * agent advertises — so an abstraction over several agents has to have a way of saying
  * "not here", and saying it by name.
  */
-public class UnsupportedAcpAgentOperationException extends AcpAgentClientException {
+public class UnsupportedAcpAgentOperationException extends AcpHarnessClientException {
 
 	private final transient AcpAgentSessions.Operation operation;
 

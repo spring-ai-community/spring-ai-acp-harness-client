@@ -13,7 +13,7 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.config.AcpAgentOptions;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 import org.springaicommunity.acp.session.AcpAgentSession;
@@ -38,13 +38,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class AcpChatModelTests {
 
-	private FakeAcpAgentClient client;
+	private FakeAcpHarnessClient client;
 
 	private AcpChatModel model;
 
 	@BeforeEach
 	void setUp() {
-		client = new FakeAcpAgentClient();
+		client = new FakeAcpHarnessClient();
 		model = new AcpChatModel(client);
 	}
 
@@ -238,7 +238,7 @@ class AcpChatModelTests {
 	/**
 	 * Records what the model asked of the client, and replays whatever the test set up.
 	 */
-	private static final class FakeAcpAgentClient implements AcpAgentClient {
+	private static final class FakeAcpHarnessClient implements AcpHarnessClient {
 
 		private String sent;
 

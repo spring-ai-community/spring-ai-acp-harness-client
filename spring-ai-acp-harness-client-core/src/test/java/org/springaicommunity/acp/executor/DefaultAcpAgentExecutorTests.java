@@ -7,7 +7,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.client.AcpAgentInfo;
 import org.springaicommunity.acp.config.AcpAgentOptions;
 import org.springaicommunity.acp.event.AcpAgentEvent;
@@ -133,8 +133,8 @@ class DefaultAcpAgentExecutorTests {
 		return new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN);
 	}
 
-	/** An {@link AcpAgentClient} that replays a fixed list of events. */
-	private static final class ScriptedClient implements AcpAgentClient {
+	/** An {@link AcpHarnessClient} that replays a fixed list of events. */
+	private static final class ScriptedClient implements AcpHarnessClient {
 
 		private List<AcpAgentEvent> script = List.of();
 

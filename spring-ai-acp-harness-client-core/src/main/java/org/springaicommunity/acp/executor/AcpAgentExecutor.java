@@ -21,12 +21,12 @@ import org.springaicommunity.acp.config.AcpAgentOptions;
  * protocol's. {@code getConfiguration()} returned a parsed
  * {@code ~/.config/goose/config.yaml}, which no other agent has; what an application
  * actually wanted from it — which model am I really using — is
- * {@code AcpAgentClient.openSession(name).configuration()}, and it is the negotiated
+ * {@code AcpHarnessClient.openSession(name).configuration()}, and it is the negotiated
  * truth rather than a file. {@code executeInSessionStreamingJson} did come across,
  * because its event vocabulary is what existing consumers parse.
  *
  * <p>
- * New code should use {@code AcpAgentClient} instead. This interface exists to make a
+ * New code should use {@code AcpHarnessClient} instead. This interface exists to make a
  * migration cheap, not to be the nicer of the two: it is blocking, it returns strings,
  * and it cannot express a tool call or a plan.
  */

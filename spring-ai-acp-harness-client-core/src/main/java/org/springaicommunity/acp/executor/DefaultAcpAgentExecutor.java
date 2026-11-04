@@ -3,7 +3,7 @@ package org.springaicommunity.acp.executor;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.config.AcpAgentOptions;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 
@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * {@link AcpAgentExecutor} over an {@link AcpAgentClient}.
+ * {@link AcpAgentExecutor} over an {@link AcpHarnessClient}.
  *
  * <p>
  * A thin adapter on purpose. Everything it does — sessions, turns, the one-terminal-event
@@ -21,11 +21,11 @@ import reactor.core.scheduler.Schedulers;
  */
 public final class DefaultAcpAgentExecutor implements AcpAgentExecutor {
 
-	private final AcpAgentClient client;
+	private final AcpHarnessClient client;
 
 	private final LegacyEventFormat format;
 
-	public DefaultAcpAgentExecutor(AcpAgentClient client) {
+	public DefaultAcpAgentExecutor(AcpHarnessClient client) {
 		this.client = client;
 		this.format = new LegacyEventFormat(client.runtimeId());
 	}

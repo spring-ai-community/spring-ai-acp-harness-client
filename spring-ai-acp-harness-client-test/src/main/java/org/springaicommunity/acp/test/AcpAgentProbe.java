@@ -12,8 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientFactory;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.runtime.AcpAgentRuntime;
 import org.springaicommunity.acp.session.AcpAgentSession;
@@ -94,7 +94,7 @@ public final class AcpAgentProbe {
 			AcpAgentSettings settings = AcpAgentSettings.builder(runtime.id(), workspace)
 				.timeout(HANDSHAKE_TIMEOUT)
 				.build();
-			try (AcpAgentClient client = AcpAgentClientFactory.create(runtime, settings)) {
+			try (AcpHarnessClient client = AcpHarnessClientFactory.create(runtime, settings)) {
 				AcpAgentSession session = client.openSession("probe");
 				Optional<AcpSchema.SessionConfigSelect> model = session.advertised().select("model", "model");
 				List<String> models = model.map(AcpAgentProbe::values).orElseGet(List::of);

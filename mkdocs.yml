@@ -47,7 +47,7 @@ theme:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Client API: agent-client.md
+  - Client API: harness-client.md
   - Runtimes:
     - runtimes/index.md
     - Runtime Configuration: runtimes/configuration.md

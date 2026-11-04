@@ -7,8 +7,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.client.AcpAgentClientException;
-import org.springaicommunity.acp.client.AcpAgentClientFactory;
+import org.springaicommunity.acp.client.AcpHarnessClientException;
+import org.springaicommunity.acp.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.runtime.AcpAgentLaunchSpec;
 import org.springaicommunity.acp.runtime.AcpAgentRuntime;
@@ -32,9 +32,9 @@ class AcpAgentStartupFailureTests {
 
 	@Test
 	void theAgentsOwnExplanationIsInTheException() {
-		assertThatThrownBy(() -> AcpAgentClientFactory.create(new FailingRuntime("Configuration is invalid at line 3"),
-				settings()))
-			.isInstanceOf(AcpAgentClientException.class)
+		assertThatThrownBy(() -> AcpHarnessClientFactory
+			.create(new FailingRuntime("Configuration is invalid at line 3"), settings()))
+			.isInstanceOf(AcpHarnessClientException.class)
 			.hasMessageContaining("Failed to initialize runtime 'failing'")
 			.hasMessageContaining("Configuration is invalid at line 3");
 	}
@@ -44,7 +44,7 @@ class AcpAgentStartupFailureTests {
 		// OpenCode's real complaint arrives as "\u001B[91m\u001B[1mError:
 		// \u001B[0mConfiguration is
 		// invalid …", and an exception message is not a terminal.
-		assertThatThrownBy(() -> AcpAgentClientFactory
+		assertThatThrownBy(() -> AcpHarnessClientFactory
 			.create(new FailingRuntime("\u001B[91m\u001B[1mError: \u001B[0mbad config"), settings()))
 			.hasMessageContaining("Error: bad config")
 			.hasMessageNotContaining("\u001B");
@@ -52,8 +52,8 @@ class AcpAgentStartupFailureTests {
 
 	@Test
 	void anAgentThatFailsSilentlyStillFailsCleanly() {
-		assertThatThrownBy(() -> AcpAgentClientFactory.create(new FailingRuntime(null), settings()))
-			.isInstanceOf(AcpAgentClientException.class)
+		assertThatThrownBy(() -> AcpHarnessClientFactory.create(new FailingRuntime(null), settings()))
+			.isInstanceOf(AcpHarnessClientException.class)
 			.hasMessageContaining("Failed to initialize runtime");
 	}
 

@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.config.SessionConfiguration;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 import org.springaicommunity.acp.runtime.AcpAgentNotice;
@@ -40,11 +40,11 @@ class ConsoleChatTests {
 	@TempDir
 	Path temp;
 
-	private final AcpAgentClient agent = mock(AcpAgentClient.class);
+	private final AcpHarnessClient agent = mock(AcpHarnessClient.class);
 
-	private final AcpAgentClient.PromptSpec prompt = mock(AcpAgentClient.PromptSpec.class, RETURNS_SELF);
+	private final AcpHarnessClient.PromptSpec prompt = mock(AcpHarnessClient.PromptSpec.class, RETURNS_SELF);
 
-	private final AcpAgentClient.AcpAgentStream stream = mock(AcpAgentClient.AcpAgentStream.class);
+	private final AcpHarnessClient.AcpAgentStream stream = mock(AcpHarnessClient.AcpAgentStream.class);
 
 	private final AcpAgentSessions sessions = mock(AcpAgentSessions.class);
 

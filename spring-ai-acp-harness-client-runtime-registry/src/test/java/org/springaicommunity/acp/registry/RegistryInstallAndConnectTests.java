@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientFactory;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.runtime.AcpAgentRuntime;
 
@@ -26,8 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * checked, the archive unpacks, the launch spec is right. None of them proves the chain
  * holds, and the chain is what "any ACP agent" means. So this builds an archive,
  * publishes it through a {@code file:} registry, and then goes through the ordinary
- * {@link AcpAgentClientFactory#create(AcpAgentRuntime, AcpAgentSettings)} path: resolve,
- * verify, unpack, chmod, spawn, handshake, prompt.
+ * {@link AcpHarnessClientFactory#create(AcpAgentRuntime, AcpAgentSettings)} path:
+ * resolve, verify, unpack, chmod, spawn, handshake, prompt.
  *
  * <p>
  * The agent is fifteen lines of shell rather than a real vendor's binary, and
@@ -87,7 +87,7 @@ class RegistryInstallAndConnectTests {
 			.orElseThrow();
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
-		try (AcpAgentClient client = AcpAgentClientFactory.create(runtime,
+		try (AcpHarnessClient client = AcpHarnessClientFactory.create(runtime,
 				AcpAgentSettings.builder("house-agent", workspace).timeout(Duration.ofSeconds(30)).build())) {
 
 			assertThat(client.agentInfo()).get().extracting(info -> info.name()).isEqualTo("house-agent");
@@ -113,8 +113,9 @@ class RegistryInstallAndConnectTests {
 			.orElseThrow();
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
-		org.assertj.core.api.Assertions.assertThatThrownBy(
-				() -> AcpAgentClientFactory.create(runtime, AcpAgentSettings.builder("house-agent", workspace).build()))
+		org.assertj.core.api.Assertions
+			.assertThatThrownBy(() -> AcpHarnessClientFactory.create(runtime,
+					AcpAgentSettings.builder("house-agent", workspace).build()))
 			.isInstanceOf(AcpAgentInstaller.AcpAgentInstallException.class)
 			.hasMessageContaining("refusing to run it");
 	}

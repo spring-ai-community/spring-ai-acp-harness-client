@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import org.springaicommunity.acp.client.AcpAgentClient;
-import org.springaicommunity.acp.client.AcpAgentClientException;
+import org.springaicommunity.acp.client.AcpHarnessClient;
+import org.springaicommunity.acp.client.AcpHarnessClientException;
 import org.springaicommunity.acp.config.AcpAgentOptions;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 import org.springaicommunity.acp.session.StoredSession;
@@ -53,11 +53,11 @@ public class AcpController {
 
 	private static final Logger logger = LoggerFactory.getLogger(AcpController.class);
 
-	private final AcpAgentClient agent;
+	private final AcpHarnessClient agent;
 
 	private final AcpProperties.Controller properties;
 
-	public AcpController(AcpAgentClient agent, AcpProperties properties) {
+	public AcpController(AcpHarnessClient agent, AcpProperties properties) {
 		this.agent = agent;
 		this.properties = properties.controller();
 	}
@@ -69,11 +69,11 @@ public class AcpController {
 		validate(request);
 		String requestId = UUID.randomUUID().toString();
 		try {
-			AcpAgentClient.AcpAgentResponse response = spec(request).call();
+			AcpHarnessClient.AcpAgentResponse response = spec(request).call();
 			return ResponseEntity
 				.ok(new PromptResponse(response.content(), response.completion().reason().toString(), null, requestId));
 		}
-		catch (AcpAgentClientException ex) {
+		catch (AcpHarnessClientException ex) {
 			// The agent's own words can carry anything it read; the caller gets the
 			// request id.
 			logger.warn("Agent request {} failed", requestId, ex);
@@ -89,7 +89,7 @@ public class AcpController {
 	 * Text only, deliberately: tool calls and plans name paths and commands inside the
 	 * workspace, and an endpoint that may be exposed to a browser should not be the thing
 	 * that decides those are safe to publish. An application that wants them has
-	 * {@code AcpAgentClient}.
+	 * {@code AcpHarnessClient}.
 	 */
 	@PostMapping(value = "${spring.ai.acp.harness.controller.path:/api/acp}/stream",
 			produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -137,8 +137,8 @@ public class AcpController {
 					agent.agentInfo().map(info -> info.toString()).orElse(null)));
 	}
 
-	private AcpAgentClient.PromptSpec spec(PromptRequest request) {
-		AcpAgentClient.PromptSpec spec = agent.prompt().user(request.prompt());
+	private AcpHarnessClient.PromptSpec spec(PromptRequest request) {
+		AcpHarnessClient.PromptSpec spec = agent.prompt().user(request.prompt());
 		if (request.session() != null) {
 			spec = spec.session(request.session());
 		}

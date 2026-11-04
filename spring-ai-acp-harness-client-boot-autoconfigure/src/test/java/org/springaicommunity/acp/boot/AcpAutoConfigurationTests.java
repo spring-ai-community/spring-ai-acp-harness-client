@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.FilteredClassLoader;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.codex.CodexRuntime;
 import org.springaicommunity.acp.goose.GooseRuntime;
 import org.springaicommunity.acp.opencode.OpenCodeRuntime;
@@ -31,8 +31,8 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Binding and wiring only — no agent is started. {@code AcpAgentClient} is stubbed out so
- * these stay fast and run anywhere.
+ * Binding and wiring only — no agent is started. {@code AcpHarnessClient} is stubbed out
+ * so these stay fast and run anywhere.
  */
 class AcpAutoConfigurationTests {
 
@@ -583,7 +583,7 @@ class AcpAutoConfigurationTests {
 		plain.withPropertyValues("spring.ai.acp.harness.enabled=false")
 			.run(context -> assertThat(context).hasNotFailed()
 				.doesNotHaveBean(AcpAgentSettings.class)
-				.doesNotHaveBean(AcpAgentClient.class));
+				.doesNotHaveBean(AcpHarnessClient.class));
 	}
 
 	/**
@@ -593,8 +593,8 @@ class AcpAutoConfigurationTests {
 	static class StubClient {
 
 		@Bean
-		AcpAgentClient acpAgentClient(SelectedRuntime selected, AcpAgentSettings settings) {
-			return org.mockito.Mockito.mock(AcpAgentClient.class);
+		AcpHarnessClient acpHarnessClient(SelectedRuntime selected, AcpAgentSettings settings) {
+			return org.mockito.Mockito.mock(AcpHarnessClient.class);
 		}
 
 	}

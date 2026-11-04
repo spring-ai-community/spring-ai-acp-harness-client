@@ -37,7 +37,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 /**
- * Starts an agent and hands back a connected {@link AcpAgentClient}.
+ * Starts an agent and hands back a connected {@link AcpHarnessClient}.
  *
  * <p>
  * The client capabilities declared here follow the settings, and default to lending the
@@ -54,24 +54,24 @@ import reactor.core.scheduler.Schedulers;
  * agent calls the options a client may set. Skills need no adapter: every runtime reads
  * them from the workspace, so they are installed here.
  */
-public final class AcpAgentClientFactory {
+public final class AcpHarnessClientFactory {
 
-	private static final Logger logger = LoggerFactory.getLogger(AcpAgentClientFactory.class);
+	private static final Logger logger = LoggerFactory.getLogger(AcpHarnessClientFactory.class);
 
 	private static final String CLIENT_NAME = "spring-ai-acp-harness-client";
 
 	private static final String SESSION_UPDATE = "session/update";
 
-	private AcpAgentClientFactory() {
+	private AcpHarnessClientFactory() {
 	}
 
 	/** Provisions, launches and connects the runtime named by {@code settings}. */
-	public static AcpAgentClient create(AcpAgentRuntime runtime, AcpAgentSettings settings) {
+	public static AcpHarnessClient create(AcpAgentRuntime runtime, AcpAgentSettings settings) {
 		return create(runtime, settings, AcpAgentObservations.NONE);
 	}
 
 	/** Same, with every turn this client runs reported to {@code observations}. */
-	public static AcpAgentClient create(AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public static AcpHarnessClient create(AcpAgentRuntime runtime, AcpAgentSettings settings,
 			AcpAgentObservations observations) {
 		// Before the agent starts, because agents read their skills at startup, and here
 		// rather than in
@@ -120,7 +120,7 @@ public final class AcpAgentClientFactory {
 	 * {@link AcpAgentProcessSupervisor} waits for readiness and reports what the agent
 	 * said instead.
 	 */
-	private static AcpAgentClient connectServed(AcpAgentRuntime runtime, AcpAgentSettings settings,
+	private static AcpHarnessClient connectServed(AcpAgentRuntime runtime, AcpAgentSettings settings,
 			AcpAgentLaunchSpec.WebSocket served, AcpAgentDiagnostics diagnostics, AcpAgentObservations observations) {
 		AcpAgentProcessSupervisor supervisor = served.process() == null ? null
 				: new AcpAgentProcessSupervisor(runtime.id(), served.process(), settings.pool().maxRestarts());
@@ -208,13 +208,13 @@ public final class AcpAgentClientFactory {
 	 * an in-memory transport through here, and it is where a runtime that attaches to
 	 * something it did not spawn — an agent on a WebSocket, a sidecar — will come in.
 	 */
-	public static AcpAgentClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
 			AcpClientTransport launched) {
 		return connect(runtime, settings, launched, AcpAgentObservations.NONE);
 	}
 
 	/** Same, reporting turns to {@code observations}. */
-	public static AcpAgentClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
 			AcpClientTransport launched, AcpAgentObservations observations) {
 		return connect(runtime, settings, launched, observations, null);
 	}
@@ -229,12 +229,12 @@ public final class AcpAgentClientFactory {
 	 * caller is asserting that the watcher belongs to this agent, which only a caller
 	 * that knows both can do. The watcher is closed with the client.
 	 */
-	public static AcpAgentClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
 			AcpClientTransport launched, AcpAgentObservations observations, AcpAgentLogWatcher watcher) {
 		return connect(runtime, settings, Launched.attached(launched, watcher), observations);
 	}
 
-	private static AcpAgentClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings, Launched launched,
+	private static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings, Launched launched,
 			AcpAgentObservations observations) {
 		SessionConfigRecorder recorder = new SessionConfigRecorder();
 		AcpClientTransport transport = recorder.wrap(launched.transport());
@@ -286,8 +286,8 @@ public final class AcpAgentClientFactory {
 		}
 
 		Liveness liveness = launched.liveness();
-		DefaultAcpAgentClient client = new DefaultAcpAgentClient(acp, runtime, settings, new SessionRegistry(), router,
-				recorder, handshake.initialized(), handshake.protocolVersion(), observations,
+		DefaultAcpHarnessClient client = new DefaultAcpHarnessClient(acp, runtime, settings, new SessionRegistry(),
+				router, recorder, handshake.initialized(), handshake.protocolVersion(), observations,
 				liveness.knowable() ? liveness.alive() : null, release);
 		client.watch(launched.watcher());
 		return client;
@@ -313,14 +313,14 @@ public final class AcpAgentClientFactory {
 						new AcpSchema.Implementation(CLIENT_NAME, version()), null))
 				.block(settings.timeout());
 			if (initialized == null) {
-				throw new AcpAgentClientException("Agent '" + runtime.id() + "' did not complete initialization");
+				throw new AcpHarnessClientException("Agent '" + runtime.id() + "' did not complete initialization");
 			}
 		}
 		catch (RuntimeException ex) {
 			// Collected here, before the caller closes anything: closing disposes the
 			// scheduler that delivers the agent's stderr, so a complaint still in flight
 			// is lost the moment the transport goes down.
-			throw new AcpAgentClientException(
+			throw new AcpHarnessClientException(
 					"Failed to initialize runtime '" + runtime.id() + "'" + diagnostics.settledSummary(), ex);
 		}
 
@@ -370,7 +370,7 @@ public final class AcpAgentClientFactory {
 			logger.debug("Authenticated {} with '{}'", runtime.id(), method.get());
 		}
 		catch (RuntimeException ex) {
-			throw new AcpAgentClientException("Runtime '" + runtime.id() + "' refused authentication with '"
+			throw new AcpHarnessClientException("Runtime '" + runtime.id() + "' refused authentication with '"
 					+ method.get() + "'" + diagnostics.settledSummary(), ex);
 		}
 	}
@@ -487,7 +487,7 @@ public final class AcpAgentClientFactory {
 	}
 
 	private static String version() {
-		String implementation = AcpAgentClientFactory.class.getPackage().getImplementationVersion();
+		String implementation = AcpHarnessClientFactory.class.getPackage().getImplementationVersion();
 		return implementation == null ? "0.1.0-SNAPSHOT" : implementation;
 	}
 

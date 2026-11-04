@@ -42,11 +42,11 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
 import reactor.core.publisher.Flux;
 
 /**
- * The default {@link AcpAgentClient}: one agent connection, many named sessions.
+ * The default {@link AcpHarnessClient}: one agent connection, many named sessions.
  */
-public final class DefaultAcpAgentClient implements AcpAgentClient {
+public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
-	private static final Logger logger = LoggerFactory.getLogger(DefaultAcpAgentClient.class);
+	private static final Logger logger = LoggerFactory.getLogger(DefaultAcpHarnessClient.class);
 
 	private final AcpAsyncClient acp;
 
@@ -71,7 +71,7 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 	private final AcpAgentObservations observations;
 
 	/**
-	 * Null when the transport cannot tell; see {@code AcpAgentClientFactory.Liveness}.
+	 * Null when the transport cannot tell; see {@code AcpHarnessClientFactory.Liveness}.
 	 */
 	private final BooleanSupplier alive;
 
@@ -88,14 +88,14 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 	 */
 	private final McpAccess mcpAccess;
 
-	public DefaultAcpAgentClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
 			SessionRegistry sessions, SessionUpdateRouter router, SessionConfigRecorder recorder,
 			AcpSchema.InitializeResponse initialized, BooleanSupplier alive, Runnable onClose) {
 		this(acp, runtime, settings, sessions, router, recorder, initialized, AcpProtocol.V1, AcpAgentObservations.NONE,
 				alive, onClose);
 	}
 
-	public DefaultAcpAgentClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
 			SessionRegistry sessions, SessionUpdateRouter router, SessionConfigRecorder recorder,
 			AcpSchema.InitializeResponse initialized, int protocolVersion, AcpAgentObservations observations,
 			BooleanSupplier alive, Runnable onClose) {
@@ -125,7 +125,7 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 	 * <p>
 	 * Not a constructor parameter because it is optional, runtime-specific and already
 	 * the eleventh thing this class is handed; set once, by
-	 * {@code AcpAgentClientFactory}, before anything can call {@link #notices()}.
+	 * {@code AcpHarnessClientFactory}, before anything can call {@link #notices()}.
 	 */
 	void watch(AcpAgentLogWatcher watcher) {
 		this.watcher = watcher;
@@ -275,7 +275,7 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 							grant.servers().stream().map(m -> m.toAcp()).toList()))
 					.block(effective.timeout());
 				if (response == null || response.sessionId() == null) {
-					throw new AcpAgentClientException("Agent did not return a session id for '" + n + "'");
+					throw new AcpHarnessClientException("Agent did not return a session id for '" + n + "'");
 				}
 				advertised.set(new AdvertisedSessionConfig(recorder.configOptionsFor(response.sessionId()),
 						response.modes(), response.models()));
@@ -330,8 +330,8 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 			}
 			sessions.remove(name);
 			closeRemote(session.sessionId());
-			throw new AcpAgentClientException("Agent '" + runtime.id() + "' could not load MCP server '" + server.name()
-					+ "', so this session would have run without its tools; the agent reported: "
+			throw new AcpHarnessClientException("Agent '" + runtime.id() + "' could not load MCP server '"
+					+ server.name() + "', so this session would have run without its tools; the agent reported: "
 					+ failure.get().detail());
 		}
 	}
@@ -451,11 +451,11 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 			}).blockLast();
 
 			if (failure.get() != null) {
-				throw new AcpAgentClientException("Agent turn failed", failure.get());
+				throw new AcpHarnessClientException("Agent turn failed", failure.get());
 			}
 			if (completion.get() == null) {
 				// Would mean the terminal-event contract was broken upstream.
-				throw new AcpAgentClientException("Agent turn ended without a terminal event");
+				throw new AcpHarnessClientException("Agent turn ended without a terminal event");
 			}
 			return new DefaultAcpAgentResponse(content.toString(), completion.get());
 		}
@@ -504,13 +504,13 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 		private void acquireTurn(AcpAgentSession session, Duration timeout) {
 			try {
 				if (!session.tryBeginTurn(timeout)) {
-					throw new AcpAgentClientException(
+					throw new AcpHarnessClientException(
 							"Session '" + session.name() + "' is busy with another turn after " + timeout);
 				}
 			}
 			catch (InterruptedException ex) {
 				Thread.currentThread().interrupt();
-				throw new AcpAgentClientException("Interrupted waiting for session '" + session.name() + "'", ex);
+				throw new AcpHarnessClientException("Interrupted waiting for session '" + session.name() + "'", ex);
 			}
 		}
 

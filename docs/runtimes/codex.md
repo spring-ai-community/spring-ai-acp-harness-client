@@ -45,7 +45,7 @@ spring:
 or only for the turns that need it:
 
 ```java
-agent.prompt().session("migration").user("Run the full integration build")
+acpHarnessClient.prompt().session("migration").user("Run the full integration build")
         .options(o -> o.mode("agent-full-access"))
         .call();
 ```

@@ -20,7 +20,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.event.AcpAgentEvent;
 import org.springaicommunity.acp.runtime.AcpAgentRuntime;
 
@@ -75,25 +75,25 @@ import reactor.core.publisher.Flux;
  * Tool calling is the same story from the other side. The agent has its own tools and
  * runs them itself; {@code ToolCallbacks} registered on the Spring AI side are not
  * visible to it. Tool activity surfaces as {@code ToolCallStarted} and
- * {@code ToolCallUpdated} on the native {@link AcpAgentClient} API, which is where an
+ * {@code ToolCallUpdated} on the native {@link AcpHarnessClient} API, which is where an
  * application that cares about it should be.
  */
 public class AcpChatModel implements ChatModel {
 
 	private static final Logger logger = LoggerFactory.getLogger(AcpChatModel.class);
 
-	private final AcpAgentClient client;
+	private final AcpHarnessClient client;
 
 	private final AcpChatOptions defaultOptions;
 
 	/** So an ignored option is named once per model, not once per call. */
 	private final Set<String> reportedUnsupported = ConcurrentHashMap.newKeySet();
 
-	public AcpChatModel(AcpAgentClient client) {
+	public AcpChatModel(AcpHarnessClient client) {
 		this(client, AcpChatOptions.builder().build());
 	}
 
-	public AcpChatModel(AcpAgentClient client, AcpChatOptions defaultOptions) {
+	public AcpChatModel(AcpHarnessClient client, AcpChatOptions defaultOptions) {
 		this.client = client;
 		this.defaultOptions = defaultOptions == null ? AcpChatOptions.builder().build() : defaultOptions;
 	}
@@ -106,7 +106,7 @@ public class AcpChatModel implements ChatModel {
 	@Override
 	public ChatResponse call(Prompt prompt) {
 		AcpChatOptions options = options(prompt);
-		AcpAgentClient.AcpAgentResponse response = spec(prompt, options).call();
+		AcpHarnessClient.AcpAgentResponse response = spec(prompt, options).call();
 		return new ChatResponse(
 				List.of(new Generation(new AssistantMessage(response.content()),
 						ChatGenerationMetadata.builder().finishReason(finishReason(response.completion())).build())),
@@ -129,7 +129,7 @@ public class AcpChatModel implements ChatModel {
 					default -> {
 						// Thoughts, tool calls and plans are agent activity, not
 						// assistant output.
-						// They are on the AcpAgentClient API, which is where an
+						// They are on the AcpHarnessClient API, which is where an
 						// application
 						// that wants
 						// them should be looking.
@@ -147,10 +147,10 @@ public class AcpChatModel implements ChatModel {
 				metadata(options, usage));
 	}
 
-	private AcpAgentClient.PromptSpec spec(Prompt prompt, AcpChatOptions options) {
+	private AcpHarnessClient.PromptSpec spec(Prompt prompt, AcpChatOptions options) {
 		reportUnsupported(prompt.getOptions());
 
-		AcpAgentClient.PromptSpec spec = client.prompt();
+		AcpHarnessClient.PromptSpec spec = client.prompt();
 		if (options.getSession() != null) {
 			spec = spec.session(options.getSession());
 		}

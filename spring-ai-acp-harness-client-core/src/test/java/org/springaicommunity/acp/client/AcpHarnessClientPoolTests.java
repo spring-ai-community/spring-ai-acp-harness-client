@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * to and when a connection is replaced, and a fake makes both observable in a way a
  * subprocess would not.
  */
-class AcpAgentClientPoolTests {
+class AcpHarnessClientPoolTests {
 
 	@TempDir
 	Path workspace;
@@ -52,8 +52,8 @@ class AcpAgentClientPoolTests {
 			.build();
 	}
 
-	private AcpAgentClientPool pool(AcpAgentSettings settings) {
-		return new AcpAgentClientPool("fake", settings, this::newClient);
+	private AcpHarnessClientPool pool(AcpAgentSettings settings) {
+		return new AcpHarnessClientPool("fake", settings, this::newClient);
 	}
 
 	private static final SessionPrincipal ALICE = SessionPrincipal.of("alice");
@@ -63,11 +63,11 @@ class AcpAgentClientPoolTests {
 	/**
 	 * A pool over a runtime whose MCP servers are shared by every session in a process.
 	 */
-	private AcpAgentClientPool processScoped(AcpAgentSettings settings) {
-		return new AcpAgentClientPool("fake", settings, this::newClient, McpScope.PROCESS);
+	private AcpHarnessClientPool processScoped(AcpAgentSettings settings) {
+		return new AcpHarnessClientPool("fake", settings, this::newClient, McpScope.PROCESS);
 	}
 
-	private AcpAgentClient newClient() {
+	private AcpHarnessClient newClient() {
 		FakeClient client = new FakeClient(connections.incrementAndGet());
 		created.add(client);
 		return client;
@@ -76,7 +76,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("nothing is connected until something is asked of the pool")
 	void connectsLazily() {
-		try (AcpAgentClientPool pool = pool(settings(2, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(2, 32))) {
 			assertThat(pool.openConnections()).isZero();
 
 			pool.openSession("a");
@@ -88,7 +88,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a named session always goes back to the connection that has its context")
 	void namedSessionsAreSticky() {
-		try (AcpAgentClientPool pool = pool(settings(3, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(3, 32))) {
 			pool.openSession("review");
 			FakeClient owner = created.get(0);
 
@@ -104,7 +104,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("unrelated conversations spread across the pool")
 	void spreadsAcrossConnections() {
-		try (AcpAgentClientPool pool = pool(settings(3, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(3, 32))) {
 			pool.openSession("a");
 			pool.openSession("b");
 			pool.openSession("c");
@@ -117,11 +117,11 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a full pool says so, and says what to change")
 	void refusesWhenFull() {
-		try (AcpAgentClientPool pool = pool(settings(2, 1))) {
+		try (AcpHarnessClientPool pool = pool(settings(2, 1))) {
 			pool.openSession("a");
 			pool.openSession("b");
 
-			assertThatThrownBy(() -> pool.openSession("c")).isInstanceOf(AcpAgentClientException.class)
+			assertThatThrownBy(() -> pool.openSession("c")).isInstanceOf(AcpHarnessClientException.class)
 				.hasMessageContaining("maximum of 2 sessions")
 				.hasMessageContaining("spring.ai.acp.harness.pool");
 		}
@@ -130,7 +130,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a connection that reports itself dead is replaced on next use")
 	void replacesADeadConnection() {
-		try (AcpAgentClientPool pool = pool(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
 			pool.openSession("a");
 			FakeClient first = created.get(0);
 			first.alive.set(false);
@@ -148,7 +148,7 @@ class AcpAgentClientPoolTests {
 		AcpAgentSettings settings = AcpAgentSettings.builder("fake", workspace)
 			.pool(new PoolSettings(1, 32, 2))
 			.build();
-		try (AcpAgentClientPool pool = new AcpAgentClientPool("fake", settings, () -> {
+		try (AcpHarnessClientPool pool = new AcpHarnessClientPool("fake", settings, () -> {
 			FakeClient client = (FakeClient) newClient();
 			client.alive.set(false);
 			return client;
@@ -157,7 +157,7 @@ class AcpAgentClientPoolTests {
 				for (int i = 0; i < 10; i++) {
 					pool.openSession("s" + i);
 				}
-			}).isInstanceOf(AcpAgentClientException.class);
+			}).isInstanceOf(AcpHarnessClientException.class);
 			assertThat(created).hasSizeLessThanOrEqualTo(4);
 		}
 	}
@@ -165,7 +165,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("sweeping evicts idle sessions and gives their place in the pool back")
 	void sweepFreesCapacity() {
-		try (AcpAgentClientPool pool = pool(settings(1, 1))) {
+		try (AcpHarnessClientPool pool = pool(settings(1, 1))) {
 			pool.openSession("a");
 			created.get(0).registry.clear();
 
@@ -180,7 +180,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("closing a session frees its name and tells the connection that owns it")
 	void closeReleasesTheName() {
-		try (AcpAgentClientPool pool = pool(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
 			pool.openSession("a");
 
 			pool.sessions().close("a");
@@ -193,7 +193,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("closing the pool closes every connection it opened")
 	void closeClosesEverything() {
-		AcpAgentClientPool pool = pool(settings(2, 32));
+		AcpHarnessClientPool pool = pool(settings(2, 32));
 		pool.openSession("a");
 		pool.openSession("b");
 
@@ -206,7 +206,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a throwaway turn runs without taking a name")
 	void ephemeralTurns() {
-		try (AcpAgentClientPool pool = pool(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
 			String answer = pool.prompt("hello").call().content();
 
 			assertThat(answer).isEqualTo("ok");
@@ -217,8 +217,8 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a streamed turn picks its connection on subscription, not when it was described")
 	void streamsAreDeferred() {
-		try (AcpAgentClientPool pool = pool(settings(1, 32))) {
-			AcpAgentClient.AcpAgentStream stream = pool.prompt("hello").stream();
+		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
+			AcpHarnessClient.AcpAgentStream stream = pool.prompt("hello").stream();
 			assertThat(pool.openConnections()).isZero();
 
 			List<AcpAgentEvent> events = stream.events().collectList().block();
@@ -231,7 +231,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: two principals never share a process")
 	void processScopedPrincipalsNeverShare() {
-		try (AcpAgentClientPool pool = processScoped(settings(2, 32))) {
+		try (AcpHarnessClientPool pool = processScoped(settings(2, 32))) {
 			pool.openSession("a", ALICE);
 			pool.openSession("b", BOB);
 			pool.openSession("c", ALICE);
@@ -246,7 +246,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: one principal's sessions share a process")
 	void processScopedPrincipalShares() {
-		try (AcpAgentClientPool pool = processScoped(settings(3, 32))) {
+		try (AcpHarnessClientPool pool = processScoped(settings(3, 32))) {
 			pool.openSession("a", ALICE);
 			pool.openSession("b", ALICE);
 			pool.openSession("c", ALICE);
@@ -258,10 +258,10 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: a principal with no process free is refused, naming max-processes")
 	void processScopedRefusesWhenEveryProcessServesSomeoneElse() {
-		try (AcpAgentClientPool pool = processScoped(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
 			pool.openSession("a", ALICE);
 
-			assertThatThrownBy(() -> pool.openSession("b", BOB)).isInstanceOf(AcpAgentClientException.class)
+			assertThatThrownBy(() -> pool.openSession("b", BOB)).isInstanceOf(AcpHarnessClientException.class)
 				.hasMessageContaining("spring.ai.acp.harness.pool.max-processes");
 			assertThat(created.get(0).registry.knows("b")).isFalse();
 		}
@@ -270,7 +270,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: an idle process is restarted before it serves someone else")
 	void processScopedRecyclesOnHandover() {
-		try (AcpAgentClientPool pool = processScoped(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
 			pool.openSession("a", ALICE);
 			pool.sessions().close("a");
 
@@ -285,7 +285,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: an idle process goes back to the same principal without a restart")
 	void processScopedKeepsTheProcessForItsOwner() {
-		try (AcpAgentClientPool pool = processScoped(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
 			pool.openSession("a", ALICE);
 			pool.sessions().close("a");
 
@@ -301,7 +301,7 @@ class AcpAgentClientPoolTests {
 		AcpAgentSettings settings = AcpAgentSettings.builder("fake", workspace)
 			.pool(new PoolSettings(1, 32, 1))
 			.build();
-		try (AcpAgentClientPool pool = processScoped(settings)) {
+		try (AcpHarnessClientPool pool = processScoped(settings)) {
 			for (int i = 0; i < 4; i++) {
 				String name = "s" + i;
 				pool.openSession(name, i % 2 == 0 ? ALICE : BOB);
@@ -316,7 +316,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: an unnamed turn holds its process until it ends")
 	void processScopedEphemeralTurnHoldsItsProcess() {
-		try (AcpAgentClientPool pool = processScoped(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
 			BaseSubscriber<AcpAgentEvent> firstEventOnly = new BaseSubscriber<>() {
 				@Override
 				protected void hookOnSubscribe(org.reactivestreams.Subscription subscription) {
@@ -325,7 +325,7 @@ class AcpAgentClientPoolTests {
 			};
 			pool.prompt().principal(ALICE).user("hello").stream().events().subscribe(firstEventOnly);
 
-			assertThatThrownBy(() -> pool.openSession("b", BOB)).isInstanceOf(AcpAgentClientException.class);
+			assertThatThrownBy(() -> pool.openSession("b", BOB)).isInstanceOf(AcpHarnessClientException.class);
 
 			firstEventOnly.cancel();
 			pool.openSession("b", BOB);
@@ -337,7 +337,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("session-scoped MCP: principals are placed by load alone, as before")
 	void sessionScopedIgnoresPrincipals() {
-		try (AcpAgentClientPool pool = pool(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
 			pool.openSession("a", ALICE);
 			pool.openSession("b", BOB);
 
@@ -345,8 +345,8 @@ class AcpAgentClientPoolTests {
 		}
 	}
 
-	/** An {@link AcpAgentClient} that records what was asked of it and nothing else. */
-	private static final class FakeClient implements AcpAgentClient {
+	/** An {@link AcpHarnessClient} that records what was asked of it and nothing else. */
+	private static final class FakeClient implements AcpHarnessClient {
 
 		private final int index;
 
@@ -535,7 +535,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a session keeps its connection after that connection has been replaced")
 	void stickinessSurvivesAReplacement() {
-		try (AcpAgentClientPool pool = pool(settings(3, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(3, 32))) {
 			pool.openSession("review");
 			created.get(0).alive.set(false);
 
@@ -552,7 +552,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("asking who the agent is does not start one")
 	void agentInfoDoesNotConnect() {
-		try (AcpAgentClientPool pool = pool(settings(1, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
 			assertThat(pool.agentInfo()).isEmpty();
 			assertThat(pool.openConnections()).isZero();
 
@@ -570,7 +570,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a name is not forgotten by the first sweep that finds its session missing")
 	void pruningTakesTwoSweeps() {
-		try (AcpAgentClientPool pool = pool(settings(2, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(2, 32))) {
 			pool.openSession("review");
 			FakeClient owner = created.get(0);
 			owner.registry.clear();
@@ -586,7 +586,7 @@ class AcpAgentClientPoolTests {
 	@Test
 	@DisplayName("a name whose session is gone for two sweeps is let go")
 	void pruningHappensEventually() {
-		try (AcpAgentClientPool pool = pool(settings(2, 32))) {
+		try (AcpHarnessClientPool pool = pool(settings(2, 32))) {
 			pool.openSession("review");
 			created.get(0).registry.clear();
 

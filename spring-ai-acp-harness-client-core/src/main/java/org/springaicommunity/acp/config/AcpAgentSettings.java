@@ -14,7 +14,7 @@ import org.springaicommunity.acp.workspace.FileSystemAccess;
 import org.springaicommunity.acp.workspace.TerminalAccess;
 
 /**
- * The resolved, runtime-neutral configuration an {@code AcpAgentClient} runs with.
+ * The resolved, runtime-neutral configuration an {@code AcpHarnessClient} runs with.
  *
  * <p>
  * Deliberately free of Spring types. The Boot module binds

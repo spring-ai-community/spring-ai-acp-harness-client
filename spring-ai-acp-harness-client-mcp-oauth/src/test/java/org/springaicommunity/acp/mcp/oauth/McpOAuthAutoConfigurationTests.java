@@ -19,7 +19,7 @@ import org.springframework.security.oauth2.client.JdbcOAuth2AuthorizedClientServ
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springaicommunity.acp.boot.AcpAutoConfiguration;
-import org.springaicommunity.acp.client.AcpAgentClient;
+import org.springaicommunity.acp.client.AcpHarnessClient;
 import org.springaicommunity.acp.config.AcpAgentSettings;
 import org.springaicommunity.acp.mcp.McpCredentialsProvider;
 import org.springaicommunity.acp.runtime.AcpAgentLaunchSpec;
@@ -169,8 +169,8 @@ class McpOAuthAutoConfigurationTests {
 		}
 
 		@Bean
-		AcpAgentClient acpAgentClient() {
-			return org.mockito.Mockito.mock(AcpAgentClient.class);
+		AcpHarnessClient acpHarnessClient() {
+			return org.mockito.Mockito.mock(AcpHarnessClient.class);
 		}
 
 	}
