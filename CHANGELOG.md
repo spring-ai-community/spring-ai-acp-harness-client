@@ -129,8 +129,9 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   built when the pool closed was never closed. A closed pool now refuses work with an
   `AcpHarnessClientException`, and a connection that finishes building after the close is closed at
   once. Closing does not interrupt or wait for a connect in progress.
-- The HTTP endpoint failed every call on a real server, with a 500, because it blocked on the Netty
-  event loop. Its handlers now run off the event loop.
+- The HTTP endpoint blocked on the Netty event loop, so on a real server `/prompt`, `/stream` and
+  listing sessions failed with a 500, and closing a session never reached the agent. Its handlers
+  now run off the event loop.
 - The HTTP endpoint ran turns with no owner, so any caller could continue another user's session by
   naming it, and `DELETE {path}/sessions/{name}` closed any session. The caller's `Principal` now
   owns the session, and another user gets a 403. On OpenCode this means
