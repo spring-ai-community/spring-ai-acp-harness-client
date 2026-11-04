@@ -5,13 +5,6 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>org.springaicommunity</groupId>
-        <artifactId>spring-ai-community-parent</artifactId>
-        <version>1.0.1</version>
-        <relativePath/>
-    </parent>
-
     <groupId>org.springaicommunity</groupId>
     <artifactId>spring-ai-acp-harness-client</artifactId>
     <version>0.6.0-SNAPSHOT</version>
@@ -67,8 +60,11 @@
 
     <properties>
         <java.version>21</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <spring-boot.version>4.1.1</spring-boot.version>
         <acp.version>0.18.0</acp.version>
@@ -81,6 +77,14 @@
         <jline.version>3.30.17</jline.version>
         <!-- A module with no Java sources sets this to "package"; see maven-jar-plugin below. -->
         <placeholder-jars.phase>none</placeholder-jars.phase>
+
+        <!-- Plugin versions -->
+        <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
+        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
+        <maven-javadoc-plugin.version>3.6.0</maven-javadoc-plugin.version>
+        <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+        <central-publishing-maven-plugin.version>0.12.0</central-publishing-maven-plugin.version>
+        <spring-javaformat-maven-plugin.version>0.0.43</spring-javaformat-maven-plugin.version>
     </properties>
 
     <modules>
@@ -266,6 +270,10 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.15.0</version>
+                    <configuration>
+                        <!-- @ConfigurationProperties constructor binding reads parameter names at runtime. -->
+                        <parameters>true</parameters>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -277,18 +285,29 @@
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>3.1.4</version>
                 </plugin>
-                <!--
-                    The parent's release profile publishes with this plugin, which bundles every
-                    module and ignores maven.deploy.skip, so the sample is excluded by name.
-                -->
                 <plugin>
-                    <groupId>org.sonatype.central</groupId>
-                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>${maven-source-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <version>${maven-javadoc-plugin.version}</version>
                     <configuration>
-                        <excludeArtifacts>
-                            <excludeArtifact>spring-ai-acp-harness-client-smoke-app</excludeArtifact>
-                        </excludeArtifacts>
+                        <failOnError>false</failOnError>
+                        <quiet>true</quiet>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>io.spring.javaformat</groupId>
+                    <artifactId>spring-javaformat-maven-plugin</artifactId>
+                    <version>${spring-javaformat-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -359,7 +378,85 @@
         </plugins>
     </build>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>central</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <profiles>
+        <!-- Publishes to Maven Central: mvn deploy -Prelease -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>${central-publishing-maven-plugin.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <!--
+                                This plugin bundles every module and ignores maven.deploy.skip, so the
+                                sample is excluded by name. This POM is not excluded: nothing flattens
+                                the modules' POMs, so each one still names it as its parent.
+                            -->
+                            <excludeArtifacts>
+                                <excludeArtifact>spring-ai-acp-harness-client-smoke-app</excludeArtifact>
+                            </excludeArtifacts>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- Publishes to the public Artifact Registry repository: mvn deploy -Partifact-registry -->
         <profile>
             <id>artifact-registry</id>
