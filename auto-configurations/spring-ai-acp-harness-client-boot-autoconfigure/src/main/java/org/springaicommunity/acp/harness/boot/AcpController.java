@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -22,12 +23,16 @@ import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
 import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.session.SessionOwnershipException;
+import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.StoredSession;
 import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * An optional HTTP face for the agent, off unless
@@ -67,23 +72,24 @@ public class AcpController {
 
 	/** Runs a turn and returns the whole answer. */
 	@PostMapping("${spring.ai.acp.harness.controller.path:/api/acp}/prompt")
-	public ResponseEntity<PromptResponse> prompt(@RequestBody PromptRequest request, Principal principal) {
+	public Mono<ResponseEntity<PromptResponse>> prompt(@RequestBody PromptRequest request, Principal principal) {
 		requireAuthorized(principal);
 		validate(request);
 		String requestId = UUID.randomUUID().toString();
-		try {
-			AcpHarnessClient.AcpHarnessResponse response = spec(request).call();
-			AcpSchema.StopReason reason = response.completion().reason();
-			return ResponseEntity
-				.ok(new PromptResponse(response.content(), reason == null ? null : reason.toString(), null, requestId));
-		}
-		catch (AcpHarnessClientException ex) {
-			// The agent's own words can carry anything it read; the caller gets the
-			// request id.
-			logger.warn("Agent request {} failed", requestId, ex);
-			return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-				.body(new PromptResponse(null, null, "The agent did not complete the turn", requestId));
-		}
+		return blocking(() -> spec(request, principal).call())
+			.onErrorMap(SessionOwnershipException.class, AcpController::forbidden)
+			.map(response -> {
+				AcpSchema.StopReason reason = response.completion().reason();
+				return ResponseEntity
+					.ok(new PromptResponse(response.content(), reason == null ? null : reason.toString(), null, requestId));
+			})
+			.onErrorResume(AcpHarnessClientException.class, ex -> {
+				// The agent's own words can carry anything it read; the caller gets the
+				// request id.
+				logger.warn("Agent request {} failed", requestId, ex);
+				return Mono.just(ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+					.body(new PromptResponse(null, null, "The agent did not complete the turn", requestId)));
+			});
 	}
 
 	/**
@@ -100,8 +106,11 @@ public class AcpController {
 	public Flux<String> stream(@RequestBody PromptRequest request, Principal principal) {
 		requireAuthorized(principal);
 		validate(request);
-		return spec(request).stream()
-			.events()
+		// Opening the session blocks when the stream is subscribed to, so that has to
+		// happen off the event loop too.
+		return Flux.defer(() -> spec(request, principal).stream().events())
+			.subscribeOn(Schedulers.boundedElastic())
+			.onErrorMap(SessionOwnershipException.class, AcpController::forbidden)
 			.filter(AcpHarnessEvent.Text.class::isInstance)
 			.map(AcpHarnessEvent.Text.class::cast)
 			.map(AcpHarnessEvent.Text::text);
@@ -111,22 +120,28 @@ public class AcpController {
 	 * The conversations the agent has stored, when it implements {@code session/list}.
 	 */
 	@GetMapping("${spring.ai.acp.harness.controller.path:/api/acp}/sessions")
-	public ResponseEntity<List<StoredSession>> sessions(Principal principal) {
+	public Mono<ResponseEntity<List<StoredSession>>> sessions(Principal principal) {
 		requireAuthorized(principal);
-		try {
-			return ResponseEntity.ok(agent.sessions().list());
-		}
-		catch (UnsupportedAcpHarnessOperationException ex) {
-			throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, ex.getMessage());
-		}
+		return blocking(() -> agent.sessions().list()).map(ResponseEntity::ok)
+			.onErrorMap(UnsupportedAcpHarnessOperationException.class,
+					ex -> new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, ex.getMessage()));
 	}
 
-	/** Ends a named session. Always succeeds, whether or not the agent knew about it. */
+	/**
+	 * Ends one of the caller's named sessions. A name nobody holds succeeds, whether or
+	 * not the agent knew about it; a name someone else holds is refused.
+	 */
 	@DeleteMapping("${spring.ai.acp.harness.controller.path:/api/acp}/sessions/{name}")
-	public ResponseEntity<Void> closeSession(@PathVariable String name, Principal principal) {
+	public Mono<ResponseEntity<Void>> closeSession(@PathVariable String name, Principal principal) {
 		requireAuthorized(principal);
-		agent.sessions().close(name);
-		return ResponseEntity.noContent().build();
+		SessionPrincipal caller = sessionPrincipal(principal);
+		return blocking(() -> {
+			if (agent.sessions().find(name).filter(session -> !session.belongsTo(caller)).isPresent()) {
+				throw forbidden(new SessionOwnershipException(name));
+			}
+			agent.sessions().close(name);
+			return ResponseEntity.noContent().build();
+		});
 	}
 
 	/**
@@ -134,15 +149,30 @@ public class AcpController {
 	 * it does.
 	 */
 	@GetMapping("${spring.ai.acp.harness.controller.path:/api/acp}/health")
-	public ResponseEntity<HealthResponse> health() {
-		boolean available = agent.isAlive();
-		var info = agent.harnessInfo();
-		return ResponseEntity.status(available ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
-			.body(new HealthResponse(available, agent.runtimeId(), info == null ? null : info.toString()));
+	public Mono<ResponseEntity<HealthResponse>> health() {
+		return blocking(() -> {
+			boolean available = agent.isAlive();
+			var info = agent.harnessInfo();
+			return ResponseEntity.status(available ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
+				.body(new HealthResponse(available, agent.runtimeId(), info == null ? null : info.toString()));
+		});
 	}
 
-	private AcpHarnessClient.PromptSpec spec(PromptRequest request) {
-		AcpHarnessClient.PromptSpec spec = agent.prompt().user(request.prompt());
+	/**
+	 * Runs client calls off the event loop. {@link AcpHarnessClient} blocks on the agent,
+	 * and Reactor refuses to block on a Netty thread.
+	 */
+	private static <T> Mono<T> blocking(Callable<T> work) {
+		return Mono.fromCallable(work).subscribeOn(Schedulers.boundedElastic());
+	}
+
+	/**
+	 * Passes the caller on explicitly, because a principal resolver has no thread-bound
+	 * context to read on a reactive stack, and without an owner any caller could continue
+	 * a session by naming it.
+	 */
+	private AcpHarnessClient.PromptSpec spec(PromptRequest request, Principal principal) {
+		AcpHarnessClient.PromptSpec spec = agent.prompt().principal(sessionPrincipal(principal)).user(request.prompt());
 		if (request.session() != null) {
 			spec = spec.session(request.session());
 		}
@@ -166,6 +196,14 @@ public class AcpController {
 			}
 		}
 		return builder.build();
+	}
+
+	private static SessionPrincipal sessionPrincipal(Principal principal) {
+		return principal == null ? null : SessionPrincipal.of(principal.getName());
+	}
+
+	private static ResponseStatusException forbidden(SessionOwnershipException ex) {
+		return new ResponseStatusException(HttpStatus.FORBIDDEN, ex.getMessage());
 	}
 
 	private void requireAuthorized(Principal principal) {
