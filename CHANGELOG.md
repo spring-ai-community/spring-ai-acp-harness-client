@@ -29,6 +29,15 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
 
+### Fixed
+
+- On a runtime that shares MCP servers across a process, such as OpenCode, a session name left
+  behind by an evicted or refused session could give that process to another user without the
+  restart a handover gets. The pool then recorded the wrong user for the process, so either user
+  could be refused with a misleading error while another process was free. MCP credentials stayed
+  separate: a user's route is removed with their last session, and a process holding one user's
+  sessions refuses anyone else's.
+
 ## [0.5.0] - 2026-10-20
 
 ### Changed

@@ -17,6 +17,7 @@ import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.McpScope;
 import org.springaicommunity.acp.harness.session.AcpAgentSession;
 import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.session.SessionOwnershipException;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
 import org.springaicommunity.acp.harness.session.StoredSession;
@@ -331,6 +332,116 @@ class AcpHarnessClientPoolTests {
 			pool.openSession("b", BOB);
 
 			assertThat(created).hasSize(2);
+		}
+	}
+
+	/**
+	 * A name outlives its session by up to two sweeps, and a session that failed to open
+	 * leaves its name behind the same way. Neither may take a process to a new principal
+	 * without the restart a handover gets.
+	 */
+	@Test
+	@DisplayName("process-scoped MCP: a name left behind does not take a process to someone else")
+	void processScopedStaleNameIsAHandover() {
+		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
+			pool.openSession("a", ALICE);
+			created.get(0).registry.clear();
+
+			pool.openSession("a", BOB);
+
+			assertThat(created).hasSize(2);
+			assertThat(created.get(0).closed).isTrue();
+			assertThat(created.get(1).registry.knows("a")).isTrue();
+		}
+	}
+
+	@Test
+	@DisplayName("process-scoped MCP: a name left behind does not put someone beside its old owner's sessions")
+	void processScopedStaleNameKeepsPrincipalsApart() {
+		try (AcpHarnessClientPool pool = processScoped(settings(2, 32))) {
+			pool.openSession("a", ALICE);
+			pool.openSession("b", ALICE);
+			created.get(0).registry.remove("a");
+
+			pool.openSession("a", BOB);
+
+			assertThat(created).hasSize(2);
+			assertThat(created.get(0).closed).isFalse();
+			assertThat(created.get(0).registry.knows("a")).isFalse();
+			assertThat(created.get(0).registry.knows("b")).isTrue();
+			assertThat(created.get(1).registry.knows("a")).isTrue();
+		}
+	}
+
+	@Test
+	@DisplayName("process-scoped MCP: a name left behind is refused like any other when no process is free")
+	void processScopedStaleNameIsRefusedWhenNoProcessIsFree() {
+		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
+			pool.openSession("a", ALICE);
+			pool.openSession("b", ALICE);
+			created.get(0).registry.remove("a");
+
+			assertThatThrownBy(() -> pool.openSession("a", BOB)).isInstanceOf(AcpHarnessClientException.class)
+				.hasMessageContaining("spring.ai.acp.harness.pool.max-processes");
+
+			assertThat(created).hasSize(1);
+			assertThat(created.get(0).closed).isFalse();
+			pool.openSession("a", ALICE);
+			assertThat(created.get(0).registry.knows("a")).isTrue();
+		}
+	}
+
+	@Test
+	@DisplayName("process-scoped MCP: a name left behind stays where it is for its own principal")
+	void processScopedStaleNameStaysWithItsOwner() {
+		try (AcpHarnessClientPool pool = processScoped(settings(2, 32))) {
+			pool.openSession("a", ALICE);
+			created.get(0).registry.clear();
+
+			pool.openSession("a", ALICE);
+
+			assertThat(created).hasSize(1);
+			assertThat(created.get(0).closed).isFalse();
+			assertThat(created.get(0).registry.knows("a")).isTrue();
+		}
+	}
+
+	@Test
+	@DisplayName("process-scoped MCP: a name someone is using is still refused, not moved")
+	void processScopedLiveNameIsStillRefused() {
+		try (AcpHarnessClientPool pool = processScoped(settings(2, 32))) {
+			pool.openSession("a", ALICE);
+
+			assertThatThrownBy(() -> pool.openSession("a", BOB)).isInstanceOf(SessionOwnershipException.class);
+
+			assertThat(created).hasSize(1);
+			assertThat(created.get(0).closed).isFalse();
+			assertThat(created.get(0).registry.knows("a")).isTrue();
+		}
+	}
+
+	/**
+	 * The two-sweep rule protects a name between being assigned and its session opening,
+	 * so a name that moved must start again rather than keep the mark from its old slot.
+	 * With one session per process, a forgotten name would have to go to another process.
+	 */
+	@Test
+	@DisplayName("process-scoped MCP: a name that moved is not forgotten by the next sweep")
+	void processScopedMovedNameStartsItsSweepsAgain() {
+		try (AcpHarnessClientPool pool = processScoped(settings(2, 1))) {
+			pool.openSession("a", ALICE);
+			created.get(0).registry.clear();
+			pool.evictIdleSessions();
+
+			pool.openSession("a", BOB);
+			created.get(1).registry.clear();
+			pool.evictIdleSessions();
+			pool.openSession("z", BOB);
+			pool.openSession("a", BOB);
+
+			assertThat(created).hasSize(2);
+			assertThat(created.get(1).registry.knows("a")).isTrue();
+			assertThat(created.get(1).registry.knows("z")).isTrue();
 		}
 	}
 

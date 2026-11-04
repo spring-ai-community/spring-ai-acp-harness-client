@@ -9,16 +9,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
+import org.springaicommunity.acp.harness.client.AcpHarnessClientPool;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.config.OnUnsupported;
 import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
+import org.springaicommunity.acp.harness.config.PoolSettings;
 import org.springaicommunity.acp.harness.config.UnsupportedAcpAgentOptionException;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
 import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.StoredSession;
 import org.springaicommunity.acp.harness.session.UnsupportedAcpAgentOperationException;
 
@@ -573,6 +576,102 @@ class AcpHarnessClientWireTests {
 			assertThat(agent.newSessions()).isEmpty();
 			assertThat(client.session("s")).isEmpty();
 		}
+	}
+
+	// --- a session name left behind, on an agent that shares MCP servers across sessions
+	// ----------------------------------------------------------
+
+	private static final SessionPrincipal ALICE = SessionPrincipal.of("alice");
+
+	private static final SessionPrincipal BOB = SessionPrincipal.of("bob");
+
+	/**
+	 * Refuses Alice's first session, as a provider does for a user not yet signed in,
+	 * which leaves its name assigned in the pool with no session behind it.
+	 */
+	private static org.springaicommunity.acp.harness.mcp.McpCredentialsProvider refusingAliceOnce() {
+		java.util.concurrent.atomic.AtomicBoolean refused = new java.util.concurrent.atomic.AtomicBoolean();
+		return (server, principal) -> {
+			if (ALICE.equals(principal) && refused.compareAndSet(false, true)) {
+				throw new IllegalStateException("alice needs a sign-in first");
+			}
+			return java.util.Optional
+				.of(org.springaicommunity.acp.harness.mcp.McpCredentials.bearer(() -> "token-" + principal.name()));
+		};
+	}
+
+	/** Each connection is its own scripted agent, as each would be its own process. */
+	private AcpHarnessClientPool processScopedPool(List<ScriptedAcpAgent> agents, int processes,
+			org.springaicommunity.acp.harness.mcp.McpCredentialsProvider provider) {
+		AcpAgentSettings settings = withProtectedServer(provider, null)
+			.pool(new PoolSettings(processes, 32, PoolSettings.DEFAULT_MAX_RESTARTS))
+			.build();
+		return new AcpHarnessClientPool("scripted", settings, () -> {
+			ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
+			agents.add(agent);
+			return AcpHarnessClientFactory.connect(new SharedMcpRuntime(), settings, agent.transport());
+		}, AcpAgentRuntime.McpScope.PROCESS);
+	}
+
+	@Test
+	void aNameLeftBehindDoesNotTakeAProcessToAnotherPrincipalWithoutARestart() {
+		List<ScriptedAcpAgent> agents = new java.util.ArrayList<>();
+		try (AcpHarnessClient pool = processScopedPool(agents, 1, refusingAliceOnce())) {
+			assertThatThrownBy(() -> pool.openSession("s", ALICE)).hasMessageContaining("needs a sign-in first");
+
+			pool.openSession("s", BOB);
+
+			assertThat(agents).hasSize(2);
+			assertThat(agents.get(0).newSessions()).isEmpty();
+			assertThat(agents.get(1).newSessions()).hasSize(1);
+		}
+		finally {
+			agents.forEach(ScriptedAcpAgent::close);
+		}
+	}
+
+	@Test
+	void aPrincipalIsNotSentBackToAProcessThatANameLeftBehindGaveToSomeoneElse() {
+		List<ScriptedAcpAgent> agents = new java.util.ArrayList<>();
+		try (AcpHarnessClient pool = processScopedPool(agents, 2, refusingAliceOnce())) {
+			assertThatThrownBy(() -> pool.openSession("s", ALICE)).hasMessageContaining("needs a sign-in first");
+			pool.openSession("s", BOB);
+
+			pool.openSession("other", ALICE);
+
+			assertThat(agents).hasSize(2);
+			assertThat(agents).allSatisfy(agent -> assertThat(agent.newSessions()).hasSize(1));
+		}
+		finally {
+			agents.forEach(ScriptedAcpAgent::close);
+		}
+	}
+
+	@Test
+	void aNameLeftBehindBesideALiveSessionMovesInsteadOfBeingRefused() {
+		List<ScriptedAcpAgent> agents = new java.util.ArrayList<>();
+		try (AcpHarnessClient pool = processScopedPool(agents, 2, refusingAliceOnce())) {
+			assertThatThrownBy(() -> pool.openSession("s", ALICE)).hasMessageContaining("needs a sign-in first");
+			pool.openSession("live", ALICE);
+
+			pool.openSession("s", BOB);
+
+			assertThat(agents).hasSize(2);
+			assertThat(agents).allSatisfy(agent -> assertThat(agent.newSessions()).hasSize(1));
+		}
+		finally {
+			agents.forEach(ScriptedAcpAgent::close);
+		}
+	}
+
+	/** An agent like OpenCode, whose MCP servers belong to the process. */
+	private static final class SharedMcpRuntime extends ScriptedRuntime {
+
+		@Override
+		public McpScope mcpScope() {
+			return McpScope.PROCESS;
+		}
+
 	}
 
 	// --- the portable tier

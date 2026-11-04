@@ -296,6 +296,11 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 			Slot slot;
 			synchronized (placement) {
 				slot = assignment.get(name);
+				if (slot != null && leftBehind(name, slot, principal)) {
+					assignment.remove(name);
+					missedLastSweep.remove(name);
+					slot = null;
+				}
 				if (slot == null) {
 					slot = placeFor(principal);
 					assignment.put(name, slot);
@@ -309,6 +314,22 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		AcpHarnessClient client = slot.client();
 		assignment.putIfAbsent(name, slot);
 		return client;
+	}
+
+	/**
+	 * Whether {@code name} points at a process serving someone else, with no session
+	 * behind it.
+	 *
+	 * <p>
+	 * A name outlives its session by up to two sweeps, and a session that failed to open
+	 * leaves its name behind too. Following such a name would skip {@link #placeFor}, and
+	 * with it the restart a handover gets and the record of who the process now serves. A
+	 * name whose session is still open stays put, so that the session's own ownership
+	 * check refuses the caller.
+	 */
+	private boolean leftBehind(String name, Slot slot, SessionPrincipal principal) {
+		return !Optional.ofNullable(principal).equals(slot.owner)
+				&& slot.connected().flatMap(client -> client.session(name)).isEmpty();
 	}
 
 	/**
