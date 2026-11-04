@@ -45,8 +45,13 @@ theme:
     - content.tabs.link
 
 nav:
-  - Home: index.md
-  - Getting Started: getting-started.md
+  - Home:
+    - index.md
+    - Getting Started: getting-started.md
+    - Guides:
+      - "Example: acp-meridian": guides/acp-meridian.md
+      - Testing: guides/testing.md
+      - Troubleshooting: guides/troubleshooting.md
   - Client API: harness-client.md
   - Runtimes:
     - runtimes/index.md
@@ -67,10 +72,6 @@ nav:
     - Terminal Console: integrations/console.md
     - Observability: integrations/observability.md
   - Properties: properties.md
-  - Guides:
-    - "Example: acp-meridian": guides/acp-meridian.md
-    - Testing: guides/testing.md
-    - Troubleshooting: guides/troubleshooting.md
   - Changes: changes.md
 
 markdown_extensions:
