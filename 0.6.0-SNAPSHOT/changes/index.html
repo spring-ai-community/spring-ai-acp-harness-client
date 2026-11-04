@@ -262,7 +262,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../agent-client/" class="md-tabs__link">
+      <a href="../harness-client/" class="md-tabs__link">
         
   
   
@@ -514,7 +514,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-client/" class="md-nav__link">
+      <a href="../harness-client/" class="md-nav__link">
         
   
   
@@ -1940,6 +1940,12 @@
 <h2 id="060-unreleased">[0.6.0] - Unreleased<a class="headerlink" href="#060-unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong>Breaking:</strong> <code>AcpAgentClient</code> becomes <code>AcpHarnessClient</code>, along with <code>DefaultAcpHarnessClient</code>,
+  <code>AcpHarnessClientPool</code>, <code>AcpHarnessClientFactory</code> and <code>AcpHarnessClientException</code>, and the bean
+  <code>acpAgentClient</code> becomes <code>acpHarnessClient</code>. ACP's two roles are client and agent, so a client type
+  named for both was ambiguous, and it matched neither the project's artifacts nor its properties.
+  Replace <code>AcpAgentClient</code> with <code>AcpHarnessClient</code> to migrate. Types that describe the agent keep
+  their <code>AcpAgent</code> names, as do <code>AcpHarnessClient.AcpAgentResponse</code> and <code>AcpAgentStream</code>.</li>
 <li><strong>Breaking:</strong> configuration properties move from <code>spring.acp.*</code> to <code>spring.ai.acp.harness.*</code>,
   and environment variables from <code>SPRING_ACP_*</code> to <code>SPRING_AI_ACP_HARNESS_*</code>. The old root is shared
   with <code>acp-autoconfig</code> (<code>spring.acp.client.*</code>, <code>spring.acp.agent.*</code>), and the new one follows the

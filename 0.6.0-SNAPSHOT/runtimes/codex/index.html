@@ -264,7 +264,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../agent-client/" class="md-tabs__link">
+      <a href="../../harness-client/" class="md-tabs__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-client/" class="md-nav__link">
+      <a href="../../harness-client/" class="md-nav__link">
         
   
   
@@ -1651,7 +1651,7 @@
 </span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">        </span><span class="nt">on-unsupported</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fail</span><span class="w">        </span><span class="c1"># refuse to run if the preset cannot be applied</span>
 </span></code></pre></div>
 <p>or only for the turns that need it:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">agent</span><span class="p">.</span><span class="na">prompt</span><span class="p">().</span><span class="na">session</span><span class="p">(</span><span class="s">"migration"</span><span class="p">).</span><span class="na">user</span><span class="p">(</span><span class="s">"Run the full integration build"</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">acpHarnessClient</span><span class="p">.</span><span class="na">prompt</span><span class="p">().</span><span class="na">session</span><span class="p">(</span><span class="s">"migration"</span><span class="p">).</span><span class="na">user</span><span class="p">(</span><span class="s">"Run the full integration build"</span><span class="p">)</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">        </span><span class="p">.</span><span class="na">options</span><span class="p">(</span><span class="n">o</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">o</span><span class="p">.</span><span class="na">mode</span><span class="p">(</span><span class="s">"agent-full-access"</span><span class="p">))</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">        </span><span class="p">.</span><span class="na">call</span><span class="p">();</span>
 </span></code></pre></div>

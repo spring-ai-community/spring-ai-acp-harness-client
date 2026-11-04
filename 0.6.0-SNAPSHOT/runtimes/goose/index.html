@@ -264,7 +264,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../agent-client/" class="md-tabs__link">
+      <a href="../../harness-client/" class="md-tabs__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-client/" class="md-nav__link">
+      <a href="../../harness-client/" class="md-nav__link">
         
   
   
@@ -1815,7 +1815,7 @@
 <p>The adapter does not move goose's configuration, so goose looks for this file in its usual place: <code>~/.config/goose/config.yaml</code> for the user the application runs as. On a developer machine that is your own goose configuration. To give the application a file of its own, point <code>GOOSE_PATH_ROOT</code> at a directory through the <code>env</code> block. Goose then reads <code>&lt;root&gt;/config/config.yaml</code>, and keeps its sessions and logs under that root too, so set <code>log-dir</code> to <code>&lt;root&gt;/state/logs</code> as well (<a href="#log-directory-and-mcp-gateways">see below</a>). A name disabled in the file and also listed in <code>builtins</code> is loaded: <code>builtins</code> wins.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>A misspelled name does not stop goose. It writes <code>Failed to load extension &lt;name&gt;: … Unknown extension</code> (since 1.55.0, <code>failed to start extension</code> with the name and <code>Unknown extension</code> in fields of their own) to its log and carries on. Spring AI ACP Harness Client reads that log for agents it started, so the mistake appears as a WARN line and in <code>AcpAgentClient.notices()</code>, worded as a server that could not be loaded.</p>
+<p>A misspelled name does not stop goose. It writes <code>Failed to load extension &lt;name&gt;: … Unknown extension</code> (since 1.55.0, <code>failed to start extension</code> with the name and <code>Unknown extension</code> in fields of their own) to its log and carries on. Spring AI ACP Harness Client reads that log for agents it started, so the mistake appears as a WARN line and in <code>AcpHarnessClient.notices()</code>, worded as a server that could not be loaded.</p>
 </div>
 <p>For tools that are not built in, declare an MCP server under <code>spring.ai.acp.harness.mcp-servers</code> rather than a goose extension. It is the same thing to goose, and it stays portable.</p>
 <h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>

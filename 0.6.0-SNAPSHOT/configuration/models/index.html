@@ -264,7 +264,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../agent-client/" class="md-tabs__link">
+      <a href="../../harness-client/" class="md-tabs__link">
         
   
   
@@ -516,7 +516,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../agent-client/" class="md-nav__link">
+      <a href="../../harness-client/" class="md-nav__link">
         
   
   
@@ -1652,9 +1652,9 @@
 </span></code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>Leave <code>model</code> unset to use whatever the agent is already configured with, which is the one model its credentials are sure to reach. To see what an agent offers, set a deliberately wrong model with <code>warn</code> and read the warning, or inspect <code>agent.openSession("probe").configOptions()</code>.</p>
+<p>Leave <code>model</code> unset to use whatever the agent is already configured with, which is the one model its credentials are sure to reach. To see what an agent offers, set a deliberately wrong model with <code>warn</code> and read the warning, or inspect <code>acpHarnessClient.openSession("probe").configOptions()</code>.</p>
 </div>
-<p>Override per turn with <code>.options(o -&gt; o.model("gpt-5.6-sol"))</code>. Options are negotiated once per session, and again only when a turn asks for something different. To see what was applied, read <code>openSession(name).configuration()</code> (<a href="../../agent-client/#named-sessions">Named sessions</a>); each option reports a <code>Mechanism</code>: <code>CONFIG_OPTION</code>, <code>ENDPOINT</code>, <code>SESSION_MODE</code>, <code>SESSION_MODEL</code>, <code>PROVIDERS_SET</code>, <code>OUT_OF_BAND</code>, <code>UNSUPPORTED</code> or <code>NOT_REQUESTED</code>.</p>
+<p>Override per turn with <code>.options(o -&gt; o.model("gpt-5.6-sol"))</code>. Options are negotiated once per session, and again only when a turn asks for something different. To see what was applied, read <code>openSession(name).configuration()</code> (<a href="../../harness-client/#named-sessions">Named sessions</a>); each option reports a <code>Mechanism</code>: <code>CONFIG_OPTION</code>, <code>ENDPOINT</code>, <code>SESSION_MODE</code>, <code>SESSION_MODEL</code>, <code>PROVIDERS_SET</code>, <code>OUT_OF_BAND</code>, <code>UNSUPPORTED</code> or <code>NOT_REQUESTED</code>.</p>
 <h2 id="provider-credentials">Provider credentials<a class="headerlink" href="#provider-credentials" title="Permanent link">&para;</a></h2>
 <p>An agent either already has credentials (its own login or config file), or you give it one through <code>spring.ai.acp.harness.provider</code>. The provider block is fixed at process start and never per request.</p>
 <div class="highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">spring</span><span class="p">:</span>
