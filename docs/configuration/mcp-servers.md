@@ -145,7 +145,7 @@ SecurityFilterChain security(HttpSecurity http) throws Exception {
 }
 ```
 
-The signed-in user becomes the `SessionPrincipal` of every prompt described on a request thread. A named session belongs to its principal; another user reusing the name gets `SessionOwnershipException`. On a reactive stack, pass `.principal(SessionPrincipal.of(name))` explicitly. To send a user to sign in before a stream starts, call `OAuth2McpCredentialsProvider.requireAuthorized(principal)` in the controller. With `store: jdbc`, registrations and tokens are shared across instances (schema: `org/springaicommunity/acp/mcp/oauth/acp-mcp-oauth-schema.sql` plus Spring Security's `oauth2_authorized_client`).
+The signed-in user becomes the `SessionPrincipal` of every prompt described on a request thread. A named session belongs to its principal; another user reusing the name gets `SessionOwnershipException`. On a reactive stack, pass `.principal(SessionPrincipal.of(name))` explicitly. To send a user to sign in before a stream starts, call `OAuth2McpCredentialsProvider.requireAuthorized(principal)` in the controller. With `store: jdbc`, registrations and tokens are shared across instances (schema: `org/springaicommunity/acp/harness/mcp/oauth/acp-mcp-oauth-schema.sql` plus Spring Security's `oauth2_authorized_client`).
 
 ### Terminal applications
 

@@ -23,7 +23,7 @@ spring:
 | `auto-approve` | Approves everything. Only in a sandbox, or when the gate that matters is elsewhere (see acp-meridian's `AGENTS.md`). |
 | `ask` | Puts each request to a person through the application's `PermissionPrompt` bean. `spring-ai-acp-harness-client-console` provides one (see [the console](../integrations/console.md#answering-permission-requests)); without one, the application fails to start rather than guess. |
 
-To find the names an agent reports, run once with `logging.level.org.springaicommunity.acp: DEBUG` and read them off the permission requests.
+To find the names an agent reports, run once with `logging.level.org.springaicommunity.acp.harness: DEBUG` and read them off the permission requests.
 
 ## Mode decides whether the question is asked
 

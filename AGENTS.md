@@ -44,7 +44,7 @@ Java 21 is required. Use the Maven wrapper:
 ## Conventions
 
 - Java uses tabs, not spaces, as spring-javaformat enforces.
-- Package-by-feature under `org.springaicommunity.acp`: `client`, `session`, `turn`, `event`,
+- Package-by-feature under `org.springaicommunity.acp.harness`: `client`, `session`, `turn`, `event`,
   `config`, `permission`, `mcp`, `workspace`, `process`, `transport`, `protocol`,
   `observation`, `executor`, `runtime`, `skill`.
 - Core and application code must not name a specific agent; vendor knowledge lives only in its

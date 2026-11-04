@@ -76,4 +76,4 @@ spring:
 
 logging:
   level:
-    org.springaicommunity.acp: INFO
+    org.springaicommunity.acp.harness: INFO

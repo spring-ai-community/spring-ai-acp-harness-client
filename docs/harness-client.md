@@ -88,7 +88,7 @@ Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (6
 `openSession(name)` opens a session without spending a turn. It is how to learn what the negotiated tier actually achieved before the first prompt:
 
 ```java
-import org.springaicommunity.acp.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
 
 SessionConfiguration config = acpHarnessClient.openSession("review-123").configuration();
 config.applied(PortableOption.MODEL);          // Optional: the model this session is really using

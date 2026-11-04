@@ -7,6 +7,11 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ### Changed
 
+- **Breaking:** Java packages move from `org.springaicommunity.acp.*` to
+  `org.springaicommunity.acp.harness.*`, to match the artifacts and the properties. Update your
+  imports, and any `logging.level.org.springaicommunity.acp` setting, which otherwise stops matching
+  without an error. The JDBC schema for MCP OAuth moves with them, to
+  `org/springaicommunity/acp/harness/mcp/oauth/acp-mcp-oauth-schema.sql`.
 - **Breaking:** `AcpAgentClient` becomes `AcpHarnessClient`, along with `DefaultAcpHarnessClient`,
   `AcpHarnessClientPool`, `AcpHarnessClientFactory` and `AcpHarnessClientException`, and the bean
   `acpAgentClient` becomes `acpHarnessClient`. ACP's two roles are client and agent, so a client type
