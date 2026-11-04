@@ -4,7 +4,9 @@ import java.nio.file.Path;
 import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +19,7 @@ import org.springframework.boot.webflux.autoconfigure.WebFluxAutoConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
@@ -24,12 +27,14 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
 import org.springaicommunity.acp.harness.client.AcpAgentInfo;
+import org.springaicommunity.acp.harness.client.AcpHarnessCapacityException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
 import org.springaicommunity.acp.harness.config.AcpAgentOptions;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.session.AcpAgentSession;
 import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.session.SessionOwnershipException;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
 import org.springaicommunity.acp.harness.session.StoredSession;
@@ -42,16 +47,17 @@ import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The endpoint on a real Netty server, because that is where two of its failures live.
+ * The endpoint on a real Netty server, because that is where its failures live.
  *
  * <p>
  * {@code WebTestClient.bindToApplicationContext} never reaches an event loop, so a
  * handler that blocks passes there and fails in production: Reactor refuses to block on a
- * Netty thread. The client here blocks the way the real one does, and owns its sessions
- * through the real {@link SessionRegistry}, so a request from the wrong user meets the
- * same refusal it would in an application.
+ * Netty thread. The client here blocks where the real one does and nowhere else, keeps
+ * sessions in the real {@link SessionRegistry}, reports failed turns as events, and falls
+ * back to a resolved principal when given none, as the real ones do.
  */
 class AcpControllerServerTests {
 
@@ -62,59 +68,39 @@ class AcpControllerServerTests {
 		.withPropertyValues("spring.ai.acp.harness.controller.enabled=true");
 
 	@Test
-	@DisplayName("a blocking turn completes on a real server")
-	void promptCompletesOnTheEventLoopServer() {
+	@DisplayName("a turn completes on a real server, without holding a thread through call()")
+	void promptCompletesOnARealServer() {
 		onServer((client, agent) -> prompt(client, "alice", null).expectStatus()
 			.isOk()
 			.expectBody()
 			.jsonPath("$.content")
-			.isEqualTo("ok"));
+			.isEqualTo("ok")
+			.jsonPath("$.stopReason")
+			.isEqualTo("END_TURN"));
 	}
 
 	@Test
-	@DisplayName("a blocking stream completes on a real server")
-	void streamCompletesOnTheEventLoopServer() {
-		onServer((client, agent) -> {
-			List<String> events = stream(client, "alice", null).expectStatus()
-				.isOk()
-				.returnResult(String.class)
-				.getResponseBody()
-				.collectList()
-				.block(Duration.ofSeconds(10));
-			assertThat(events).containsExactly("ok");
-		});
+	@DisplayName("a stream completes on a real server")
+	void streamCompletesOnARealServer() {
+		onServer((client, agent) -> assertThat(events(stream(client, "alice", null))).containsExactly("ok"));
 	}
 
 	@Test
 	@DisplayName("listing and closing sessions complete on a real server")
-	void sessionOperationsCompleteOnTheEventLoopServer() {
+	void sessionOperationsCompleteOnARealServer() {
 		onServer((client, agent) -> {
 			client.get().uri("/api/acp/sessions").header("X-User", "alice").exchange().expectStatus().isOk();
-			client.delete()
-				.uri("/api/acp/sessions/none")
-				.header("X-User", "alice")
-				.exchange()
-				.expectStatus()
-				.isNoContent();
+			close(client, "alice", "none").expectStatus().isNoContent();
 		});
 	}
 
 	@Test
-	@DisplayName("the health check answers on a real server")
-	void healthAnswersOnTheEventLoopServer() {
-		onServer((client, agent) -> client.get().uri("/api/acp/health").exchange().expectStatus().isOk());
-	}
-
-	@Test
-	@DisplayName("a failed turn is a 502 that does not repeat the agent's words")
-	void reportsAFailedTurnWithoutItsDetails() {
-		onServer((client, agent) -> prompt(client, "alice", "boom").expectStatus()
-			.isEqualTo(HttpStatus.BAD_GATEWAY)
-			.expectBody()
-			.jsonPath("$.error")
-			.isEqualTo("The agent did not complete the turn")
-			.jsonPath("$.requestId")
-			.isNotEmpty());
+	@DisplayName("the health check stays on the event loop, so busy turns cannot hold it up")
+	void healthStaysOnTheEventLoop() {
+		onServer((client, agent) -> {
+			client.get().uri("/api/acp/health").exchange().expectStatus().isOk();
+			assertThat(agent.healthThread).contains("reactor-http");
+		});
 	}
 
 	@Test
@@ -122,48 +108,63 @@ class AcpControllerServerTests {
 	void passesThePrincipalToTheClient() {
 		onServer((client, agent) -> {
 			prompt(client, "alice", "pr-1").expectStatus().isOk();
-			assertThat(agent.lastPrincipal).isEqualTo(SessionPrincipal.of("alice"));
+			assertThat(agent.owners.values()).containsExactly(SessionPrincipal.of("alice"));
 		});
 	}
 
 	@Test
-	@DisplayName("a second user cannot continue another user's session")
-	void refusesAnotherUsersSession() {
+	@DisplayName("a repeated name continues the same user's session")
+	void continuesTheSameSession() {
 		onServer((client, agent) -> {
 			prompt(client, "alice", "pr-1").expectStatus().isOk();
-			prompt(client, "bob", "pr-1").expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
 			prompt(client, "alice", "pr-1").expectStatus().isOk();
+			assertThat(agent.sessions.size()).isEqualTo(1);
 		});
 	}
 
 	@Test
-	@DisplayName("a second user cannot stream into another user's session")
-	void refusesToStreamIntoAnotherUsersSession() {
+	@DisplayName("two users choosing the same name get separate sessions")
+	void keepsUsersSessionsApart() {
 		onServer((client, agent) -> {
 			prompt(client, "alice", "pr-1").expectStatus().isOk();
-			stream(client, "bob", "pr-1").expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+			prompt(client, "bob", "pr-1").expectStatus().isOk();
+			assertThat(events(stream(client, "bob", "pr-1"))).containsExactly("ok");
+			assertThat(agent.owners.values()).containsExactlyInAnyOrder(SessionPrincipal.of("alice"),
+					SessionPrincipal.of("bob"));
 		});
 	}
 
 	@Test
-	@DisplayName("a user cannot close another user's session, and can close their own")
+	@DisplayName("closing touches only the caller's session, and never says whether a name is taken")
 	void closesOnlyYourOwnSession() {
 		onServer((client, agent) -> {
 			prompt(client, "alice", "pr-1").expectStatus().isOk();
-			client.delete()
-				.uri("/api/acp/sessions/pr-1")
-				.header("X-User", "bob")
-				.exchange()
-				.expectStatus()
-				.isEqualTo(HttpStatus.FORBIDDEN);
-			assertThat(agent.sessions.knows("pr-1")).isTrue();
-			client.delete()
-				.uri("/api/acp/sessions/pr-1")
-				.header("X-User", "alice")
-				.exchange()
-				.expectStatus()
-				.isNoContent();
-			assertThat(agent.sessions.knows("pr-1")).isFalse();
+
+			close(client, "bob", "pr-1").expectStatus().isNoContent();
+			close(client, "bob", "never-used").expectStatus().isNoContent();
+			assertThat(agent.sessions.size()).isEqualTo(1);
+
+			close(client, "alice", "pr-1").expectStatus().isNoContent();
+			assertThat(agent.sessions.size()).isZero();
+		});
+	}
+
+	/**
+	 * With no principal the client asks its resolver, which on a laptop answers with the
+	 * OS user, so the session has an owner the anonymous caller cannot name.
+	 */
+	@Test
+	@DisplayName("an anonymous caller can close the session they opened")
+	void anonymousCallersCloseTheirOwnSessions() {
+		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true").run(context -> {
+			try (Server server = Server.start(context)) {
+				BlockingClient agent = context.getBean(BlockingClient.class);
+				prompt(server.client(), null, "pr-1").expectStatus().isOk();
+				assertThat(agent.owners.values()).containsExactly(BlockingClient.RESOLVED_PRINCIPAL);
+
+				close(server.client(), null, "pr-1").expectStatus().isNoContent();
+				assertThat(agent.sessions.size()).isZero();
+			}
 		});
 	}
 
@@ -172,14 +173,127 @@ class AcpControllerServerTests {
 	void anonymousCallersCannotCloseOwnedSessions() {
 		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true").run(context -> {
 			try (Server server = Server.start(context)) {
+				BlockingClient agent = context.getBean(BlockingClient.class);
 				prompt(server.client(), "alice", "pr-1").expectStatus().isOk();
-				server.client()
-					.delete()
-					.uri("/api/acp/sessions/pr-1")
-					.exchange()
-					.expectStatus()
-					.isEqualTo(HttpStatus.FORBIDDEN);
+
+				close(server.client(), null, "pr-1").expectStatus().isNoContent();
+				assertThat(agent.sessions.size()).isEqualTo(1);
 			}
+		});
+	}
+
+	@Test
+	@DisplayName("listing shows only the caller's sessions, because a title can repeat a prompt")
+	void listsOnlyYourOwnSessions() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "pr-1").expectStatus().isOk();
+			prompt(client, "bob", "pr-2").expectStatus().isOk();
+
+			List<StoredSession> listed = client.get()
+				.uri("/api/acp/sessions")
+				.header("X-User", "bob")
+				.exchange()
+				.expectStatus()
+				.isOk()
+				.expectBody(new ParameterizedTypeReference<List<StoredSession>>() {
+				})
+				.returnResult()
+				.getResponseBody();
+
+			assertThat(listed).singleElement().satisfies(session -> assertThat(session.title()).endsWith("-pr-2"));
+		});
+	}
+
+	@Test
+	@DisplayName("a turn that fails is a 502 that does not repeat the agent's words")
+	void reportsAFailedTurnWithoutItsDetails() {
+		onServer((client, agent) -> {
+			String body = prompt(client, "alice", "failed").expectStatus()
+				.isEqualTo(HttpStatus.BAD_GATEWAY)
+				.expectBody(String.class)
+				.returnResult()
+				.getResponseBody();
+			assertThat(body).contains("The agent did not complete the turn").doesNotContain("secret");
+		});
+	}
+
+	@Test
+	@DisplayName("a turn that cannot start is a 502 on both endpoints")
+	void reportsAClientFailure() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "boom").expectStatus().isEqualTo(HttpStatus.BAD_GATEWAY);
+			stream(client, "alice", "boom").expectStatus().isEqualTo(HttpStatus.BAD_GATEWAY);
+		});
+	}
+
+	@Test
+	@DisplayName("a turn with no terminal event is a 502, not an answer")
+	void reportsAMissingTerminalEvent() {
+		onServer((client, agent) -> prompt(client, "alice", "no-terminal").expectStatus()
+			.isEqualTo(HttpStatus.BAD_GATEWAY));
+	}
+
+	@Test
+	@DisplayName("a stream that fails before any text is a 502")
+	void reportsAFailedStreamBeforeAnyText() {
+		onServer((client, agent) -> stream(client, "alice", "failed").expectStatus().isEqualTo(HttpStatus.BAD_GATEWAY));
+	}
+
+	@Test
+	@DisplayName("a stream that fails after some text does not end as if it had finished")
+	void abortsAStreamThatFailsPartWay() {
+		onServer((client, agent) -> {
+			WebTestClient.ResponseSpec response = stream(client, "alice", "failed-late");
+			assertThatThrownBy(() -> events(response)).isNotNull();
+		});
+	}
+
+	@Test
+	@DisplayName("being at capacity is a 503 on both endpoints, not an agent failure")
+	void reportsCapacitySeparately() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "full").expectStatus().isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+			stream(client, "alice", "full").expectStatus().isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+		});
+	}
+
+	/** Only reachable when a session was opened outside the endpoint under that name. */
+	@Test
+	@DisplayName("a session held by someone else is still refused")
+	void refusesASessionHeldBySomeoneElse() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "taken").expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+			stream(client, "alice", "taken").expectStatus().isEqualTo(HttpStatus.FORBIDDEN);
+		});
+	}
+
+	/**
+	 * Asserting that nothing was opened is the point: past this check the pool assigns
+	 * the name to a process, and may restart one for it.
+	 */
+	@Test
+	@DisplayName("an invalid session name is a 400, before the agent is involved")
+	void rejectsInvalidSessionNames() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "bad name!").expectStatus().isBadRequest();
+			stream(client, "alice", "bad name!").expectStatus().isBadRequest();
+			client.delete()
+				.uri("/api/acp/sessions/{name}", "bad name!")
+				.header("X-User", "alice")
+				.exchange()
+				.expectStatus()
+				.isBadRequest();
+			assertThat(agent.opened).isZero();
+		});
+	}
+
+	@Test
+	@DisplayName("a session name leaves room for the caller's scope")
+	void limitsSessionNameLength() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "x".repeat(AcpController.MAX_SESSION_NAME_LENGTH)).expectStatus().isOk();
+			prompt(client, "alice", "x".repeat(AcpController.MAX_SESSION_NAME_LENGTH + 1)).expectStatus()
+				.isBadRequest();
 		});
 	}
 
@@ -191,22 +305,50 @@ class AcpControllerServerTests {
 		});
 	}
 
-	private static WebTestClient.ResponseSpec prompt(WebTestClient client, String user, String session) {
+	static WebTestClient.ResponseSpec prompt(WebTestClient client, String user, String session) {
 		return post(client, "/api/acp/prompt", user, session);
 	}
 
-	private static WebTestClient.ResponseSpec stream(WebTestClient client, String user, String session) {
+	static WebTestClient.ResponseSpec stream(WebTestClient client, String user, String session) {
 		return post(client, "/api/acp/stream", user, session);
+	}
+
+	static List<String> events(WebTestClient.ResponseSpec response) {
+		return response.expectStatus()
+			.isOk()
+			.returnResult(String.class)
+			.getResponseBody()
+			.collectList()
+			.block(Duration.ofSeconds(10));
 	}
 
 	private static WebTestClient.ResponseSpec post(WebTestClient client, String path, String user, String session) {
 		String body = session == null ? "{\"prompt\":\"hi\"}" : "{\"prompt\":\"hi\",\"session\":\"" + session + "\"}";
-		return client.post()
-			.uri(path)
-			.header("X-User", user)
-			.contentType(MediaType.APPLICATION_JSON)
-			.bodyValue(body)
-			.exchange();
+		WebTestClient.RequestBodySpec request = client.post().uri(path).contentType(MediaType.APPLICATION_JSON);
+		if (user != null) {
+			request = request.header("X-User", user);
+		}
+		return request.bodyValue(body).exchange();
+	}
+
+	static WebTestClient.ResponseSpec close(WebTestClient client, String user, String session) {
+		WebTestClient.RequestHeadersSpec<?> request = client.delete().uri("/api/acp/sessions/{name}", session);
+		if (user != null) {
+			request = request.header("X-User", user);
+		}
+		return request.exchange();
+	}
+
+	/** Stands in for Spring Security: the request says who it is. */
+	static WebFilter principalFromHeader() {
+		return (exchange, chain) -> {
+			String user = exchange.getRequest().getHeaders().getFirst("X-User");
+			if (user == null) {
+				return chain.filter(exchange);
+			}
+			Principal principal = () -> user;
+			return chain.filter(exchange.mutate().principal(Mono.just(principal)).build());
+		};
 	}
 
 	/** What the real client does on the way to the agent. */
@@ -221,7 +363,7 @@ class AcpControllerServerTests {
 
 	}
 
-	private record Server(DisposableServer netty, WebTestClient client) implements AutoCloseable {
+	record Server(DisposableServer netty, WebTestClient client) implements AutoCloseable {
 
 		static Server start(ApplicationContext context) {
 			DisposableServer netty = HttpServer.create()
@@ -252,29 +394,31 @@ class AcpControllerServerTests {
 			return new BlockingClient();
 		}
 
-		/** Stands in for Spring Security: the request says who it is. */
 		@Bean
 		WebFilter principalFromHeader() {
-			return (exchange, chain) -> {
-				String user = exchange.getRequest().getHeaders().getFirst("X-User");
-				if (user == null) {
-					return chain.filter(exchange);
-				}
-				Principal principal = () -> user;
-				return chain.filter(exchange.mutate().principal(Mono.just(principal)).build());
-			};
+			return AcpControllerServerTests.principalFromHeader();
 		}
 
 	}
 
 	/**
-	 * Blocks where the real client blocks, and keeps sessions in the real registry.
+	 * Behaves like the real client where the endpoint can tell: opening a session and
+	 * closing one block, reading its identity and liveness does not, a turn's failure is
+	 * an event, and no principal means asking the resolver. {@code call()} throws,
+	 * because a turn must not hold a thread for its whole length.
 	 */
 	static final class BlockingClient implements AcpHarnessClient {
 
+		/** What a resolver answers with on a laptop: the OS user. */
+		static final SessionPrincipal RESOLVED_PRINCIPAL = SessionPrincipal.of("os-user");
+
 		final SessionRegistry sessions = new SessionRegistry();
 
-		volatile SessionPrincipal lastPrincipal;
+		final Map<String, SessionPrincipal> owners = new ConcurrentHashMap<>();
+
+		volatile int opened;
+
+		volatile String healthThread;
 
 		@Override
 		public PromptSpec prompt() {
@@ -288,7 +432,7 @@ class AcpControllerServerTests {
 
 		@Override
 		public Optional<AcpAgentInfo> agentInfo() {
-			blockLikeTheRealClient();
+			this.healthThread = Thread.currentThread().getName();
 			return Optional.of(new AcpAgentInfo("fake", "1.0"));
 		}
 
@@ -313,13 +457,22 @@ class AcpControllerServerTests {
 
 		private void open(String name, SessionPrincipal principal) {
 			blockLikeTheRealClient();
-			BlockingClient.this.lastPrincipal = principal;
-			if ("boom".equals(name)) {
+			this.opened++;
+			if (name == null) {
+				return;
+			}
+			if (name.endsWith("-boom")) {
 				throw new AcpHarnessClientException("secret the agent read");
 			}
-			if (name != null) {
-				this.sessions.resolve(name, principal, n -> new SessionRegistry.Opened("id-" + n, null));
+			if (name.endsWith("-full")) {
+				throw new AcpHarnessCapacityException("no process can take this session");
 			}
+			if (name.endsWith("-taken")) {
+				throw new SessionOwnershipException(name);
+			}
+			SessionPrincipal owner = principal != null ? principal : RESOLVED_PRINCIPAL;
+			this.sessions.resolve(name, owner, n -> new SessionRegistry.Opened("id-" + n, null));
+			this.owners.put(name, owner);
 		}
 
 		private final class Spec implements PromptSpec {
@@ -357,28 +510,30 @@ class AcpControllerServerTests {
 
 			@Override
 			public AcpAgentResponse call() {
-				open(this.name, this.principal);
-				return new AcpAgentResponse() {
-
-					@Override
-					public String content() {
-						return "ok";
-					}
-
-					@Override
-					public AcpAgentEvent.Completed completion() {
-						return new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN);
-					}
-				};
+				throw new UnsupportedOperationException("A turn must not hold a thread for its whole length");
 			}
 
 			@Override
 			public AcpAgentStream stream() {
 				return () -> Flux.defer(() -> {
 					open(this.name, this.principal);
-					return Flux.just(new AcpAgentEvent.Text("ok"),
-							new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+					return Flux.fromIterable(eventsFor(this.name));
 				});
+			}
+
+			private List<AcpAgentEvent> eventsFor(String name) {
+				AcpAgentEvent text = new AcpAgentEvent.Text("ok");
+				AcpAgentEvent failed = new AcpAgentEvent.Failed(new IllegalStateException("secret the agent read"));
+				if (name != null && name.endsWith("-failed")) {
+					return List.of(failed);
+				}
+				if (name != null && name.endsWith("-failed-late")) {
+					return List.of(text, failed);
+				}
+				if (name != null && name.endsWith("-no-terminal")) {
+					return List.of(text);
+				}
+				return List.of(text, new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
 			}
 
 		}
@@ -388,7 +543,10 @@ class AcpControllerServerTests {
 			@Override
 			public List<StoredSession> list() {
 				blockLikeTheRealClient();
-				return List.of();
+				return BlockingClient.this.sessions.all()
+					.stream()
+					.map(session -> new StoredSession(session.sessionId(), null, "title of " + session.name(), null))
+					.toList();
 			}
 
 			@Override

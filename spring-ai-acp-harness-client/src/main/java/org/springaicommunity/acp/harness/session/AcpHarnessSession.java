@@ -76,7 +76,7 @@ public final class AcpHarnessSession {
 	 * Whether a caller acting for {@code candidate} (null for nobody) may use this
 	 * session.
 	 */
-	public boolean belongsTo(@Nullable SessionPrincipal candidate) {
+	boolean belongsTo(@Nullable SessionPrincipal candidate) {
 		return Objects.equals(principal, candidate);
 	}
 

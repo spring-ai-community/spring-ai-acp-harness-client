@@ -83,5 +83,10 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springaicommunity</groupId>
+            <artifactId>spring-ai-acp-harness-client-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

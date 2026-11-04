@@ -130,12 +130,20 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   `AcpHarnessClientException`, and a connection that finishes building after the close is closed at
   once. Closing does not interrupt or wait for a connect in progress.
 - The HTTP endpoint blocked on the Netty event loop, so on a real server `/prompt`, `/stream` and
-  listing sessions failed with a 500, and closing a session never reached the agent. Its handlers
-  now run off the event loop.
-- The HTTP endpoint ran turns with no owner, so any caller could continue another user's session by
-  naming it, and `DELETE {path}/sessions/{name}` closed any session. The caller's `Principal` now
-  owns the session, and another user gets a 403. On OpenCode this means
-  `spring.ai.acp.harness.pool.max-processes` now limits how many endpoint users can hold sessions.
+  listing sessions failed with a 500, and closing a session never reached the agent. It now runs
+  turns without holding a thread.
+- The HTTP endpoint gave sessions no owner, so any caller could continue or close another user's
+  session by naming it, and `GET {path}/sessions` listed everyone's. Session names are now scoped to
+  the caller, and listing returns only the caller's open sessions. Names are limited to 109
+  characters, and the endpoint can no longer reach a session the application opened under the same
+  name. On OpenCode, `spring.ai.acp.harness.pool.max-processes` now limits how many endpoint users
+  can hold sessions.
+- `/stream` ended normally when a turn failed. It now returns a 502, or aborts the connection if
+  text was already sent.
+- An invalid session name on the HTTP endpoint returned a 500, after the pool had assigned the name
+  to a process. It is now a 400 before anything else happens.
+- A full pool is reported by the new `AcpHarnessCapacityException`, which the HTTP endpoint returns
+  as a 503 instead of a 502 or 500.
 
 ## [0.5.0] - 2026-10-20
 
