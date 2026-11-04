@@ -27,12 +27,12 @@ acp-meridian/
 
 ## Dependencies
 
-All three runtime starters are on the classpath, so `spring.ai.acp.harness.runtime` must be set and is the only thing that picks one. `spring-ai-acp-harness-client-mcp-oauth` signs the user in to the MCP servers, and `spring-ai-acp-harness-client-console` is the whole user interface.
+All three runtime starters are on the classpath, so `spring.ai.acp.harness.runtime` must be set and is the only thing that picks one. `spring-ai-acp-harness-client-mcp-oauth` signs the user in to the MCP servers, and `spring-ai-acp-harness-client-console` is the whole user interface. A snapshot version also needs the repository from [Getting Started](../getting-started.md#add-the-dependency).
 
 ```xml title="pom.xml"
 <properties>
     <java.version>21</java.version>
-    <spring-ai-acp-harness-client.version>0.5.0</spring-ai-acp-harness-client.version>
+    <spring-ai-acp-harness-client.version>0.6.0-SNAPSHOT</spring-ai-acp-harness-client.version>
 </properties>
 
 <dependencies>

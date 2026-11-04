@@ -38,20 +38,23 @@ Flux<AcpAgentEvent> events = agentClient.prompt()
 
 ## Choosing an agent
 
-Releases are published to a public Artifact Registry repository; no credentials are needed to read it:
+0.6.0 is not released yet. Until it is, use its snapshots from the Maven Central snapshot repository;
+no credentials are needed to read it:
 
 ```xml
 <repositories>
     <repository>
-        <id>spring-ai-acp-harness-client</id>
-        <url>https://us-central1-maven.pkg.dev/cf-mcp/maven-public</url>
+        <id>central-portal-snapshots</id>
+        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+        <releases><enabled>false</enabled></releases>
+        <snapshots><enabled>true</enabled></snapshots>
     </repository>
 </repositories>
 
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>spring-ai-acp-harness-client-boot-starter-goose</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -76,10 +79,10 @@ choices until it is.
 and the reason the abstraction is worth having. Since M4 it also runs against Gemini CLI, which this
 library has never had a line of code about: no adapter, just a catalogue entry.
 
-391 tests green: 344 run anywhere (including 24 against a scripted agent speaking raw JSON-RPC over
-an in-memory transport), 45 drive real agents and skip themselves when one is not usable here, and
-2 download a real agent from the real registry and are opt-in. Of the live ones, 42 are the same 14
-assertions run against each adapter: `AcpAgentRuntimeContract`, which is the actual definition of the
+674 tests: 621 run anywhere (including 42 against a scripted agent speaking raw JSON-RPC over an
+in-memory transport), 51 drive real agents, are opt-in, and skip themselves when one is not usable
+here, and 2 download a real agent from the real registry and are opt-in. Of the live ones, 48 are the
+same 16 assertions run against each adapter: `AcpAgentRuntimeContract`, which is the actual definition of the
 abstraction, since an interface alone cannot stop three adapters behaving differently enough that an
 application cannot move between them.
 
@@ -93,8 +96,8 @@ a Micrometer observation per turn and per tool call, `AcpAgentEvent.UsageUpdated
 negotiation behind a feature flag.
 
 The [reference documentation](https://spring-ai-community.github.io/spring-ai-acp-harness-client/latest-snapshot/)
-(sources in [`docs/`](docs/)) covers the configuration model,
-the runtime SPI, and the protocol handling. What each release contains is in the
+(sources in [`docs/`](docs/)) covers the client API, the runtimes, how to configure the agent, the
+integrations and every configuration property. What each release contains is in the
 [changelog](CHANGELOG.md).
 
 ## Requirements
@@ -145,8 +148,8 @@ spring:
           policy: deny
 ```
 
-With that, goose asks twice, is refused twice, and writes nothing. The measurements and the full
-table are in the design doc's security section.
+With that, goose asks twice, is refused twice, and writes nothing. See
+[Permissions and the Workspace](docs/configuration/permissions.md).
 
 M3 closed the half of this that *is* the client's: when `spring.ai.acp.harness.filesystem` or
 `spring.ai.acp.harness.terminal` is turned on, every path the agent asks this client to touch is confined to
@@ -292,8 +295,8 @@ The first time a signed-in user needs the server, they are redirected to its aut
 after that their token is refreshed as needed. A terminal application sets
 `spring.ai.acp.harness.mcp.oauth.mode: local` instead and needs no filter chain: the first run opens a browser
 for each server, and the sign-ins are kept in `~/.config/<spring.application.name>/`. The agent never sees it: HTTP MCP servers with
-credentials are reached through a loopback proxy, one unguessable route per session. See "MCP
-credentials" in [the MCP Servers page](docs/configuration/mcp-servers.md).
+credentials are reached through a loopback proxy, one unguessable route per session. See
+[Credentials the agent never sees](docs/configuration/mcp-servers.md#credentials-the-agent-never-sees).
 
 ## A terminal chat, for prototyping the agent
 

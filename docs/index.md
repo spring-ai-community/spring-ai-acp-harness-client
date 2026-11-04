@@ -86,3 +86,5 @@ ACP standardizes the *conversation*, not the *provisioning*. So each property be
 | `spring-ai-acp-harness-client-mcp-oauth` | Per-user OAuth sign-in to MCP servers (Spring Security) |
 | `spring-ai-acp-harness-client-console` | A terminal chat over the agent, for prototyping it (JLine); answers `policy: ask` |
 | `spring-ai-acp-harness-client-test` | `ScriptedAcpAgent`, `AcpAgentProbe`, and the `AcpAgentRuntimeContract` conformance suite |
+
+The starters bring in `spring-ai-acp-harness-client-core`, `spring-ai-acp-harness-client-boot-autoconfigure` and the matching `spring-ai-acp-harness-client-runtime-*` adapter, so applications rarely name those directly.

@@ -13,6 +13,8 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   `spring.ai.*` convention of the Spring AI Community projects. Update your configuration: the old
   keys are no longer read, and nothing reports them, so a `spring.acp.*.enabled=false` stops taking
   effect. The `acp:` config import prefix, metric names and Java packages are unchanged.
+- Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
+  Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
 

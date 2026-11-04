@@ -2,28 +2,30 @@
 
 ## Prerequisites
 
-- **Java 21** and **Spring Boot 4.1**.
+- **Java 21 or later** and **Spring Boot 4.1**.
 
 - **An agent you can run.** Spring AI ACP Harness Client does not package agent binaries. For the compiled adapters:
 
-    - **Goose**: the `goose` CLI on the `PATH`, or `GOOSE_CLI_PATH` pointing at it. Verified against goose 1.51.
+    - **Goose**: the `goose` CLI on the `PATH`, or `GOOSE_CLI_PATH` pointing at it. Verified against goose 1.57.0.
     - **Codex**: Node.js with `npx`. The adapter runs `npx -y @agentclientprotocol/codex-acp@2.5.0`, so the first start downloads it. `CODEX_ACP_CLI_PATH` names a local codex-acp to run instead.
-    - **OpenCode**: the `opencode` CLI on the `PATH`, or `OPENCODE_CLI_PATH`. Verified against opencode 1.18.
+    - **OpenCode**: the `opencode` CLI on the `PATH`, or `OPENCODE_CLI_PATH`. Verified against opencode 2.2.4.
     - **Registry agents**: nothing pre-installed; the agent is downloaded and checksum-verified. Agents distributed through npm or PyPI need `npx` or `uvx`.
 
 - **Model credentials**, either already configured in the agent itself (for example `goose configure` or `codex login`) or given to Spring AI ACP Harness Client through `spring.ai.acp.harness.provider` (see [Models and Providers](configuration/models.md)).
 
 ## Add the dependency
 
-Releases are published to a public Artifact Registry repository; no credentials are needed to read it. Add the repository and **one runtime starter**:
+0.6.0 is not released yet. Until it is, use its snapshots from the Maven Central snapshot repository; no credentials are needed to read it. Add the repository and **one runtime starter**:
 
 === "Maven"
 
     ```xml
     <repositories>
         <repository>
-            <id>spring-ai-acp-harness-client</id>
-            <url>https://us-central1-maven.pkg.dev/cf-mcp/maven-public</url>
+            <id>central-portal-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
         </repository>
     </repositories>
 
@@ -31,7 +33,7 @@ Releases are published to a public Artifact Registry repository; no credentials 
         <dependency>
             <groupId>org.springaicommunity</groupId>
             <artifactId>spring-ai-acp-harness-client-boot-starter-goose</artifactId>
-            <version>0.5.0</version>
+            <version>0.6.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
     ```
@@ -41,15 +43,22 @@ Releases are published to a public Artifact Registry repository; no credentials 
     ```kotlin
     repositories {
         mavenCentral()
-        maven { url = uri("https://us-central1-maven.pkg.dev/cf-mcp/maven-public") }
+        maven {
+            url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+            mavenContent { snapshotsOnly() }
+        }
     }
 
     dependencies {
-        implementation("org.springaicommunity:spring-ai-acp-harness-client-boot-starter-goose:0.5.0")
+        implementation("org.springaicommunity:spring-ai-acp-harness-client-boot-starter-goose:0.6.0-SNAPSHOT")
     }
     ```
 
 Replace `-goose` with `-codex`, `-opencode` or `-registry` for another agent. No `@Enable…` annotation or bean definition is needed.
+
+!!! warning
+
+    This documentation describes `spring.ai.acp.harness.*`. Version 0.5.0, the latest release, reads `spring.acp.*` instead and ignores these keys without an error. It is available from the Artifact Registry repository `https://us-central1-maven.pkg.dev/cf-mcp/maven-public`.
 
 ## Configure
 
@@ -87,11 +96,11 @@ public class ReviewApplication {
 
 !!! tip
 
-    The repository's `samples/smoke-app` has all three adapters and the registry on its classpath. After `mvn install` in the Spring AI ACP Harness Client checkout, run it against each agent in turn:
+    The repository's `samples/smoke-app` has all three adapters and the registry on its classpath. After `./mvnw install` in the Spring AI ACP Harness Client checkout, run it against each agent in turn:
 
     ```bash
-    mvn -pl samples/smoke-app spring-boot:run
-    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=codex
-    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=opencode
-    mvn -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=gemini
+    ./mvnw -pl samples/smoke-app spring-boot:run
+    ./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=codex
+    ./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=opencode
+    ./mvnw -pl samples/smoke-app spring-boot:run -Dspring-boot.run.arguments=--spring.ai.acp.harness.runtime=gemini
     ```

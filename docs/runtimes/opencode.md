@@ -14,7 +14,7 @@ spring:
             config:                               # written as opencode.json, pointed at by OPENCODE_CONFIG
               share: disabled
               autoupdate: false
-            config-file: /etc/myapp/opencode.json # where to write it, instead of /opencode.json
+            config-file: /etc/myapp/opencode.json # where to write it, instead of <runtime-home>/opencode.json
             env:
               HTTPS_PROXY: http://proxy.internal:3128
 ```

@@ -110,7 +110,7 @@ For MCP servers that implement the MCP authorization spec, add `spring-ai-acp-ha
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>spring-ai-acp-harness-client-mcp-oauth</artifactId>
-    <version>0.5.0</version>
+    <version>${spring-ai-acp-harness-client.version}</version>
 </dependency>
 ```
 
