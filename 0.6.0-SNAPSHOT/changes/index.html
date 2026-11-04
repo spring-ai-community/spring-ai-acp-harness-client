@@ -1940,6 +1940,11 @@
 <h2 id="060-unreleased">[0.6.0] - Unreleased<a class="headerlink" href="#060-unreleased" title="Permanent link">&para;</a></h2>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
+<li><strong>Breaking:</strong> Java packages move from <code>org.springaicommunity.acp.*</code> to
+  <code>org.springaicommunity.acp.harness.*</code>, to match the artifacts and the properties. Update your
+  imports, and any <code>logging.level.org.springaicommunity.acp</code> setting, which otherwise stops matching
+  without an error. The JDBC schema for MCP OAuth moves with them, to
+  <code>org/springaicommunity/acp/harness/mcp/oauth/acp-mcp-oauth-schema.sql</code>.</li>
 <li><strong>Breaking:</strong> <code>AcpAgentClient</code> becomes <code>AcpHarnessClient</code>, along with <code>DefaultAcpHarnessClient</code>,
   <code>AcpHarnessClientPool</code>, <code>AcpHarnessClientFactory</code> and <code>AcpHarnessClientException</code>, and the bean
   <code>acpAgentClient</code> becomes <code>acpHarnessClient</code>. ACP's two roles are client and agent, so a client type
