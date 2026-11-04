@@ -6,7 +6,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.x-6DB33F.svg)](https://docs.spring.io/spring-boot/)
 [![Spring AI](https://img.shields.io/badge/Spring%20AI-2.x-6DB33F.svg)](https://docs.spring.io/spring-ai/reference/)
 
-**Documentation:** https://spring-ai-acp-harness-client-docs.web.app/
+**Documentation:** https://spring-ai-community.github.io/spring-ai-acp-harness-client/latest-snapshot/
 
 A Spring library that talks to **any** [Agent Client Protocol](https://agentclientprotocol.com)
 coding agent — Goose, Codex, OpenCode, and others — behind one programming model and one
@@ -90,7 +90,8 @@ M4 added the registry-driven runtime with SHA-256-verified downloads, `AcpChatMo
 a Micrometer observation per turn and per tool call, `AcpAgentEvent.UsageUpdated`, and real ACP version
 negotiation behind a feature flag.
 
-The reference is in **[docs/user-guide.html](docs/user-guide.html)** — the configuration model,
+The [reference documentation](https://spring-ai-community.github.io/spring-ai-acp-harness-client/latest-snapshot/)
+(sources in [`docs/`](docs/)) covers the configuration model,
 the runtime SPI, and the protocol handling. What each release contains is in the
 [changelog](CHANGELOG.md).
 
@@ -284,7 +285,7 @@ after that their token is refreshed as needed. A terminal application sets
 `spring.acp.mcp.oauth.mode: local` instead and needs no filter chain: the first run opens a browser
 for each server, and the sign-ins are kept in `~/.config/<spring.application.name>/`. The agent never sees it: HTTP MCP servers with
 credentials are reached through a loopback proxy, one unguessable route per session. See "MCP
-credentials" in `docs/user-guide.html`.
+credentials" in [the MCP Servers page](docs/configuration/mcp-servers.md).
 
 ## A terminal chat, for prototyping the agent
 

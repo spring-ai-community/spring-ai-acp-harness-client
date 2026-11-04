@@ -10,7 +10,7 @@ coding agent (Goose, Codex, OpenCode, or any of the ~41 in the ACP registry) beh
 selected by `spring.acp.runtime`. Successor to the `java-wrapper` module of `../goose-buildpack`.
 Built on the official `com.agentclientprotocol:acp-core` (pre-1.0, pinned exactly) with its
 Jackson 3 JSON module, `acp-json-jackson3`; nothing here uses Jackson 2. Packaging the
-agent binary is out of scope. `docs/user-guide.html` is the reference; read the relevant section
+agent binary is out of scope. `docs/` (MkDocs; pages in `mkdocs.yml`) is the reference; read the relevant page
 before changing behaviour it documents.
 
 ## Build and test
@@ -107,7 +107,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   endpoint *after* the provider is set), so the endpoint's own `/models` listing decides and an
   unadvertised model is sent anyway (`Mechanism.ENDPOINT`). `base-url` is canonicalised to end
   at the version segment; each adapter derives its vendor spelling from that. Model only — not
-  mode or provider. See "Bring your own endpoint" in `docs/user-guide.html`.
+  mode or provider. See "Bring your own endpoint" in `docs/configuration/models.md`.
 - **Don't pin the OpenAI wire API.** goose picks per model (gpt-5.6-terra → `/v1/responses`,
   deepseek → `/v1/chat/completions`) from `OPENAI_HOST` alone, so the adapter sets no
   `OPENAI_BASE_PATH`: Responses keeps reasoning items across a turn and is worth preferring
@@ -132,7 +132,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   `AcpAgentLogWatcher` does the reading), `AcpAgentClient.notices()`, and
   `spring.acp.mcp.on-server-failure`. Goose-only, and only for an agent this client started.
   `tools/mcp-silence-check.py` re-measures it after a goose upgrade. See "When a server fails to
-  load" in `docs/user-guide.html`.
+  load" in `docs/configuration/mcp-servers.md`.
 - **MCP credentials never reach the agent.** An `McpCredentialsProvider` routes the HTTP
   servers it answers for through a loopback proxy (`core/mcp`), one unguessable path per
   session, asking for headers on every request so expiring tokens refresh mid-session. Routes
@@ -141,7 +141,7 @@ Module dependency shape: `AcpAgentClient` API → `AcpAgentClientPool` → `spri
   caller's thread, never on subscription. An agent's MCP interop workarounds are
   `McpRequestFilter`s its adapter returns from `mcpRequestFilters` (goose: opt-in
   `mcp.answer-discover`), never code in core. See "Credentials the agent never sees" in
-  `docs/user-guide.html`.
+  `docs/configuration/mcp-servers.md`.
 - **Some agents share MCP servers across their sessions.** OpenCode keeps one MCP client per
   server name for the process and each `session/new` replaces it, so every session would call
   through the newest session's route: another user's, or a closed one's.

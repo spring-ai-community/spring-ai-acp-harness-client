@@ -8,3 +8,6 @@ RELEASING.md
 
 # Maintainer's local skill for bumping the pinned agent versions
 .claude/skills/update-agent-versions/
+
+# MkDocs: the site is built and published by CI, never committed.
+site/

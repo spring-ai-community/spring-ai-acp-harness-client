@@ -556,7 +556,7 @@ def main() -> int:
 			"agent's own output, not even its log files -- said the MCP server was unreachable.\n"
 			"LOG FILE ONLY means goose recorded it somewhere no ACP client and no supervisor reads,\n"
 			"which is the same outcome for an application and a different fix. Both are the failure\n"
-			"mode documented under the 'MCP Servers' section of docs/user-guide.html.")
+			"mode documented in docs/configuration/mcp-servers.md.")
 
 	if any(r["verdict"] == "NOT MEASURED" for r in results):
 		return 2

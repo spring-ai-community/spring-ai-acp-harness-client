@@ -346,8 +346,7 @@ public final class DefaultAcpAgentClient implements AcpAgentClient {
 	 * stderr — so the application gets a working session whose model silently has no
 	 * tools, and the only symptom is the model saying so in prose. This cannot detect
 	 * that. It does put what was requested in the log beside it, which is most of the
-	 * distance to the diagnosis. See the "MCP Servers" section of
-	 * {@code docs/user-guide.html}.
+	 * distance to the diagnosis. See {@code docs/configuration/mcp-servers.md}.
 	 */
 	private static void logMcpServers(AcpAgentSettings effective, McpAccess.Grant grant, String method) {
 		List<String> handed = McpAccess.describeHanded(effective.mcpServers(), grant);

@@ -27,8 +27,8 @@ import org.springaicommunity.acp.session.SessionPrincipalResolver;
  * behind a loopback proxy, one route per session, so the agent never holds a token and a
  * token that expires mid-session is refreshed between two tool calls. {@code principals}
  * says whose session it is when the caller did not. Both default to nothing, which hands
- * every server to the agent as configured — the behaviour before either existed. See the
- * "MCP Servers" section of {@code docs/user-guide.html}.
+ * every server to the agent as configured — the behaviour before either existed. See
+ * {@code docs/configuration/mcp-servers.md}.
  * @param onServerFailure what a reported failure does to the session that requested the
  * server
  * @param detectTimeout how long {@code session/new} waits for such a report before
@@ -94,8 +94,8 @@ public record McpSettings(OnServerFailure onServerFailure, Duration detectTimeou
 		 * <p>
 		 * Only ever triggered by a report the agent actually made. Nothing here probes a
 		 * server or infers a failure from silence: an agent that says nothing opens the
-		 * session, whatever this is set to. See the "MCP Servers" section of
-		 * {@code docs/user-guide.html}.
+		 * session, whatever this is set to. See
+		 * {@code docs/configuration/mcp-servers.md}.
 		 */
 		FAIL
 

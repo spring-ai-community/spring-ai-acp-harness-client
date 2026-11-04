@@ -27,7 +27,7 @@ public sealed interface McpServerSpec {
 	 * and reports nothing, so the application gets a healthy-looking session whose model
 	 * quietly has no tools. Naming what was requested does not detect that, but it puts
 	 * "we asked for finops-mcp" in the log next to a model saying it has no finops tools.
-	 * See the "MCP Servers" section of {@code docs/user-guide.html}.
+	 * See {@code docs/configuration/mcp-servers.md}.
 	 *
 	 * <p>
 	 * Never includes headers or environment values: they carry the tokens.

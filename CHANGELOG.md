@@ -5,6 +5,11 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ## [0.5.1] - Unreleased
 
+### Changed
+
+- The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
+  site, published to GitHub Pages from `docs/`.
+
 ## [0.5.0] - 2026-10-20
 
 ### Changed

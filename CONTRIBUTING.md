@@ -42,6 +42,13 @@ skip by default:
 Keep changes focused, add tests for changed behavior, and update documentation when a
 change affects users.
 
+The documentation lives in `docs/` and is built with MkDocs. To preview it:
+
+```bash
+pip install mkdocs-material mike
+mkdocs serve
+```
+
 ## Commits and Pull Requests
 
 - Sign every commit with a verified signature.

@@ -375,7 +375,7 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 * <p>
 	 * Only Goose can report one at all today, and only for an agent this application
 	 * started; everywhere else these settings are inert, because nothing ever reports a
-	 * failure. See the "MCP Servers" section of {@code docs/user-guide.html}.
+	 * failure. See {@code docs/configuration/mcp-servers.md}.
 	 *
 	 * @param onServerFailure {@code warn} logs it and opens the session anyway;
 	 * {@code fail} refuses the session.

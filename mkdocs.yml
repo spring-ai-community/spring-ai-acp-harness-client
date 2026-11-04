@@ -1,0 +1,115 @@
+site_name: Spring AI ACP Harness Client
+site_description: Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application
+site_url: https://spring-ai-community.github.io/spring-ai-acp-harness-client/
+repo_url: https://github.com/spring-ai-community/spring-ai-acp-harness-client
+repo_name: spring-ai-community/spring-ai-acp-harness-client
+edit_uri: edit/main/docs/
+
+# A broken page link or heading anchor fails the build, and so the deploy.
+strict: true
+validation:
+  links:
+    anchors: warn
+
+theme:
+  name: material
+  logo: images/logo.svg
+  favicon: images/logo.svg
+  palette:
+    - scheme: default
+      primary: green
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: green
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.path
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Client API: agent-client.md
+  - Runtimes:
+    - runtimes/index.md
+    - Runtime Configuration: runtimes/configuration.md
+    - Goose: runtimes/goose.md
+    - Codex: runtimes/codex.md
+    - OpenCode: runtimes/opencode.md
+    - Registry Agents: runtimes/registry.md
+  - Configuring the Agent:
+    - Models and Providers: configuration/models.md
+    - MCP Servers: configuration/mcp-servers.md
+    - Skills: configuration/skills.md
+    - Agent Instructions: configuration/agent-instructions.md
+    - Permissions and the Workspace: configuration/permissions.md
+  - Integrations:
+    - Spring AI ChatModel: integrations/spring-ai.md
+    - HTTP Endpoint: integrations/http-endpoint.md
+    - Terminal Console: integrations/console.md
+    - Observability: integrations/observability.md
+  - Properties: properties.md
+  - Guides:
+    - "Example: acp-meridian": guides/acp-meridian.md
+    - Testing: guides/testing.md
+    - Troubleshooting: guides/troubleshooting.md
+  - Changes: changes.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      check_paths: true
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  # The docs.yml workflow publishes with `mike`, which needs this provider for the
+  # version selector to appear in the header.
+  version:
+    provider: mike
+    default:
+      - latest-snapshot
+      - latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/spring-ai-community/spring-ai-acp-harness-client
+  generator: false
+
+plugins:
+  - search
