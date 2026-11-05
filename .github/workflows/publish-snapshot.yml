@@ -29,6 +29,16 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
+      # The deploy below publishes any version it is given, and the release profile's
+      # autoPublish makes a non-SNAPSHOT version a permanent Maven Central release.
+      - name: Refuse a release version
+        run: |
+          VERSION=$(./mvnw help:evaluate -Dexpression=project.version --quiet -DforceStdout)
+          if [[ "${VERSION}" != *-SNAPSHOT ]]; then
+            echo "::error::${VERSION} is not a -SNAPSHOT version, so deploying it would publish a release to Maven Central. Use the Release to Maven Central workflow, from a tag."
+            exit 1
+          fi
+
       - name: Build with Maven and deploy to Sonatype snapshot repository
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
