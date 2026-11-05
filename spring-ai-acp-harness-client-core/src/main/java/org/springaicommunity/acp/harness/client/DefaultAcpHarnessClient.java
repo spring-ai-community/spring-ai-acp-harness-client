@@ -335,9 +335,14 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 */
 	private AcpSchema.NewSessionResponse awaitNewSession(String name, Mono<AcpSchema.NewSessionResponse> request,
 			Duration timeout) {
-		CompletableFuture<AcpSchema.NewSessionResponse> answer = request.toFuture();
+		// Reactor's future completes with null for an empty Mono; the SDK's never is.
+		CompletableFuture<AcpSchema.@Nullable NewSessionResponse> answer = request.toFuture();
 		try {
-			return answer.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+			AcpSchema.NewSessionResponse response = answer.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+			if (response == null) {
+				throw new AcpHarnessClientException("Agent answered session/new for '" + name + "' with nothing");
+			}
+			return response;
 		}
 		catch (TimeoutException ex) {
 			closeWhenAnswered(name, answer);
@@ -364,7 +369,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	/** Runs on the thread delivering the late answer, so it must not wait. */
-	private void closeWhenAnswered(String name, CompletableFuture<AcpSchema.NewSessionResponse> answer) {
+	private void closeWhenAnswered(String name, CompletableFuture<AcpSchema.@Nullable NewSessionResponse> answer) {
 		answer.thenAccept(late -> {
 			if (late != null && late.sessionId() != null) {
 				logger.warn("Agent answered session/new for '{}' after the caller gave up; closing session {}", name,
@@ -573,7 +578,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 			Flux<AcpAgentEvent> events = Flux.defer(() -> {
 				// Named per subscription, so subscribing twice is two throwaway turns.
-				String name = ephemeral ? "turn-" + UUID.randomUUID() : named;
+				String name = named != null ? named : "turn-" + UUID.randomUUID();
 				AcpAgentSession session = openSession(name, effective, owner);
 				try {
 					acquireTurn(session, effective.timeout());

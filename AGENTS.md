@@ -40,10 +40,23 @@ Java 21 is required. Use the Maven wrapper:
 - spring-javaformat validates every module in the `validate` phase, so run
   `./mvnw spring-javaformat:apply` after editing Java. JaCoCo writes coverage to
   `target/site/jacoco` during `verify`.
+- **Nullness is enforced, not advisory.** Every package of a published module is `@NullMarked`
+  (`package-info.java`) and NullAway runs as an Error Prone check on main code (`maven-compiler-plugin`
+  in the root POM; `.mvn/jvm.config` opens the javac internals it needs). A possibly-null value
+  passed, returned or stored where a non-null one is declared is a compile error. Tests are not
+  checked. A new package needs its own `package-info.java`, or NullAway skips it silently.
+  Build with an OpenJDK 21 such as Temurin, which CI uses: an Oracle JDK 21 build was seen to miss
+  type-argument nullness from library class files (Reactor's `CompletableFuture<@Nullable T>`),
+  so a build that passes there can still fail CI.
 
 ## Conventions
 
 - Java uses tabs, not spaces, as spring-javaformat enforces.
+- JSpecify nullness, Spring Framework 7 style: type-use `@Nullable` next to the type
+  (`private @Nullable String x`, `AcpSchema.@Nullable StopReason`), never `Optional` on the API.
+  Prefer a null check or a non-null default over `Objects.requireNonNull`; use the latter only where
+  an invariant guarantees presence, and say which. `@SuppressWarnings("NullAway")` needs a comment
+  saying why.
 - Package-by-feature under `org.springaicommunity.acp.harness`: `client`, `session`, `turn`, `event`,
   `config`, `permission`, `mcp`, `workspace`, `process`, `transport`, `protocol`,
   `observation`, `executor`, `runtime`, `skill`.

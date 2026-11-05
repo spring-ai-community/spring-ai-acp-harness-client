@@ -39,6 +39,22 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   `AcpAgentEvent.UsageUpdated.contextFraction()` returns a `Double` or null instead of an
   `OptionalDouble`. Replace `.isPresent()` with a null check and `.orElse(x)` with a conditional
   to migrate; the compiler finds every call site, since the types changed.
+- Every package of a published module is `@NullMarked`, so a reference is non-null unless it says
+  `@Nullable`, and the build enforces that with NullAway: main code that passes, returns or stores a
+  possibly-null value where a non-null one is declared no longer compiles. Nothing changes for a
+  caller, except that a `@Nullable` on this API is now something the compiler checked rather than
+  a comment. A few signatures gained a `@Nullable` the behaviour already implied, such as
+  `AcpAgentExecutor.getVersion()`, `SkillFetcher.Fetched.revision()`, `McpServerSpec.Http.url()`,
+  `AcpAgentLaunchSpec.WebSocket.process()` and the optional components of `SkillSpec.Git` and
+  `AcpController`'s request and response records; `SecretRedactor.redact` no longer accepts null.
+  A few behaviours changed where a null used to flow on: `SessionConfiguration.of(option)` returns
+  a `NOT_REQUESTED` resolution instead of null for an option the configuration never mentioned; a
+  registry entry with no id, package, archive or command is skipped when the catalogue is parsed
+  instead of failing at launch, and a registry agent with no distribution fails at launch with a
+  message; a stored MCP OAuth client registration missing a required field fails with a message
+  naming it; and an `auth: oauth` server declared without a `url` is refused when the credentials
+  provider is built rather than when the first user's session opens. For a contributor, `.mvn/jvm.config` now opens the javac internals Error Prone needs, and
+  `spring-boot-configuration-processor` is named on the compiler's processor path.
 - Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs

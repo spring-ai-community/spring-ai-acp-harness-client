@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.util.unit.DataSize;
@@ -90,7 +91,7 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 * @param prompt who {@code policy: ask} asks, or null when nobody can be asked;
 	 * required for {@code ask} and ignored by every other policy
 	 */
-	public PermissionPolicy toPermissionPolicy(PermissionPrompt prompt) {
+	public PermissionPolicy toPermissionPolicy(@Nullable PermissionPrompt prompt) {
 		return permissions.toPolicy(prompt);
 	}
 
@@ -352,7 +353,7 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 */
 	public record Permissions(@DefaultValue("deny") PermissionMode policy, @DefaultValue Set<String> allowedTools) {
 
-		PermissionPolicy toPolicy(PermissionPrompt prompt) {
+		PermissionPolicy toPolicy(@Nullable PermissionPrompt prompt) {
 			return switch (policy) {
 				case DENY -> PermissionPolicy.deny();
 				case AUTO_APPROVE -> PermissionPolicy.autoApprove();

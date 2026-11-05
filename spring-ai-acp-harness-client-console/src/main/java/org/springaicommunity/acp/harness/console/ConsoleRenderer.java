@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
@@ -58,7 +59,7 @@ public class ConsoleRenderer {
 	 * The latest accounting of the turn, shown once when it ends rather than every time
 	 * it moves.
 	 */
-	private AcpAgentEvent.UsageUpdated usage;
+	private AcpAgentEvent.@Nullable UsageUpdated usage;
 
 	public ConsoleRenderer(Terminal terminal, boolean showThoughts) {
 		this.terminal = terminal;

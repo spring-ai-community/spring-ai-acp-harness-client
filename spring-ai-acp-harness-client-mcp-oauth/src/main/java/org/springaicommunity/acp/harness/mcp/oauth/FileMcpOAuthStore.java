@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.mcp.security.client.sync.oauth2.registration.McpClientRegistrationRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
@@ -90,18 +91,18 @@ public final class FileMcpOAuthStore {
 	public final class Registrations implements McpClientRegistrationRepository {
 
 		@Override
-		public ClientRegistration findByRegistrationId(String registrationId) {
+		public @Nullable ClientRegistration findByRegistrationId(String registrationId) {
 			JsonNode node = read().path("registrations").path(registrationId);
 			return node.isObject() ? registration(registrationId, node) : null;
 		}
 
 		@Override
-		public String findResourceIdByRegistrationId(String registrationId) {
+		public @Nullable String findResourceIdByRegistrationId(String registrationId) {
 			return text(read().path("registrations").path(registrationId), "resource_id");
 		}
 
 		@Override
-		public void addClientRegistration(ClientRegistration registration, String resourceId) {
+		public void addClientRegistration(ClientRegistration registration, @Nullable String resourceId) {
 			update(root -> root.withObjectProperty("registrations")
 				.set(registration.getRegistrationId(), write(registration, resourceId)));
 		}
@@ -136,15 +137,16 @@ public final class FileMcpOAuthStore {
 
 		@Override
 		@SuppressWarnings("unchecked")
-		public <T extends OAuth2AuthorizedClient> T loadAuthorizedClient(String registrationId, String principalName) {
+		public <T extends OAuth2AuthorizedClient> @Nullable T loadAuthorizedClient(String registrationId,
+				String principalName) {
 			JsonNode node = read().path("tokens").path(registrationId).path(principalName);
 			ClientRegistration registration = registrations.findByRegistrationId(registrationId);
-			if (!node.isObject() || registration == null || text(node, "access_token") == null) {
+			String accessToken = node.isObject() ? text(node, "access_token") : null;
+			if (registration == null || accessToken == null) {
 				return null;
 			}
-			OAuth2AccessToken access = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER,
-					text(node, "access_token"), instant(node, "issued_at"), instant(node, "expires_at"),
-					scopes(text(node, "scopes")));
+			OAuth2AccessToken access = new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, accessToken,
+					instant(node, "issued_at"), instant(node, "expires_at"), scopes(text(node, "scopes")));
 			String refresh = text(node, "refresh_token");
 			return (T) new OAuth2AuthorizedClient(registration, principalName, access,
 					refresh == null ? null : new OAuth2RefreshToken(refresh, instant(node, "refresh_issued_at")));
@@ -158,9 +160,10 @@ public final class FileMcpOAuthStore {
 			node.put("issued_at", string(access.getIssuedAt()));
 			node.put("expires_at", string(access.getExpiresAt()));
 			node.put("scopes", String.join(" ", access.getScopes()));
-			if (client.getRefreshToken() != null) {
-				node.put("refresh_token", client.getRefreshToken().getTokenValue());
-				node.put("refresh_issued_at", string(client.getRefreshToken().getIssuedAt()));
+			OAuth2RefreshToken refresh = client.getRefreshToken();
+			if (refresh != null) {
+				node.put("refresh_token", refresh.getTokenValue());
+				node.put("refresh_issued_at", string(refresh.getIssuedAt()));
 			}
 			update(root -> root.withObjectProperty("tokens")
 				.withObjectProperty(client.getClientRegistration().getRegistrationId())
@@ -226,7 +229,7 @@ public final class FileMcpOAuthStore {
 		return Files.getPosixFilePermissions(file);
 	}
 
-	private static ObjectNode write(ClientRegistration registration, String resourceId) {
+	private static ObjectNode write(ClientRegistration registration, @Nullable String resourceId) {
 		ClientRegistration.ProviderDetails provider = registration.getProviderDetails();
 		ObjectNode node = JSON.createObjectNode();
 		node.put("resource_id", resourceId);
@@ -247,35 +250,44 @@ public final class FileMcpOAuthStore {
 
 	private static ClientRegistration registration(String id, JsonNode node) {
 		return ClientRegistration.withRegistrationId(id)
-			.clientId(text(node, "client_id"))
+			.clientId(required(node, "client_id"))
 			.clientSecret(text(node, "client_secret"))
-			.clientAuthenticationMethod(new ClientAuthenticationMethod(text(node, "client_authentication_method")))
-			.authorizationGrantType(new AuthorizationGrantType(text(node, "authorization_grant_type")))
+			.clientAuthenticationMethod(new ClientAuthenticationMethod(required(node, "client_authentication_method")))
+			.authorizationGrantType(new AuthorizationGrantType(required(node, "authorization_grant_type")))
 			.redirectUri(text(node, "redirect_uri"))
 			.scope(scopes(text(node, "scopes")))
 			.clientName(text(node, "client_name"))
 			.authorizationUri(text(node, "authorization_uri"))
-			.tokenUri(text(node, "token_uri"))
+			.tokenUri(required(node, "token_uri"))
 			.issuerUri(text(node, "issuer_uri"))
 			.jwkSetUri(text(node, "jwk_set_uri"))
 			.build();
 	}
 
-	private static Set<String> scopes(String value) {
+	private static Set<String> scopes(@Nullable String value) {
 		return StringUtils.hasText(value) ? new LinkedHashSet<>(Arrays.asList(value.split(" "))) : Set.of();
 	}
 
-	private static String text(JsonNode node, String field) {
+	/** A field a stored registration is unusable without. */
+	private static String required(JsonNode node, String field) {
+		String value = text(node, field);
+		if (value == null) {
+			throw new IllegalStateException("The stored MCP client registration has no " + field);
+		}
+		return value;
+	}
+
+	private static @Nullable String text(JsonNode node, String field) {
 		JsonNode value = node.get(field);
 		return value == null ? null : value.asString(null);
 	}
 
-	private static Instant instant(JsonNode node, String field) {
+	private static @Nullable Instant instant(JsonNode node, String field) {
 		String value = text(node, field);
 		return value == null ? null : Instant.parse(value);
 	}
 
-	private static String string(Instant instant) {
+	private static @Nullable String string(@Nullable Instant instant) {
 		return instant == null ? null : instant.toString();
 	}
 

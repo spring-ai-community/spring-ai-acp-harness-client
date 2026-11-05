@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.Validation;
 
 import com.agentclientprotocol.sdk.client.transport.AgentParameters;
@@ -49,7 +50,8 @@ public sealed interface AcpAgentLaunchSpec {
 	 * @param process the server to start first, or {@code null} to attach to a running
 	 * one
 	 */
-	record WebSocket(URI uri, Map<String, String> headers, ManagedProcess process) implements AcpAgentLaunchSpec {
+	record WebSocket(URI uri, Map<String, String> headers,
+			@Nullable ManagedProcess process) implements AcpAgentLaunchSpec {
 
 		public WebSocket {
 			if (uri == null) {
@@ -78,7 +80,7 @@ public sealed interface AcpAgentLaunchSpec {
 	 * alive" as ready
 	 * @param startupTimeout how long to wait for that before giving up
 	 */
-	record ManagedProcess(String command, List<String> args, Map<String, String> env, URI healthUri,
+	record ManagedProcess(String command, List<String> args, Map<String, String> env, @Nullable URI healthUri,
 			Duration startupTimeout) {
 
 		public static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofSeconds(30);

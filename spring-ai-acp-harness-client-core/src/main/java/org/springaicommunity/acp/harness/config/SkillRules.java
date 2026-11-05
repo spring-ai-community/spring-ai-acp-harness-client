@@ -3,6 +3,8 @@ package org.springaicommunity.acp.harness.config;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
+
 /** The checks both kinds of {@link SkillSpec} share. */
 final class SkillRules {
 
@@ -17,7 +19,11 @@ final class SkillRules {
 	private SkillRules() {
 	}
 
-	static String name(String name, String source) {
+	/**
+	 * {@code name} when given, else the last segment of {@code source}; checked either
+	 * way.
+	 */
+	static String name(@Nullable String name, @Nullable String source) {
 		String chosen = blankToNull(name);
 		if (chosen == null) {
 			String trimmed = source == null ? "" : source.replaceAll("/+$", "");
@@ -30,7 +36,8 @@ final class SkillRules {
 		return chosen;
 	}
 
-	static String sha256(String sha256) {
+	/** The digest in lower case, or null when none was given. */
+	static @Nullable String sha256(@Nullable String sha256) {
 		String value = blankToNull(sha256);
 		if (value == null) {
 			return null;
@@ -46,7 +53,7 @@ final class SkillRules {
 	 * Relative, normalized and inside its root. The path is resolved against a checkout
 	 * or a classpath, so {@code ..} or a leading slash would be a way out of it.
 	 */
-	static String requireSafeRelativePath(String path) {
+	static String requireSafeRelativePath(@Nullable String path) {
 		if (path == null) {
 			throw new IllegalArgumentException("skill path must not be blank");
 		}
@@ -62,7 +69,7 @@ final class SkillRules {
 		return trimmed;
 	}
 
-	static String blankToNull(String value) {
+	static @Nullable String blankToNull(@Nullable String value) {
 		return value == null || value.isBlank() ? null : value.strip();
 	}
 

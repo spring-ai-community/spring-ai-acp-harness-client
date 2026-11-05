@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -23,6 +24,8 @@ import org.springaicommunity.acp.harness.config.AcpAgentOptions;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.session.StoredSession;
 import org.springaicommunity.acp.harness.session.UnsupportedAcpAgentOperationException;
+
+import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 import reactor.core.publisher.Flux;
 
@@ -70,8 +73,9 @@ public class AcpController {
 		String requestId = UUID.randomUUID().toString();
 		try {
 			AcpHarnessClient.AcpAgentResponse response = spec(request).call();
+			AcpSchema.StopReason reason = response.completion().reason();
 			return ResponseEntity
-				.ok(new PromptResponse(response.content(), response.completion().reason().toString(), null, requestId));
+				.ok(new PromptResponse(response.content(), reason == null ? null : reason.toString(), null, requestId));
 		}
 		catch (AcpHarnessClientException ex) {
 			// The agent's own words can carry anything it read; the caller gets the
@@ -193,14 +197,24 @@ public class AcpController {
 	/**
 	 * @param session a named conversation to continue, or null for a throwaway turn
 	 */
-	public record PromptRequest(String prompt, String session, Duration timeout, String model, String provider,
-			String mode) {
+	public record PromptRequest(String prompt, @Nullable String session, @Nullable Duration timeout,
+			@Nullable String model, @Nullable String provider, @Nullable String mode) {
 	}
 
-	public record PromptResponse(String content, String stopReason, String error, String requestId) {
+	/**
+	 * @param content what the agent said, or null when the turn failed
+	 * @param stopReason why the agent stopped, or null when it did not say or the turn
+	 * failed
+	 * @param error what went wrong, or null when nothing did
+	 */
+	public record PromptResponse(@Nullable String content, @Nullable String stopReason, @Nullable String error,
+			String requestId) {
 	}
 
-	public record HealthResponse(boolean available, String runtime, String agent) {
+	/**
+	 * @param agent the agent's name and version, or null before it has introduced itself
+	 */
+	public record HealthResponse(boolean available, String runtime, @Nullable String agent) {
 	}
 
 }

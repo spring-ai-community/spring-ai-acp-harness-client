@@ -256,9 +256,13 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 		}
 
 		public AcpAgentSettings build() {
-			return new AcpAgentSettings(runtime, workspace, runtimeHome, timeout, model, provider, mode, mcpServers,
-					mcp, skills, permissions, filesystem, terminal, onUnsupported, sessionTtl, pool, runtimeOptions,
-					protocol);
+			// The same defaults the canonical constructor applies, spelled out so the
+			// nullable builder fields hand it what it declares.
+			return new AcpAgentSettings(runtime, workspace,
+					runtimeHome == null ? defaultRuntimeHome(runtime) : runtimeHome,
+					timeout == null ? DEFAULT_TIMEOUT : timeout, model, provider, mode, mcpServers, mcp, skills,
+					permissions, filesystem, terminal, onUnsupported,
+					sessionTtl == null ? DEFAULT_SESSION_TTL : sessionTtl, pool, runtimeOptions, protocol);
 		}
 
 	}

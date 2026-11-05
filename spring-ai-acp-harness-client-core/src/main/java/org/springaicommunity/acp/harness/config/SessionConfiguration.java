@@ -35,8 +35,13 @@ public record SessionConfiguration(Map<PortableOption, OptionResolution> resolut
 		return new SessionConfiguration(map);
 	}
 
+	/**
+	 * How {@code option} was resolved; {@link OptionResolution.Mechanism#NOT_REQUESTED}
+	 * for one the configuration never mentioned.
+	 */
 	public OptionResolution of(PortableOption option) {
-		return resolutions.get(option);
+		OptionResolution resolution = resolutions.get(option);
+		return resolution == null ? OptionResolution.notRequested(option) : resolution;
 	}
 
 	/**

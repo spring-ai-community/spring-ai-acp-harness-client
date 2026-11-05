@@ -49,7 +49,7 @@ public class BundledSkillFetcher {
 		}
 		try {
 			switch (url.getProtocol()) {
-				case "file" -> copyDirectory(Path.of(url.toURI()).getParent(), into);
+				case "file" -> copyDirectory(directoryOf(Path.of(url.toURI()), skillFile), into);
 				case "jar" -> copyJarEntries((JarURLConnection) url.openConnection(), into);
 				default -> throw new SkillInstallException(
 						"cannot read a skill from a '" + url.getProtocol() + "' classpath entry");
@@ -59,6 +59,15 @@ public class BundledSkillFetcher {
 			throw new SkillInstallException("could not read " + skillFile + " from the classpath", ex);
 		}
 		return new SkillFetcher.Fetched(into, null);
+	}
+
+	/** The directory holding {@code SKILL.md}, which a file on a classpath always has. */
+	private static Path directoryOf(Path skillFile, String name) {
+		Path directory = skillFile.getParent();
+		if (directory == null) {
+			throw new SkillInstallException(name + " is not inside a directory on the classpath");
+		}
+		return directory;
 	}
 
 	/**

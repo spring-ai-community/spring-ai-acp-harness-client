@@ -82,7 +82,12 @@ public class RegistryAcpAgentRuntime implements AcpAgentRuntime {
 
 	@Override
 	public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
-		return switch (entry.distribution()) {
+		RegistryEntry.Distribution distribution = entry.distribution();
+		if (distribution == null) {
+			throw new AcpAgentInstaller.AcpAgentInstallException(
+					"The ACP registry says nothing about how to obtain '" + entry.id() + "'");
+		}
+		return switch (distribution) {
 			case RegistryEntry.Distribution.Binary binary -> launchBinary(binary, settings);
 			case RegistryEntry.Distribution.Npx npx ->
 				stdio("npx", prepend(List.of("-y", npx.packageSpec()), npx.args(), settings), npx.env(), settings);

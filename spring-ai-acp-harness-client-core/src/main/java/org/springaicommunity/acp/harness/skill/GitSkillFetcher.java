@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.SkillSpec;
 
 /**
@@ -93,7 +94,7 @@ public class GitSkillFetcher {
 		return env;
 	}
 
-	private static int parseCount(String count) {
+	private static int parseCount(@Nullable String count) {
 		try {
 			return count == null ? 0 : Math.max(0, Integer.parseInt(count.strip()));
 		}

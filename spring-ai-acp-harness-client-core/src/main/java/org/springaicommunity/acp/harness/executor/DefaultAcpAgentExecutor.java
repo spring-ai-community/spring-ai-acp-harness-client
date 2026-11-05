@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.executor;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -50,8 +51,12 @@ public final class DefaultAcpAgentExecutor implements AcpAgentExecutor {
 	@Override
 	public CompletableFuture<String> executeAsync(String prompt, AcpAgentOptions options) {
 		// The blocking call is real work on a real thread; boundedElastic is where that
-		// belongs.
-		return Mono.fromSupplier(() -> execute(prompt, options)).subscribeOn(Schedulers.boundedElastic()).toFuture();
+		// belongs. execute() never returns null, so the Mono never completes empty: the
+		// last step only narrows Reactor's CompletableFuture<@Nullable T> back.
+		return Mono.fromSupplier(() -> execute(prompt, options))
+			.subscribeOn(Schedulers.boundedElastic())
+			.toFuture()
+			.thenApply(Objects::requireNonNull);
 	}
 
 	@Override

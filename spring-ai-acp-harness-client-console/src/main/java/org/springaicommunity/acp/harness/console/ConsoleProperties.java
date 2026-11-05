@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.console;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -23,13 +24,13 @@ public class ConsoleProperties {
 	 * stdin. {@code true}: always, reading plain lines when there is no terminal.
 	 * {@code false}: never.
 	 */
-	private Boolean enabled;
+	private @Nullable Boolean enabled;
 
 	/** The heading shown when the console starts. Defaults to spring.application.name. */
-	private String title;
+	private @Nullable String title;
 
 	/** Shown once before the first prompt, to tell the user what to ask. */
-	private String greeting;
+	private @Nullable String greeting;
 
 	/**
 	 * The named session the conversation runs in, so the agent remembers earlier turns.
@@ -41,7 +42,7 @@ public class ConsoleProperties {
 	 * Where input history is kept across runs. Defaults to
 	 * {@code <config dir>/<spring.application.name>/console-history}.
 	 */
-	private Path historyFile;
+	private @Nullable Path historyFile;
 
 	/** Whether to show the reasoning the agent surfaces, one dimmed line per thought. */
 	private boolean showThoughts = true;
@@ -60,27 +61,27 @@ public class ConsoleProperties {
 		return config.resolve(application).resolve("console-history");
 	}
 
-	public Boolean getEnabled() {
+	public @Nullable Boolean getEnabled() {
 		return enabled;
 	}
 
-	public void setEnabled(Boolean enabled) {
+	public void setEnabled(@Nullable Boolean enabled) {
 		this.enabled = enabled;
 	}
 
-	public String getTitle() {
+	public @Nullable String getTitle() {
 		return title;
 	}
 
-	public void setTitle(String title) {
+	public void setTitle(@Nullable String title) {
 		this.title = title;
 	}
 
-	public String getGreeting() {
+	public @Nullable String getGreeting() {
 		return greeting;
 	}
 
-	public void setGreeting(String greeting) {
+	public void setGreeting(@Nullable String greeting) {
 		this.greeting = greeting;
 	}
 
@@ -92,11 +93,11 @@ public class ConsoleProperties {
 		this.session = session;
 	}
 
-	public Path getHistoryFile() {
+	public @Nullable Path getHistoryFile() {
 		return historyFile;
 	}
 
-	public void setHistoryFile(Path historyFile) {
+	public void setHistoryFile(@Nullable Path historyFile) {
 		this.historyFile = historyFile;
 	}
 

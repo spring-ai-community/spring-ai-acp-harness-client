@@ -64,7 +64,7 @@ public record McpSettings(OnServerFailure onServerFailure, Duration detectTimeou
 
 	/** Failure handling only; every server handed to the agent as configured. */
 	public McpSettings(OnServerFailure onServerFailure, Duration detectTimeout) {
-		this(onServerFailure, detectTimeout, null, null);
+		this(onServerFailure, detectTimeout, McpCredentialsProvider.none(), SessionPrincipalResolver.none());
 	}
 
 	public static McpSettings defaults() {

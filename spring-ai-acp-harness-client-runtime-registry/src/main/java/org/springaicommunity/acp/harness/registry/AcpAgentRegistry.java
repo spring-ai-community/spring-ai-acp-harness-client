@@ -262,7 +262,7 @@ public class AcpAgentRegistry {
 	}
 
 	private RegistryEntry entry(JsonNode agent) {
-		return new RegistryEntry(text(agent, "id"), text(agent, "name"), text(agent, "version"),
+		return new RegistryEntry(required(agent, "id"), text(agent, "name"), text(agent, "version"),
 				distribution(agent.path("distribution")));
 	}
 
@@ -281,20 +281,32 @@ public class AcpAgentRegistry {
 		}
 		if (node.has("npx")) {
 			JsonNode npx = node.path("npx");
-			return new RegistryEntry.Distribution.Npx(text(npx, "package"), strings(npx.path("args")),
+			return new RegistryEntry.Distribution.Npx(required(npx, "package"), strings(npx.path("args")),
 					stringMap(npx.path("env")));
 		}
 		if (node.has("uvx")) {
 			JsonNode uvx = node.path("uvx");
-			return new RegistryEntry.Distribution.Uvx(text(uvx, "package"), strings(uvx.path("args")),
+			return new RegistryEntry.Distribution.Uvx(required(uvx, "package"), strings(uvx.path("args")),
 					stringMap(uvx.path("env")));
 		}
 		return null;
 	}
 
 	private RegistryEntry.Artifact artifact(JsonNode node) {
-		return new RegistryEntry.Artifact(URI.create(text(node, "archive")), text(node, "cmd"),
+		return new RegistryEntry.Artifact(URI.create(required(node, "archive")), required(node, "cmd"),
 				strings(node.path("args")), stringMap(node.path("env")), text(node, "sha256"));
+	}
+
+	/**
+	 * A field the entry cannot be used without; the caller skips the entry when it is
+	 * missing.
+	 */
+	private static String required(JsonNode node, String field) {
+		String value = text(node, field);
+		if (value == null) {
+			throw new IllegalArgumentException("registry entry has no " + field);
+		}
+		return value;
 	}
 
 	private static @Nullable String text(JsonNode node, String field) {

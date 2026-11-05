@@ -1,5 +1,7 @@
 package org.springaicommunity.acp.harness.observation;
 
+import org.jspecify.annotations.Nullable;
+
 import io.micrometer.observation.Observation;
 
 /**
@@ -15,11 +17,11 @@ public class AcpAgentTurnObservationContext extends Observation.Context {
 
 	private String outcome = "unknown";
 
-	private Long contextUsed;
+	private @Nullable Long contextUsed;
 
-	private Long contextSize;
+	private @Nullable Long contextSize;
 
-	private String cost;
+	private @Nullable String cost;
 
 	public AcpAgentTurnObservationContext(AcpAgentObservations.TurnContext turn) {
 		this.turn = turn;
@@ -33,19 +35,22 @@ public class AcpAgentTurnObservationContext extends Observation.Context {
 		return outcome;
 	}
 
-	public void outcome(String outcome) {
+	public void outcome(@Nullable String outcome) {
 		this.outcome = outcome == null || outcome.isBlank() ? "unknown" : outcome;
 	}
 
-	public Long contextUsed() {
+	/** Context tokens used, or null before the agent reported any usage. */
+	public @Nullable Long contextUsed() {
 		return contextUsed;
 	}
 
-	public Long contextSize() {
+	/** The context window, or null before the agent reported any usage. */
+	public @Nullable Long contextSize() {
 		return contextSize;
 	}
 
-	public String cost() {
+	/** The cost so far with its currency, or null when the agent did not say. */
+	public @Nullable String cost() {
 		return cost;
 	}
 
@@ -53,7 +58,7 @@ public class AcpAgentTurnObservationContext extends Observation.Context {
 	 * The latest {@code usage_update}; each one replaces the last, because they are
 	 * cumulative.
 	 */
-	public void usage(long used, long size, Double amount, String currency) {
+	public void usage(long used, long size, @Nullable Double amount, @Nullable String currency) {
 		this.contextUsed = used;
 		this.contextSize = size;
 		this.cost = amount == null ? null : amount + (currency == null ? "" : " " + currency);

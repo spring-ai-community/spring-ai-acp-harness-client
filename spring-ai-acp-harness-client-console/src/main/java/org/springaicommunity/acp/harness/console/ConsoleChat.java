@@ -14,6 +14,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.jline.reader.Candidate;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -67,18 +68,18 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 
 	private final String title;
 
-	private final String greeting;
+	private final @Nullable String greeting;
 
 	private final String baseSession;
 
-	private final Path historyFile;
+	private final @Nullable Path historyFile;
 
 	private final Runnable onExit;
 
 	private final AtomicBoolean started = new AtomicBoolean();
 
 	/** The turn in flight, for Ctrl-C to cancel; null between turns. */
-	private final AtomicReference<Disposable> turn = new AtomicReference<>();
+	private final AtomicReference<@Nullable Disposable> turn = new AtomicReference<>();
 
 	/** Notices already shown, so each is reported once rather than after every turn. */
 	private final Set<AcpAgentNotice> seenNotices = new HashSet<>();
@@ -99,7 +100,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	 * application
 	 */
 	public ConsoleChat(AcpHarnessClient agent, Terminal terminal, ConsoleRenderer renderer, String title,
-			String greeting, String session, Path historyFile, Runnable onExit) {
+			@Nullable String greeting, String session, @Nullable Path historyFile, Runnable onExit) {
 		this.agent = agent;
 		this.terminal = terminal;
 		this.out = renderer;
@@ -408,7 +409,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	 * The history file, when there is a person typing to keep it for: input piped into a
 	 * dumb terminal is a script, and does not belong in anyone's history.
 	 */
-	private Path persistentHistory() {
+	private @Nullable Path persistentHistory() {
 		if (historyFile == null || terminal.getType().startsWith(Terminal.TYPE_DUMB)) {
 			return null;
 		}

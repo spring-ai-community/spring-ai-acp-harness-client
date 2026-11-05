@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.executor;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AcpAgentOptions;
 
 /**
@@ -62,6 +63,7 @@ public interface AcpAgentExecutor {
 	boolean isAvailable();
 
 	/** The agent's own version string, or null if it did not give one. */
+	@Nullable
 	String getVersion();
 
 	/**

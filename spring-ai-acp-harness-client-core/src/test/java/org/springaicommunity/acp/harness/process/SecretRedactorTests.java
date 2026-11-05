@@ -48,10 +48,4 @@ class SecretRedactorTests {
 		assertThat(SecretRedactor.redact(line)).isEqualTo(line);
 	}
 
-	@Test
-	@DisplayName("null survives, because a log line can be one")
-	void toleratesNull() {
-		assertThat(SecretRedactor.redact(null)).isNull();
-	}
-
 }

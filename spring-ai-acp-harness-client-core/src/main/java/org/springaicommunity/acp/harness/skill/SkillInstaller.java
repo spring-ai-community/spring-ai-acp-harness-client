@@ -112,9 +112,10 @@ public final class SkillInstaller {
 			staging = Files.createTempDirectory("spring-ai-acp-harness-client-skill-");
 			SkillFetcher.Fetched fetched = fetcher.fetch(skill, staging);
 			String revision = fetched.revision();
-			if (skill instanceof SkillSpec.Git git && git.isPinned() && !git.ref().equalsIgnoreCase(revision)) {
+			String pinned = skill instanceof SkillSpec.Git git && git.isPinned() ? git.ref() : null;
+			if (pinned != null && !pinned.equalsIgnoreCase(revision)) {
 				throw new SkillInstallException(
-						"skill '" + skill.name() + "' resolved to " + revision + ", not the pinned " + git.ref());
+						"skill '" + skill.name() + "' resolved to " + revision + ", not the pinned " + pinned);
 			}
 			Path source = fetched.directory().normalize();
 			check(skill, staging, source);

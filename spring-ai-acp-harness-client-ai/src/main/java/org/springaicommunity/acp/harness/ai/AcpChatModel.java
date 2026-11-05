@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -139,8 +140,8 @@ public class AcpChatModel implements ChatModel {
 		});
 	}
 
-	private ChatResponse chunk(String text, String finishReason, AcpChatOptions options,
-			AcpAgentEvent.UsageUpdated usage) {
+	private ChatResponse chunk(String text, @Nullable String finishReason, AcpChatOptions options,
+			AcpAgentEvent.@Nullable UsageUpdated usage) {
 		ChatGenerationMetadata generationMetadata = finishReason == null ? ChatGenerationMetadata.NULL
 				: ChatGenerationMetadata.builder().finishReason(finishReason).build();
 		return new ChatResponse(List.of(new Generation(new AssistantMessage(text), generationMetadata)),
@@ -246,7 +247,7 @@ public class AcpChatModel implements ChatModel {
 	}
 
 	/** Names, once each, the options this application set and this model cannot honor. */
-	private void reportUnsupported(ChatOptions requested) {
+	private void reportUnsupported(@Nullable ChatOptions requested) {
 		if (requested == null) {
 			return;
 		}
@@ -313,7 +314,7 @@ public class AcpChatModel implements ChatModel {
 	 * measurements, and putting one in the other's field would put a number that means
 	 * "the whole conversation so far" where every dashboard reads "this call".
 	 */
-	private ChatResponseMetadata metadata(AcpChatOptions options, AcpAgentEvent.UsageUpdated usage) {
+	private ChatResponseMetadata metadata(AcpChatOptions options, AcpAgentEvent.@Nullable UsageUpdated usage) {
 		ChatResponseMetadata.Builder builder = ChatResponseMetadata.builder()
 			.model(modelOf(options))
 			.keyValue("acp.runtime", client.runtimeId());

@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.ai;
 import java.time.Duration;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.ai.chat.prompt.ChatOptions;
 
 /**
@@ -18,20 +19,20 @@ import org.springframework.ai.chat.prompt.ChatOptions;
  */
 public class AcpChatOptions implements ChatOptions {
 
-	private String model;
+	private @Nullable String model;
 
-	private String session;
+	private @Nullable String session;
 
-	private String mode;
+	private @Nullable String mode;
 
-	private Duration timeout;
+	private @Nullable Duration timeout;
 
 	public static Builder builder() {
 		return new Builder();
 	}
 
 	/**
-	 * The conversation this prompt belongs to.
+	 * The conversation this prompt belongs to, or null for a fresh one per call.
 	 *
 	 * <p>
 	 * The single most important option here, because it changes what is sent. Without it
@@ -39,76 +40,79 @@ public class AcpChatOptions implements ChatOptions {
 	 * agent already holds the history and only what is new is sent. See
 	 * {@link AcpChatModel}.
 	 */
-	public String getSession() {
+	public @Nullable String getSession() {
 		return session;
 	}
 
-	public void setSession(String session) {
+	public void setSession(@Nullable String session) {
 		this.session = session;
 	}
 
 	/**
 	 * The agent's own session mode: {@code plan}, {@code approve}, whatever it
-	 * advertises.
+	 * advertises; null to leave it as it is.
 	 */
-	public String getMode() {
+	public @Nullable String getMode() {
 		return mode;
 	}
 
-	public void setMode(String mode) {
+	public void setMode(@Nullable String mode) {
 		this.mode = mode;
 	}
 
-	/** How long this one turn may take. Agents are slower than chat completions. */
-	public Duration getTimeout() {
+	/**
+	 * How long this one turn may take, or null for the configured timeout. Agents are
+	 * slower than chat completions.
+	 */
+	public @Nullable Duration getTimeout() {
 		return timeout;
 	}
 
-	public void setTimeout(Duration timeout) {
+	public void setTimeout(@Nullable Duration timeout) {
 		this.timeout = timeout;
 	}
 
 	@Override
-	public String getModel() {
+	public @Nullable String getModel() {
 		return model;
 	}
 
-	public void setModel(String model) {
+	public void setModel(@Nullable String model) {
 		this.model = model;
 	}
 
 	@Override
-	public Double getFrequencyPenalty() {
+	public @Nullable Double getFrequencyPenalty() {
 		return null;
 	}
 
 	@Override
-	public Integer getMaxTokens() {
+	public @Nullable Integer getMaxTokens() {
 		return null;
 	}
 
 	@Override
-	public Double getPresencePenalty() {
+	public @Nullable Double getPresencePenalty() {
 		return null;
 	}
 
 	@Override
-	public List<String> getStopSequences() {
+	public @Nullable List<String> getStopSequences() {
 		return null;
 	}
 
 	@Override
-	public Double getTemperature() {
+	public @Nullable Double getTemperature() {
 		return null;
 	}
 
 	@Override
-	public Integer getTopK() {
+	public @Nullable Integer getTopK() {
 		return null;
 	}
 
 	@Override
-	public Double getTopP() {
+	public @Nullable Double getTopP() {
 		return null;
 	}
 
@@ -118,7 +122,7 @@ public class AcpChatOptions implements ChatOptions {
 	}
 
 	/** The values set here, on top of {@code defaults}, for one call. */
-	AcpChatOptions merge(AcpChatOptions defaults) {
+	AcpChatOptions merge(@Nullable AcpChatOptions defaults) {
 		if (defaults == null) {
 			return this;
 		}
@@ -145,58 +149,58 @@ public class AcpChatOptions implements ChatOptions {
 		}
 
 		@Override
-		public Builder model(String model) {
+		public Builder model(@Nullable String model) {
 			options.setModel(model);
 			return this;
 		}
 
-		public Builder session(String session) {
+		public Builder session(@Nullable String session) {
 			options.setSession(session);
 			return this;
 		}
 
-		public Builder mode(String mode) {
+		public Builder mode(@Nullable String mode) {
 			options.setMode(mode);
 			return this;
 		}
 
-		public Builder timeout(Duration timeout) {
+		public Builder timeout(@Nullable Duration timeout) {
 			options.setTimeout(timeout);
 			return this;
 		}
 
 		@Override
-		public Builder frequencyPenalty(Double frequencyPenalty) {
+		public Builder frequencyPenalty(@Nullable Double frequencyPenalty) {
 			return this;
 		}
 
 		@Override
-		public Builder maxTokens(Integer maxTokens) {
+		public Builder maxTokens(@Nullable Integer maxTokens) {
 			return this;
 		}
 
 		@Override
-		public Builder presencePenalty(Double presencePenalty) {
+		public Builder presencePenalty(@Nullable Double presencePenalty) {
 			return this;
 		}
 
 		@Override
-		public Builder stopSequences(List<String> stopSequences) {
+		public Builder stopSequences(@Nullable List<String> stopSequences) {
 			return this;
 		}
 
 		@Override
-		public Builder temperature(Double temperature) {
+		public Builder temperature(@Nullable Double temperature) {
 			return this;
 		}
 
 		@Override
-		public Builder topK(Integer topK) {
+		public Builder topK(@Nullable Integer topK) {
 			return this;
 		}
 
 		@Override
-		public Builder topP(Double topP) {
+		public Builder topP(@Nullable Double topP) {
 			return this;
 		}
 

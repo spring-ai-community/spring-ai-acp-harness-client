@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.goose;
 import java.io.IOException;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.mcp.McpRequestFilter;
 
 import tools.jackson.core.JacksonException;
@@ -60,7 +61,7 @@ final class DiscoverProbeFilter implements McpRequestFilter {
 		return versions.contains(PROBE_VERSION) ? request.withoutHeader(VERSION_HEADER).forward() : request.forward();
 	}
 
-	private static JsonNode parse(byte[] body) {
+	private static @Nullable JsonNode parse(byte[] body) {
 		if (body.length == 0) {
 			return null;
 		}

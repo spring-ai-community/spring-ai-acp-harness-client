@@ -2,9 +2,11 @@ package org.springaicommunity.acp.harness.mcp.oauth;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.jspecify.annotations.Nullable;
@@ -119,7 +121,13 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 			RefreshLock refreshLock) {
 		this.refreshLock = refreshLock;
 		Map<String, McpServerSpec.Http> byName = new LinkedHashMap<>();
-		servers.forEach(server -> byName.put(server.name(), server));
+		for (McpServerSpec.Http server : servers) {
+			if (server.url() == null) {
+				throw new IllegalArgumentException("MCP server '" + server.name() + "' is under auth: oauth but has"
+						+ " no url, and the url is what names the authorization server to register a client with");
+			}
+			byName.put(server.name(), server);
+		}
 		this.servers = Map.copyOf(byName);
 		this.registrations = registrations;
 		this.clientManager = clientManager;
@@ -246,9 +254,11 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 			if (registrations.findByRegistrationId(server.name()) != null) {
 				return;
 			}
+			// Every server here came through the constructor, which refused one with no
+			// url.
+			URI url = Objects.requireNonNull(server.url());
 			String redirectUri = signIn.redirectUri(server);
-			clientManager.registerMcpClient(server.name(), server.url().toString(), DynamicClientRegistrationRequest
-				.builder()
+			clientManager.registerMcpClient(server.name(), url.toString(), DynamicClientRegistrationRequest.builder()
 				.clientName(clientName)
 				// authorization_code first: the manager takes the first as the
 				// registration's grant.
@@ -331,7 +341,11 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 		}
 	}
 
-	private record Refresh(String token, String refusal) {
+	/**
+	 * @param token the live access token, or null when there is none; @param refusal why,
+	 * when the server said
+	 */
+	private record Refresh(@Nullable String token, @Nullable String refusal) {
 	}
 
 	private static boolean isFresh(OAuth2AccessToken token) {

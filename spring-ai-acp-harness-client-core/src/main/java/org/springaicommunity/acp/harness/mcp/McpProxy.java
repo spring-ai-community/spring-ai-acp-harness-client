@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.mcp.McpRequestFilter.McpRequest;
@@ -203,7 +204,7 @@ final class McpProxy implements AutoCloseable {
 		}
 	}
 
-	private Upstream lookup(String path) {
+	private @Nullable Upstream lookup(@Nullable String path) {
 		if (path == null || path.length() < 2) {
 			return null;
 		}

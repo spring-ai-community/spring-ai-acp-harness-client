@@ -2,6 +2,7 @@ package org.springaicommunity.acp.harness.skill;
 
 import java.nio.file.Path;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.SkillSpec;
 
 /**
@@ -23,7 +24,7 @@ public interface SkillFetcher {
 	 * @param revision the commit that was checked out, or {@code null} for a source
 	 * without one
 	 */
-	record Fetched(Path directory, String revision) {
+	record Fetched(Path directory, @Nullable String revision) {
 	}
 
 	/**

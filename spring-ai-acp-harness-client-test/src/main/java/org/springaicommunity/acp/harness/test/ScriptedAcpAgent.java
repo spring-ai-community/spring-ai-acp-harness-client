@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
+
 import com.agentclientprotocol.sdk.spec.AcpClientTransport;
 import com.agentclientprotocol.sdk.spec.AcpAgentTransport;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
@@ -538,9 +540,9 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 
 		private boolean refusesAuthentication;
 
-		private Duration promptDelay;
+		private @Nullable Duration promptDelay;
 
-		private Duration newSessionDelay;
+		private @Nullable Duration newSessionDelay;
 
 		/** A {@code select} config option with an explicit set of legal values. */
 		public Builder select(String id, String category, String current, String... values) {

@@ -257,7 +257,7 @@ public class AcpAgentInstaller {
 		}
 	}
 
-	private static void deleteRecursively(Path directory) {
+	private static void deleteRecursively(@Nullable Path directory) {
 		if (directory == null || !Files.exists(directory)) {
 			return;
 		}

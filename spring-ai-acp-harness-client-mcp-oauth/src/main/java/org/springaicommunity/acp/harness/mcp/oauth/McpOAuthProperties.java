@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.mcp.oauth;
 import java.nio.file.Path;
 import java.time.Duration;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -26,14 +27,14 @@ public class McpOAuthProperties {
 	 * Shown to users on the authorization server's consent screen. Defaults to
 	 * spring.application.name.
 	 */
-	private String clientName;
+	private @Nullable String clientName;
 
 	/**
 	 * Where users' browsers reach this application, for the redirect URI registered with
 	 * each authorization server. Read from the request that triggers the registration
 	 * when unset.
 	 */
-	private String baseUrl;
+	private @Nullable String baseUrl;
 
 	/** The callback path registered with each authorization server. */
 	private String redirectUri = "{baseUrl}/login/oauth2/code/{registrationId}";
@@ -42,13 +43,13 @@ public class McpOAuthProperties {
 	 * Where client registrations and users' tokens are kept. Defaults to memory for web,
 	 * file for local.
 	 */
-	private Store store;
+	private @Nullable Store store;
 
 	/**
 	 * The file for {@code store: file}. Defaults to
 	 * {@code <config dir>/<spring.application.name>/acp-mcp-oauth.json}.
 	 */
-	private Path file;
+	private @Nullable Path file;
 
 	/** How long a {@code local} sign-in waits for the user to finish in the browser. */
 	private Duration signInTimeout = Duration.ofMinutes(5);
@@ -101,11 +102,11 @@ public class McpOAuthProperties {
 		this.mode = mode;
 	}
 
-	public Path getFile() {
+	public @Nullable Path getFile() {
 		return file;
 	}
 
-	public void setFile(Path file) {
+	public void setFile(@Nullable Path file) {
 		this.file = file;
 	}
 
@@ -117,19 +118,19 @@ public class McpOAuthProperties {
 		this.signInTimeout = signInTimeout;
 	}
 
-	public String getClientName() {
+	public @Nullable String getClientName() {
 		return clientName;
 	}
 
-	public void setClientName(String clientName) {
+	public void setClientName(@Nullable String clientName) {
 		this.clientName = clientName;
 	}
 
-	public String getBaseUrl() {
+	public @Nullable String getBaseUrl() {
 		return baseUrl;
 	}
 
-	public void setBaseUrl(String baseUrl) {
+	public void setBaseUrl(@Nullable String baseUrl) {
 		this.baseUrl = baseUrl;
 	}
 
@@ -141,11 +142,11 @@ public class McpOAuthProperties {
 		this.redirectUri = redirectUri;
 	}
 
-	public Store getStore() {
+	public @Nullable Store getStore() {
 		return store;
 	}
 
-	public void setStore(Store store) {
+	public void setStore(@Nullable Store store) {
 		this.store = store;
 	}
 

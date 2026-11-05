@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 /**
@@ -61,7 +63,7 @@ public sealed interface McpServerSpec {
 	 * @param url where it lives, or {@code null} when the application's
 	 * {@code McpCredentialsProvider} supplies it per session (see {@link #provided})
 	 */
-	record Http(String name, URI url, Map<String, String> headers) implements McpServerSpec {
+	record Http(String name, @Nullable URI url, Map<String, String> headers) implements McpServerSpec {
 		public Http {
 			Validation.requireName(name, "mcp server name");
 			if (url != null) {

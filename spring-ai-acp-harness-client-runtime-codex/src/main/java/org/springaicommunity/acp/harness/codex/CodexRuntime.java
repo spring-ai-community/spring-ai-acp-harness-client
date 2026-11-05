@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.codex;
 
+import java.net.URI;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -256,19 +257,22 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 */
 	private static boolean signsInWithKey(AcpAgentSettings settings) {
 		ProviderSpec provider = settings.provider();
-		return !provider.isByo() && isOpenAiCompatible(provider) && provider.findApiKey() != null;
+		return !provider.isByo() && isOpenAiCompatible(provider.findApiType()) && provider.findApiKey() != null;
 	}
 
 	private static Map<String, Object> endpointConfig(AcpAgentSettings settings) {
 		ProviderSpec provider = settings.provider();
-		if (!provider.isByo() || !isOpenAiCompatible(provider)) {
+		// A BYO endpoint is one with a base-url; findApiBase is that url, canonicalised.
+		URI base = provider.findApiBase();
+		String apiType = provider.findApiType();
+		if (base == null || apiType == null || !isOpenAiCompatible(apiType)) {
 			return Map.of();
 		}
 		String id = providerKey(provider);
 		Map<String, Object> endpoint = new LinkedHashMap<>();
 		endpoint.put("name", id);
-		endpoint.put("base_url", Objects.requireNonNull(provider.findApiBase()).toString());
-		endpoint.put("env_key", ProviderEnvironment.apiKeyVariable(provider.apiType()));
+		endpoint.put("base_url", base.toString());
+		endpoint.put("env_key", ProviderEnvironment.apiKeyVariable(apiType));
 
 		Map<String, Object> config = new LinkedHashMap<>();
 		String model = settings.findModel();
@@ -289,8 +293,8 @@ public class CodexRuntime implements AcpAgentRuntime {
 		return id == null ? DEFAULT_PROVIDER_KEY : id;
 	}
 
-	private static boolean isOpenAiCompatible(ProviderSpec provider) {
-		return "openai".equalsIgnoreCase(provider.findApiType());
+	private static boolean isOpenAiCompatible(@Nullable String apiType) {
+		return "openai".equalsIgnoreCase(apiType);
 	}
 
 	/**

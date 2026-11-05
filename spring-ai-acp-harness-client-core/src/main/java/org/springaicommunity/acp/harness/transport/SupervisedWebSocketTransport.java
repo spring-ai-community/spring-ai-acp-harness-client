@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.Validation;
@@ -86,20 +87,22 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 
 	private final AtomicBoolean connected = new AtomicBoolean();
 
-	private volatile WebSocket webSocket;
+	/** The open socket, or null until {@link #connect} succeeds. */
+	private volatile @Nullable WebSocket webSocket;
 
-	private volatile ScheduledFuture<?> pingTask;
+	/** The keepalive, or null until the socket is open. */
+	private volatile @Nullable ScheduledFuture<?> pingTask;
 
 	private volatile Consumer<Throwable> exceptionHandler = error -> logger.error("Transport error", error);
 
 	private volatile Runnable onDisconnect = () -> {
 	};
 
-	public SupervisedWebSocketTransport(URI uri, Map<String, String> headers) {
+	public SupervisedWebSocketTransport(URI uri, @Nullable Map<String, String> headers) {
 		this(uri, headers, AcpJsonMapper.createDefault());
 	}
 
-	public SupervisedWebSocketTransport(URI uri, Map<String, String> headers, AcpJsonMapper jsonMapper) {
+	public SupervisedWebSocketTransport(URI uri, @Nullable Map<String, String> headers, AcpJsonMapper jsonMapper) {
 		this.uri = uri;
 		this.headers = headers == null ? Map.of() : Map.copyOf(headers);
 		this.headers.forEach((name, value) -> {
@@ -116,8 +119,8 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 			.fromExecutorService(Executors.newSingleThreadExecutor(daemon("acp-ws-outbound")), "ws-outbound");
 	}
 
-	/** Called once when the socket drops, however it drops. */
-	public void onDisconnect(Runnable callback) {
+	/** Called once when the socket drops, however it drops; null for nothing. */
+	public void onDisconnect(@Nullable Runnable callback) {
 		this.onDisconnect = callback == null ? () -> {
 		} : callback;
 	}
@@ -220,7 +223,7 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 	}
 
 	@Override
-	public void setExceptionHandler(Consumer<Throwable> handler) {
+	public void setExceptionHandler(@Nullable Consumer<Throwable> handler) {
 		this.exceptionHandler = handler == null ? error -> {
 		} : handler;
 	}

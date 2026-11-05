@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.observation;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation.TurnHighCardinalityKeys;
 import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation.TurnLowCardinalityKeys;
 
@@ -65,7 +66,7 @@ public class DefaultAcpAgentTurnObservationConvention implements ObservationConv
 		return context instanceof AcpAgentTurnObservationContext;
 	}
 
-	private static String orUnknown(String value) {
+	private static String orUnknown(@Nullable String value) {
 		return value == null || value.isBlank() ? UNKNOWN : value;
 	}
 

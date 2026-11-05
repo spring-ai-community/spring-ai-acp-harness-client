@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.process;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
@@ -91,13 +93,15 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 
 	private volatile long windowStartedAt = System.nanoTime();
 
-	private volatile Process process;
+	/** The current child, or null before the first spawn. */
+	private volatile @Nullable Process process;
 
 	private volatile boolean healthy;
 
 	private volatile boolean givenUp;
 
-	private Thread shutdownHook;
+	/** Installed on the first start; null until then. */
+	private @Nullable Thread shutdownHook;
 
 	public AcpAgentProcessSupervisor(String runtimeId, AcpAgentLaunchSpec.ManagedProcess spec, int maxRestarts) {
 		this.runtimeId = runtimeId;
@@ -119,8 +123,9 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 		}
 		spawn();
 		installShutdownHook();
-		if (spec.healthUri() != null) {
-			scheduler.scheduleWithFixedDelay(this::pollHealth, HEALTH_POLL_INTERVAL.toMillis(),
+		URI healthUri = spec.healthUri();
+		if (healthUri != null) {
+			scheduler.scheduleWithFixedDelay(() -> pollHealth(healthUri), HEALTH_POLL_INTERVAL.toMillis(),
 					HEALTH_POLL_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
 		}
 	}
@@ -201,7 +206,7 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 		});
 	}
 
-	private void remember(String line) {
+	private void remember(@Nullable String line) {
 		if (line == null || line.isBlank()) {
 			return;
 		}
@@ -272,18 +277,19 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 	 */
 	private boolean awaitReady(Process started) {
 		long deadline = System.nanoTime() + spec.startupTimeout().toNanos();
+		URI healthUri = spec.healthUri();
 		while (System.nanoTime() < deadline) {
 			if (!started.isAlive()) {
 				logger.error("Runtime '{}' exited during startup with code {}", runtimeId, started.exitValue());
 				return false;
 			}
-			if (spec.healthUri() == null) {
+			if (healthUri == null) {
 				// Nothing to probe: give it long enough to fail, then take being alive as
 				// ready.
 				sleep(LIVENESS_GRACE);
 				return started.isAlive();
 			}
-			if (probeHealth()) {
+			if (probeHealth(healthUri)) {
 				return true;
 			}
 			sleep(Duration.ofMillis(200));
@@ -291,17 +297,17 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 		return false;
 	}
 
-	private void pollHealth() {
+	private void pollHealth(URI healthUri) {
 		Process current = process;
 		if (closed.get() || givenUp || current == null || !current.isAlive()) {
 			return;
 		}
-		healthy = probeHealth();
+		healthy = probeHealth(healthUri);
 	}
 
-	private boolean probeHealth() {
+	private boolean probeHealth(URI healthUri) {
 		try {
-			HttpRequest request = HttpRequest.newBuilder(spec.healthUri()).timeout(PROBE_TIMEOUT).GET().build();
+			HttpRequest request = HttpRequest.newBuilder(healthUri).timeout(PROBE_TIMEOUT).GET().build();
 			return httpClient.send(request, HttpResponse.BodyHandlers.discarding()).statusCode() == 200;
 		}
 		catch (InterruptedException ex) {
@@ -326,8 +332,9 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 		if (shutdownHook != null) {
 			return;
 		}
-		shutdownHook = new Thread(this::terminate, "acp-" + runtimeId + "-shutdown");
-		Runtime.getRuntime().addShutdownHook(shutdownHook);
+		Thread hook = new Thread(this::terminate, "acp-" + runtimeId + "-shutdown");
+		Runtime.getRuntime().addShutdownHook(hook);
+		shutdownHook = hook;
 	}
 
 	@Override
@@ -338,9 +345,10 @@ public final class AcpAgentProcessSupervisor implements AutoCloseable {
 		healthy = false;
 		terminate();
 		scheduler.shutdownNow();
-		if (shutdownHook != null) {
+		Thread hook = shutdownHook;
+		if (hook != null) {
 			try {
-				Runtime.getRuntime().removeShutdownHook(shutdownHook);
+				Runtime.getRuntime().removeShutdownHook(hook);
 			}
 			catch (IllegalStateException alreadyShuttingDown) {
 				// The JVM is on its way out and is running the hook itself.

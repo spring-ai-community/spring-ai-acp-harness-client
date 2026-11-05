@@ -207,9 +207,10 @@ public class GooseRuntime implements AcpAgentRuntime {
 		return port > 0 ? port : freePort();
 	}
 
-	private static @Nullable Duration startupTimeout(RuntimeOptions options) {
+	private static Duration startupTimeout(RuntimeOptions options) {
 		String configured = options.text("serve.startup-timeout");
-		return configured == null ? null : Duration.parse(configured);
+		return configured == null ? AcpAgentLaunchSpec.ManagedProcess.DEFAULT_STARTUP_TIMEOUT
+				: Duration.parse(configured);
 	}
 
 	/** Whether tier 3 asked for the served transport. */
@@ -437,8 +438,9 @@ public class GooseRuntime implements AcpAgentRuntime {
 		Map<String, String> env = new LinkedHashMap<>(ProviderEnvironment.of(provider));
 
 		URI base = provider.findApiBase();
-		if (base != null && isOpenAiCompatible(provider)) {
-			env.remove(ProviderEnvironment.baseUrlVariable(provider.apiType()));
+		String apiType = provider.findApiType();
+		if (base != null && apiType != null && isOpenAiCompatible(apiType)) {
+			env.remove(ProviderEnvironment.baseUrlVariable(apiType));
 			env.put(OPENAI_HOST, endpoint(base));
 		}
 
@@ -473,8 +475,8 @@ public class GooseRuntime implements AcpAgentRuntime {
 		return text.substring(0, text.length() - path.length()) + prefix;
 	}
 
-	private static boolean isOpenAiCompatible(ProviderSpec provider) {
-		return "openai".equalsIgnoreCase(provider.findApiType());
+	private static boolean isOpenAiCompatible(String apiType) {
+		return "openai".equalsIgnoreCase(apiType);
 	}
 
 	/**

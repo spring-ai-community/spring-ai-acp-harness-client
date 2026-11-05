@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +60,7 @@ public final class SessionConfigRecorder {
 	private final Map<String, List<AcpSchema.SessionConfigOption>> bySession = new ConcurrentHashMap<>();
 
 	/** Options from a response that did not name its session. See the class javadoc. */
-	private final AtomicReference<List<AcpSchema.SessionConfigOption>> unattributed = new AtomicReference<>();
+	private final AtomicReference<@Nullable List<AcpSchema.SessionConfigOption>> unattributed = new AtomicReference<>();
 
 	/**
 	 * Wraps {@code delegate} so that new sessions' config options are recorded as they
@@ -91,14 +92,14 @@ public final class SessionConfigRecorder {
 		return claimed == null ? List.of() : claimed;
 	}
 
-	private void recordUnattributed(AcpClientTransport transport, Object rawOptions) {
+	private void recordUnattributed(AcpClientTransport transport, @Nullable Object rawOptions) {
 		List<AcpSchema.SessionConfigOption> options = decode(transport, rawOptions);
 		if (!options.isEmpty()) {
 			unattributed.set(options);
 		}
 	}
 
-	private void record(AcpClientTransport transport, String sessionId, Object rawOptions) {
+	private void record(AcpClientTransport transport, @Nullable String sessionId, @Nullable Object rawOptions) {
 		if (sessionId == null) {
 			return;
 		}
@@ -109,7 +110,7 @@ public final class SessionConfigRecorder {
 		}
 	}
 
-	private List<AcpSchema.SessionConfigOption> decode(AcpClientTransport transport, Object rawOptions) {
+	private List<AcpSchema.SessionConfigOption> decode(AcpClientTransport transport, @Nullable Object rawOptions) {
 		if (!(rawOptions instanceof List<?> raw) || raw.isEmpty()) {
 			return List.of();
 		}

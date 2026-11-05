@@ -3,6 +3,8 @@ package org.springaicommunity.acp.harness.config;
 import java.net.URI;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * A skill to install into the workspace before the agent starts: one directory holding a
  * {@code SKILL.md}, either bundled with the application or taken from a Git repository.
@@ -24,6 +26,7 @@ public sealed interface SkillSpec {
 	/**
 	 * The expected SHA-256 of the skill's {@code SKILL.md}, or {@code null} to not check.
 	 */
+	@Nullable
 	String sha256();
 
 	/**
@@ -42,7 +45,7 @@ public sealed interface SkillSpec {
 	 * @param path the skill's directory on the classpath, e.g. {@code skills/mailgun} for
 	 * {@code src/main/resources/skills/mailgun}
 	 */
-	record Bundled(String name, String path, String sha256) implements SkillSpec {
+	record Bundled(String name, String path, @Nullable String sha256) implements SkillSpec {
 
 		public Bundled {
 			path = SkillRules.requireSafeRelativePath(SkillRules.blankToNull(path));
@@ -51,7 +54,7 @@ public sealed interface SkillSpec {
 		}
 
 		public static Bundled of(String path) {
-			return new Bundled(null, path, null);
+			return new Bundled("", path, null);
 		}
 
 		@Override
@@ -77,7 +80,8 @@ public sealed interface SkillSpec {
 	 * @param token a token for a private repository, sent as HTTP Basic credentials, or
 	 * {@code null}
 	 */
-	record Git(String name, URI url, String ref, String path, String token, String sha256) implements SkillSpec {
+	record Git(String name, URI url, @Nullable String ref, @Nullable String path, @Nullable String token,
+			@Nullable String sha256) implements SkillSpec {
 
 		private static final Pattern COMMIT = Pattern.compile("[0-9a-fA-F]{40}");
 
@@ -105,8 +109,8 @@ public sealed interface SkillSpec {
 			name = SkillRules.name(name, path != null ? path : url.getPath());
 		}
 
-		public static Git of(URI url, String path) {
-			return new Git(null, url, null, path, null, null);
+		public static Git of(URI url, @Nullable String path) {
+			return new Git("", url, null, path, null, null);
 		}
 
 		/** Whether {@code ref} names one commit, rather than something that can move. */

@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Derives the environment variable names that carry a provider's credentials to an agent
  * that will not take them over the protocol.
@@ -47,11 +49,14 @@ public final class ProviderEnvironment {
 	 * The environment a provider needs, or an empty map when nothing was configured or no
 	 * api type says what to call the variables.
 	 */
-	public static Map<String, String> of(ProviderSpec provider) {
-		if (provider == null || !provider.hasCredentials() || provider.findApiType() == null) {
+	public static Map<String, String> of(@Nullable ProviderSpec provider) {
+		if (provider == null || !provider.hasCredentials()) {
 			return Map.of();
 		}
-		String apiType = provider.apiType();
+		String apiType = provider.findApiType();
+		if (apiType == null) {
+			return Map.of();
+		}
 		Map<String, String> env = new LinkedHashMap<>();
 		String apiKey = provider.findApiKey();
 		if (apiKey != null) {

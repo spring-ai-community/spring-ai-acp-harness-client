@@ -1,5 +1,7 @@
 package org.springaicommunity.acp.harness.config;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Thrown when a portable option cannot be honored by the selected runtime and
  * {@link OnUnsupported#FAIL} is in force.
@@ -16,8 +18,12 @@ public class UnsupportedAcpAgentOptionException extends RuntimeException {
 
 	private final String runtime;
 
-	public UnsupportedAcpAgentOptionException(String option, String value, String runtime, String detail,
-			Throwable cause) {
+	/**
+	 * @param detail why the resolver gave up, or null when the message says it all
+	 * @param cause what the agent answered, or null when it was never asked
+	 */
+	public UnsupportedAcpAgentOptionException(String option, String value, String runtime, @Nullable String detail,
+			@Nullable Throwable cause) {
 		super("runtime '" + runtime + "' cannot honor " + option + "='" + value + "'"
 				+ (detail == null ? "" : ": " + detail), cause);
 		this.option = option;

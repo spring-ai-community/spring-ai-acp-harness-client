@@ -12,12 +12,14 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
@@ -88,6 +90,10 @@ public final class LoopbackSignIn implements McpSignIn {
 	@Override
 	public void signIn(McpServerSpec.Http server, SessionPrincipal principal) {
 		ClientRegistration registration = registrations.findByRegistrationId(server.name());
+		if (registration == null) {
+			throw new IllegalStateException(
+					"MCP server '" + server.name() + "' has no client registration to sign in with");
+		}
 		String resource = registrations.findResourceIdByRegistrationId(server.name());
 		URI redirect = URI.create(registration.getRedirectUri());
 
@@ -95,7 +101,8 @@ public final class LoopbackSignIn implements McpSignIn {
 		HttpServer listener = listen(server, redirect, callback);
 		try {
 			OAuth2AuthorizationRequest.Builder builder = OAuth2AuthorizationRequest.authorizationCode()
-				.authorizationUri(registration.getProviderDetails().getAuthorizationUri())
+				.authorizationUri(Objects.requireNonNull(registration.getProviderDetails().getAuthorizationUri(),
+						"the registration for '" + server.name() + "' names no authorization endpoint"))
 				.clientId(registration.getClientId())
 				.redirectUri(registration.getRedirectUri())
 				.scopes(registration.getScopes())
@@ -106,6 +113,9 @@ public final class LoopbackSignIn implements McpSignIn {
 			}
 			OAuth2AuthorizationRequestCustomizers.withPkce().accept(builder);
 			OAuth2AuthorizationRequest request = builder.build();
+			// Set a few lines up, so the redirect is held to it: a missing state must
+			// never match a missing state.
+			String state = Objects.requireNonNull(request.getState());
 
 			prompt.open(server.name(), URI.create(request.getAuthorizationRequestUri()));
 			Map<String, String> answer = await(callback, server);
@@ -113,11 +123,16 @@ public final class LoopbackSignIn implements McpSignIn {
 				throw new IllegalStateException("Signing in to MCP server '" + server.name() + "' was refused: "
 						+ answer.get("error") + " " + answer.getOrDefault("error_description", ""));
 			}
-			if (!request.getState().equals(answer.get("state"))) {
+			if (!state.equals(answer.get("state"))) {
 				throw new IllegalStateException("The sign-in redirect for MCP server '" + server.name()
 						+ "' carried the wrong state; ignoring it");
 			}
-			OAuth2AccessTokenResponse tokens = exchange(registration, resource, request, answer.get("code"));
+			String code = answer.get("code");
+			if (code == null) {
+				throw new IllegalStateException(
+						"The sign-in redirect for MCP server '" + server.name() + "' carried no authorization code");
+			}
+			OAuth2AccessTokenResponse tokens = exchange(registration, resource, request, code);
 			authorizedClients.saveAuthorizedClient(new OAuth2AuthorizedClient(registration, principal.name(),
 					tokens.getAccessToken(), tokens.getRefreshToken()),
 					new TestingAuthenticationToken(principal.name(), null));
@@ -175,7 +190,7 @@ public final class LoopbackSignIn implements McpSignIn {
 		}
 	}
 
-	private static OAuth2AccessTokenResponse exchange(ClientRegistration registration, String resource,
+	private static OAuth2AccessTokenResponse exchange(ClientRegistration registration, @Nullable String resource,
 			OAuth2AuthorizationRequest request, String code) {
 		RestClientAuthorizationCodeTokenResponseClient client = new RestClientAuthorizationCodeTokenResponseClient();
 		client.setRestClient(TokenEndpointClient.restClient());
@@ -186,9 +201,10 @@ public final class LoopbackSignIn implements McpSignIn {
 				return parameters;
 			});
 		}
+		// Both were set when the request was built, a few lines up.
 		OAuth2AuthorizationResponse response = OAuth2AuthorizationResponse.success(code)
-			.redirectUri(request.getRedirectUri())
-			.state(request.getState())
+			.redirectUri(Objects.requireNonNull(request.getRedirectUri()))
+			.state(Objects.requireNonNull(request.getState()))
 			.build();
 		return client.getTokenResponse(new OAuth2AuthorizationCodeGrantRequest(registration,
 				new OAuth2AuthorizationExchange(request, response)));

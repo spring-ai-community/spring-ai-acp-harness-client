@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.jspecify.annotations.Nullable;
@@ -101,7 +102,8 @@ public abstract class AcpAgentRuntimeContract {
 	@TempDir
 	protected Path runtimeHome;
 
-	private AcpHarnessClient client;
+	/** Opened on first use by {@link #client()}; null between tests. */
+	private @Nullable AcpHarnessClient client;
 
 	/** The adapter under test. A fresh instance per test. */
 	protected abstract AcpAgentRuntime runtime();
@@ -203,10 +205,12 @@ public abstract class AcpAgentRuntimeContract {
 	}
 
 	protected AcpHarnessClient client() {
-		if (client == null) {
-			client = AcpHarnessClientFactory.create(runtime(), settings().build());
+		AcpHarnessClient open = client;
+		if (open == null) {
+			open = AcpHarnessClientFactory.create(runtime(), settings().build());
+			client = open;
 		}
-		return client;
+		return open;
 	}
 
 	@BeforeEach
@@ -216,10 +220,16 @@ public abstract class AcpAgentRuntimeContract {
 
 	@AfterEach
 	void closeClient() {
-		if (client != null) {
-			client.close();
+		AcpHarnessClient open = client;
+		if (open != null) {
+			open.close();
 			client = null;
 		}
+	}
+
+	/** The turn's events, which a completed turn always has. */
+	private static List<AcpAgentEvent> eventsOf(AcpHarnessClient.AcpAgentStream stream) {
+		return Objects.requireNonNull(stream.events().collectList().block(TURN_TIMEOUT), "the turn emitted nothing");
 	}
 
 	@Test
@@ -231,13 +241,10 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("a turn ends with exactly one terminal event, and it is last")
 	void oneTerminalEvent() {
-		List<AcpAgentEvent> events = client().prompt("Reply with exactly the word ACP. Do not use any tools.")
-			.stream()
-			.events()
-			.collectList()
-			.block(TURN_TIMEOUT);
+		List<AcpAgentEvent> events = eventsOf(
+				client().prompt("Reply with exactly the word ACP. Do not use any tools.").stream());
 
-		assertThat(events).isNotNull().isNotEmpty();
+		assertThat(events).isNotEmpty();
 		assertThat(events.stream().filter(AcpAgentEvent::terminal)).hasSize(1);
 		assertThat(events.get(events.size() - 1)).isInstanceOf(AcpAgentEvent.Completed.class);
 	}
@@ -365,14 +372,10 @@ public abstract class AcpAgentRuntimeContract {
 				"this agent has a reviewing mode, so denyByDefaultStopsAWriteWhenTheAgentAsksFirst "
 						+ "covers this invariant in the harder case");
 
-		List<AcpAgentEvent> events = client().prompt()
+		List<AcpAgentEvent> events = eventsOf(client().prompt()
 			.user("Create a file called contract.txt containing the word NO, then reply DONE.")
-			.stream()
-			.events()
-			.collectList()
-			.block(TURN_TIMEOUT);
+			.stream());
 
-		assertThat(events).isNotNull();
 		assertThat(events.stream().filter(AcpAgentEvent::terminal)).hasSize(1);
 	}
 
@@ -384,15 +387,11 @@ public abstract class AcpAgentRuntimeContract {
 				"this agent has no mode in which it asks before acting");
 
 		try (AcpHarnessClient reviewed = AcpHarnessClientFactory.create(runtime(), settings().mode(mode).build())) {
-			List<AcpAgentEvent> events = reviewed.prompt()
+			List<AcpAgentEvent> events = eventsOf(reviewed.prompt()
 				.session("contract-deny")
 				.user("Create a file called contract.txt containing the word NO, then reply DONE.")
-				.stream()
-				.events()
-				.collectList()
-				.block(TURN_TIMEOUT);
+				.stream());
 
-			assertThat(events).isNotNull();
 			assertThat(events.stream().filter(AcpAgentEvent::terminal)).hasSize(1);
 			assertThat(workspace.resolve("contract.txt")).doesNotExist();
 		}
@@ -477,8 +476,7 @@ public abstract class AcpAgentRuntimeContract {
 			.session("contract-load")
 			.user("Remember the number 8675309. Reply with just OK. Do not use tools.")
 			.call();
-		AcpAgentSession loaded = agent.session("contract-load");
-		assertThat(loaded).isNotNull();
+		AcpAgentSession loaded = Objects.requireNonNull(agent.session("contract-load"), "the session was just opened");
 		String sessionId = loaded.sessionId();
 		agent.sessions().close("contract-load");
 
@@ -608,7 +606,8 @@ public abstract class AcpAgentRuntimeContract {
 	private List<String> carriedBy(AcpAgentLaunchSpec launch, AcpAgentSettings settings) throws IOException {
 		List<String> carried = new ArrayList<>(switch (launch) {
 			case AcpAgentLaunchSpec.Stdio stdio -> stdio.env().values();
-			case AcpAgentLaunchSpec.WebSocket socket -> socket.process().env().values();
+			case AcpAgentLaunchSpec.WebSocket socket ->
+				socket.process() == null ? List.<String>of() : socket.process().env().values();
 		});
 		if (Files.isDirectory(settings.runtimeHome())) {
 			try (Stream<Path> files = Files.walk(settings.runtimeHome())) {

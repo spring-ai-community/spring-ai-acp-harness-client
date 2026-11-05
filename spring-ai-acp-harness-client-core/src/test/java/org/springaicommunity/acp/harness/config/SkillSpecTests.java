@@ -25,6 +25,13 @@ class SkillSpecTests {
 	void withoutAPathAGitSkillIsNamedForItsRepository() {
 		assertThat(SkillSpec.Git.of(URI.create("https://github.com/owner/my-skill.git"), null).name())
 			.isEqualTo("my-skill");
+		assertThat(SkillSpec.Git.of(URI.create("https://github.com/owner/my-skill.git"), " ").name())
+			.isEqualTo("my-skill");
+	}
+
+	@Test
+	void theNameIsTakenFromThePathAsNormalized() {
+		assertThat(SkillSpec.Bundled.of(" skills/mailgun/ ").name()).isEqualTo("mailgun");
 	}
 
 	@Test

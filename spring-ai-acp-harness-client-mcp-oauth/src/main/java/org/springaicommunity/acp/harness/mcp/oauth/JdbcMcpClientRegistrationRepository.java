@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.mcp.security.client.sync.oauth2.registration.McpClientRegistrationRepository;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcOperations;
@@ -47,7 +48,7 @@ public final class JdbcMcpClientRegistrationRepository implements McpClientRegis
 
 	private final Map<String, Row> cache = new ConcurrentHashMap<>();
 
-	private record Row(ClientRegistration registration, String resourceId) {
+	private record Row(ClientRegistration registration, @Nullable String resourceId) {
 	}
 
 	public JdbcMcpClientRegistrationRepository(JdbcOperations jdbc) {
@@ -55,13 +56,13 @@ public final class JdbcMcpClientRegistrationRepository implements McpClientRegis
 	}
 
 	@Override
-	public ClientRegistration findByRegistrationId(String registrationId) {
+	public @Nullable ClientRegistration findByRegistrationId(String registrationId) {
 		Row row = find(registrationId);
 		return row == null ? null : row.registration();
 	}
 
 	@Override
-	public String findResourceIdByRegistrationId(String registrationId) {
+	public @Nullable String findResourceIdByRegistrationId(String registrationId) {
 		Row row = find(registrationId);
 		return row == null ? null : row.resourceId();
 	}
@@ -77,7 +78,7 @@ public final class JdbcMcpClientRegistrationRepository implements McpClientRegis
 	 * client id is left unused at the authorization server, which is the cheaper failure.
 	 */
 	@Override
-	public void addClientRegistration(ClientRegistration registration, String resourceId) {
+	public void addClientRegistration(ClientRegistration registration, @Nullable String resourceId) {
 		String id = registration.getRegistrationId();
 		try {
 			jdbc.update(
@@ -112,7 +113,7 @@ public final class JdbcMcpClientRegistrationRepository implements McpClientRegis
 		cache.put(registrationId, new Row(updated, row.resourceId()));
 	}
 
-	private Row find(String registrationId) {
+	private @Nullable Row find(String registrationId) {
 		Row cached = cache.get(registrationId);
 		if (cached != null) {
 			return cached;
@@ -126,7 +127,7 @@ public final class JdbcMcpClientRegistrationRepository implements McpClientRegis
 		return rows.get(0);
 	}
 
-	private static Object[] values(ClientRegistration registration, String resourceId, boolean idFirst) {
+	private static Object[] values(ClientRegistration registration, @Nullable String resourceId, boolean idFirst) {
 		ClientRegistration.ProviderDetails provider = registration.getProviderDetails();
 		Object[] fields = { resourceId, registration.getClientId(), emptyToNull(registration.getClientSecret()),
 				registration.getClientAuthenticationMethod().getValue(),
@@ -164,7 +165,7 @@ public final class JdbcMcpClientRegistrationRepository implements McpClientRegis
 		return new Row(registration, rs.getString("resource_id"));
 	}
 
-	private static String emptyToNull(String value) {
+	private static @Nullable String emptyToNull(@Nullable String value) {
 		return StringUtils.hasText(value) ? value : null;
 	}
 

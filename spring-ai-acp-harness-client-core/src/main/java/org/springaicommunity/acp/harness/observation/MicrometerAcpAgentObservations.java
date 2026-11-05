@@ -5,6 +5,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.jspecify.annotations.Nullable;
+
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationConvention;
 import io.micrometer.observation.ObservationRegistry;
@@ -48,22 +50,23 @@ public class MicrometerAcpAgentObservations implements AcpAgentObservations {
 
 	private final ObservationRegistry registry;
 
-	private final ObservationConvention<AcpAgentTurnObservationContext> turnConvention;
+	private final @Nullable ObservationConvention<AcpAgentTurnObservationContext> turnConvention;
 
-	private final ObservationConvention<ToolCallObservationContext> toolCallConvention;
+	private final @Nullable ObservationConvention<ToolCallObservationContext> toolCallConvention;
 
-	public MicrometerAcpAgentObservations(ObservationRegistry registry) {
+	public MicrometerAcpAgentObservations(@Nullable ObservationRegistry registry) {
 		this(registry, null, null);
 	}
 
 	/**
+	 * @param registry where observations go, or {@code null} for none
 	 * @param turnConvention overrides the tags put on a turn, or {@code null} for the
 	 * default
 	 * @param toolCallConvention likewise for a tool call
 	 */
-	public MicrometerAcpAgentObservations(ObservationRegistry registry,
-			ObservationConvention<AcpAgentTurnObservationContext> turnConvention,
-			ObservationConvention<ToolCallObservationContext> toolCallConvention) {
+	public MicrometerAcpAgentObservations(@Nullable ObservationRegistry registry,
+			@Nullable ObservationConvention<AcpAgentTurnObservationContext> turnConvention,
+			@Nullable ObservationConvention<ToolCallObservationContext> toolCallConvention) {
 		this.registry = registry == null ? ObservationRegistry.NOOP : registry;
 		this.turnConvention = turnConvention;
 		this.toolCallConvention = toolCallConvention;
@@ -97,7 +100,7 @@ public class MicrometerAcpAgentObservations implements AcpAgentObservations {
 		}
 
 		@Override
-		public void toolCallStarted(String toolCallId, String title, String kind) {
+		public void toolCallStarted(String toolCallId, @Nullable String title, @Nullable String kind) {
 			if (toolCallId == null) {
 				return;
 			}
@@ -120,7 +123,7 @@ public class MicrometerAcpAgentObservations implements AcpAgentObservations {
 		}
 
 		@Override
-		public void toolCallUpdated(String toolCallId, String status) {
+		public void toolCallUpdated(String toolCallId, @Nullable String status) {
 			if (toolCallId == null || status == null) {
 				return;
 			}
@@ -142,21 +145,22 @@ public class MicrometerAcpAgentObservations implements AcpAgentObservations {
 		}
 
 		@Override
-		public void usage(long contextUsed, long contextSize, Double costAmount, String costCurrency) {
+		public void usage(long contextUsed, long contextSize, @Nullable Double costAmount,
+				@Nullable String costCurrency) {
 			this.context.usage(contextUsed, contextSize, costAmount, costCurrency);
 		}
 
 		@Override
-		public void completed(String stopReason) {
+		public void completed(@Nullable String stopReason) {
 			stop(stopReason, null);
 		}
 
 		@Override
-		public void failed(String reason, Throwable cause) {
+		public void failed(String reason, @Nullable Throwable cause) {
 			stop(reason, cause);
 		}
 
-		private void stop(String outcome, Throwable cause) {
+		private void stop(@Nullable String outcome, @Nullable Throwable cause) {
 			if (!this.stopped.compareAndSet(false, true)) {
 				return;
 			}

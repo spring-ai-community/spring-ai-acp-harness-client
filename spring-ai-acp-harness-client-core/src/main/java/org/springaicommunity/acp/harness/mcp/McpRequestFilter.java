@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Adjusts, or answers, one request the loopback proxy is about to forward to an MCP
  * server.
@@ -38,7 +40,10 @@ public interface McpRequestFilter {
 		}
 
 		/** Answer the agent here and send nothing upstream. */
-		record Answer(int status, String contentType, byte[] body) implements Outcome {
+		/**
+		 * @param contentType the response's media type, or null for a body with none
+		 */
+		record Answer(int status, @Nullable String contentType, byte[] body) implements Outcome {
 
 			public static Answer json(int status, String json) {
 				return new Answer(status, "application/json", json.getBytes(StandardCharsets.UTF_8));

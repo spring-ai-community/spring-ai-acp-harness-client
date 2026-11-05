@@ -78,6 +78,10 @@
         <!-- A module with no Java sources sets this to "package"; see maven-jar-plugin below. -->
         <placeholder-jars.phase>none</placeholder-jars.phase>
 
+        <!-- Nullness checking: NullAway runs as an Error Prone check over the @NullMarked packages. -->
+        <error-prone.version>2.46.0</error-prone.version>
+        <nullaway.version>0.13.4</nullaway.version>
+
         <!-- Plugin versions -->
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
@@ -273,7 +277,47 @@
                     <configuration>
                         <!-- @ConfigurationProperties constructor binding reads parameter names at runtime. -->
                         <parameters>true</parameters>
+                        <!--
+                          Naming a processor path turns off javac's classpath discovery, so the Boot
+                          configuration processor the Boot modules rely on is named here as well.
+                        -->
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>com.google.errorprone</groupId>
+                                <artifactId>error_prone_core</artifactId>
+                                <version>${error-prone.version}</version>
+                            </path>
+                            <path>
+                                <groupId>com.uber.nullaway</groupId>
+                                <artifactId>nullaway</artifactId>
+                                <version>${nullaway.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.springframework.boot</groupId>
+                                <artifactId>spring-boot-configuration-processor</artifactId>
+                                <version>${spring-boot.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
+                    <executions>
+                        <!--
+                          Main code is checked by NullAway, in JSpecify mode and only inside @NullMarked
+                          packages, which every package of a published module is. Every other Error Prone
+                          check is off: this is a nullness gate, not a style gate. Tests compile without
+                          it. The javac internals Error Prone needs are opened in .mvn/jvm.config.
+                        -->
+                        <execution>
+                            <id>default-compile</id>
+                            <configuration>
+                                <compilerArgs>
+                                    <arg>-XDcompilePolicy=simple</arg>
+                                    <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
+                                    <arg>--should-stop=ifError=FLOW</arg>
+                                    <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked -XepOpt:NullAway:JSpecifyMode=true</arg>
+                                </compilerArgs>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

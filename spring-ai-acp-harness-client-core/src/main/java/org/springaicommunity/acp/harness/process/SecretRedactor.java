@@ -35,8 +35,9 @@ public final class SecretRedactor {
 	private SecretRedactor() {
 	}
 
+	/** The line with every credential-shaped value blanked. */
 	public static String redact(String line) {
-		return line == null ? null : SENSITIVE.matcher(line).replaceAll("$1$2[REDACTED]");
+		return SENSITIVE.matcher(line).replaceAll("$1$2[REDACTED]");
 	}
 
 }

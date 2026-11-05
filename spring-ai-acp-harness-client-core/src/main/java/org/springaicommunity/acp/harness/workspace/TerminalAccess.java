@@ -5,6 +5,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Whether the agent may ask this client to run commands, and which ones.
  *
@@ -40,17 +42,17 @@ public record TerminalAccess(boolean enabled, Set<String> allowedCommands, long 
 	}
 
 	public static TerminalAccess disabled() {
-		return new TerminalAccess(false, Set.of(), 0, null, 0);
+		return new TerminalAccess(false, Set.of(), 0, DEFAULT_COMMAND_TIMEOUT, 0);
 	}
 
 	/** Terminals on, every command allowed, with the default limits. */
 	public static TerminalAccess unrestricted() {
-		return new TerminalAccess(true, Set.of(), 0, null, 0);
+		return new TerminalAccess(true, Set.of(), 0, DEFAULT_COMMAND_TIMEOUT, 0);
 	}
 
 	/** Terminals on, limited to the named commands. */
 	public static TerminalAccess allowing(Set<String> commands) {
-		return new TerminalAccess(true, commands, 0, null, 0);
+		return new TerminalAccess(true, commands, 0, DEFAULT_COMMAND_TIMEOUT, 0);
 	}
 
 	/**
@@ -58,7 +60,7 @@ public record TerminalAccess(boolean enabled, Set<String> allowedCommands, long 
 	 * {@code /usr/local/bin/mvn} and {@code mvn} are the same command — an allowlist that
 	 * could be evaded by spelling out the path would not be one.
 	 */
-	public boolean permits(String command) {
+	public boolean permits(@Nullable String command) {
 		if (!enabled) {
 			return false;
 		}

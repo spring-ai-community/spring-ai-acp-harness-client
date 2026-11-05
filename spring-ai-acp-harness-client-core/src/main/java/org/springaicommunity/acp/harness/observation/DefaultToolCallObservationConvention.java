@@ -2,6 +2,7 @@ package org.springaicommunity.acp.harness.observation;
 
 import java.util.Locale;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation.ToolCallHighCardinalityKeys;
 import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation.ToolCallLowCardinalityKeys;
 
@@ -51,7 +52,7 @@ public class DefaultToolCallObservationConvention implements ObservationConventi
 		return context instanceof ToolCallObservationContext;
 	}
 
-	private static String orUnknown(String value) {
+	private static String orUnknown(@Nullable String value) {
 		return value == null || value.isBlank() ? UNKNOWN : value;
 	}
 

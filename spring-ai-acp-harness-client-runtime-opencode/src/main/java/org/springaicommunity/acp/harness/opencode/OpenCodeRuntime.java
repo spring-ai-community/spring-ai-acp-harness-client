@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.opencode;
 
+import java.net.URI;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -9,7 +10,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -171,14 +171,17 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 
 	private static Map<String, Object> endpointConfig(AcpAgentSettings settings) {
 		ProviderSpec provider = settings.provider();
-		if (!provider.isByo() || provider.findApiType() == null) {
+		// A BYO endpoint is one with a base-url; findApiBase is that url, canonicalised.
+		URI base = provider.findApiBase();
+		String apiType = provider.findApiType();
+		if (base == null || apiType == null) {
 			return Map.of();
 		}
 		String id = endpointKey(provider);
 		Map<String, Object> options = new LinkedHashMap<>();
-		options.put("baseURL", Objects.requireNonNull(provider.findApiBase()).toString());
+		options.put("baseURL", base.toString());
 		if (provider.findApiKey() != null) {
-			options.put("apiKey", "{env:" + ProviderEnvironment.apiKeyVariable(provider.apiType()) + "}");
+			options.put("apiKey", "{env:" + ProviderEnvironment.apiKeyVariable(apiType) + "}");
 		}
 
 		String providerId = provider.findId();
