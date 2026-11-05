@@ -335,10 +335,11 @@ spring.ai.acp.harness.turn{spring.ai.kind=acp_harness_turn, spring.ai.acp.harnes
 spring.ai.acp.harness.tool.call{spring.ai.kind=acp_harness_tool_call, spring.ai.acp.harness.runtime=goose, spring.ai.acp.harness.tool.kind=READ, spring.ai.acp.harness.tool.status=COMPLETED}
 ```
 
-The names follow Spring AI's own: `spring.ai.kind` and `gen_ai.response.model` are the keys its chat
-clients and models use, so one dashboard covers both. `gen_ai.response.model` is the model the session
-is **really** using, not the one that was requested — which with `on-unsupported: warn` is not the same
-thing, and is the whole reason to tag it.
+The names follow Spring AI's own: `spring.ai.kind` is the tag on its chat client, advisor, tool call and
+vector store observations, and `gen_ai.response.model` the key its chat models tag the model with, so one
+dashboard covers both. `gen_ai.response.model` is the model the session is **really** using, not the one
+that was requested — which with `on-unsupported: warn` is not the same thing, and is the whole reason to
+tag it.
 
 ## Scope
 

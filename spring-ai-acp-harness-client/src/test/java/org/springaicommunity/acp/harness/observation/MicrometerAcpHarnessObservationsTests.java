@@ -60,7 +60,7 @@ class MicrometerAcpHarnessObservationsTests {
 
 		assertThat(meters.get("spring.ai.acp.harness.turn")
 			.tag("spring.ai.acp.harness.session.kind", "ephemeral")
-			.tag("gen_ai.response.model", "unknown")
+			.tag("gen_ai.response.model", "none")
 			.timer()
 			.count()).isEqualTo(1);
 	}

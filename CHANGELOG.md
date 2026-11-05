@@ -53,9 +53,14 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   tag of our own rather than `gen_ai.response.finish_reasons`, which Spring AI records as a
   high-cardinality list on the span. The bare `acp.` root was no library's to claim: ACP itself
   defines no telemetry names, and any other ACP library could have used the same ones. The
-  `AcpChatModel` response metadata keys follow, from `acp.runtime`, `acp.session`,
-  `acp.context.used`, `acp.context.size`, `acp.cost.amount` and `acp.cost.currency` to the same
-  names under `spring.ai.acp.harness.`.
+  `AcpChatModel` response metadata keys follow, and now spell the same thing the same way as the
+  turn span: `acp.runtime`, `acp.session`, `acp.context.used` and `acp.context.size` become
+  `spring.ai.acp.harness.runtime`, `.session.name`, `.context.used` and `.context.size`;
+  `acp.cost.amount` and `acp.cost.currency` keep their typed split as `.cost.amount` and
+  `.cost.currency`. An absent model is tagged `none`, Spring AI's spelling on that key, where it was
+  `unknown`. For a custom `ObservationConvention`, the key constants are unchanged in meaning: the
+  new `spring.ai.kind` constant is `SPRING_AI_KIND` on both low-cardinality enums, and
+  `ToolCallLowCardinalityKeys.KIND` is still the ACP tool kind.
 - **Breaking:** configuration properties move from `spring.acp.*` to `spring.ai.acp.harness.*`,
   and environment variables from `SPRING_ACP_*` to `SPRING_AI_ACP_HARNESS_*`. The old root is shared
   with `acp-autoconfig` (`spring.acp.client.*`, `spring.acp.agent.*`), and the new one follows the

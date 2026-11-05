@@ -21,6 +21,9 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation;
+import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation.TurnHighCardinalityKeys;
+import org.springaicommunity.acp.harness.observation.AcpObservationDocumentation.TurnLowCardinalityKeys;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
@@ -82,6 +85,13 @@ import reactor.core.publisher.Flux;
 public class AcpChatModel implements ChatModel {
 
 	private static final Logger logger = LoggerFactory.getLogger(AcpChatModel.class);
+
+	/**
+	 * The cost keys of the response metadata: an amount and a currency, not one string.
+	 */
+	private static final String COST_AMOUNT = AcpObservationDocumentation.PREFIX + ".cost.amount";
+
+	private static final String COST_CURRENCY = AcpObservationDocumentation.PREFIX + ".cost.currency";
 
 	private final AcpHarnessClient client;
 
@@ -317,17 +327,20 @@ public class AcpChatModel implements ChatModel {
 	private ChatResponseMetadata metadata(AcpChatOptions options, AcpHarnessEvent.@Nullable UsageUpdated usage) {
 		ChatResponseMetadata.Builder builder = ChatResponseMetadata.builder()
 			.model(modelOf(options))
-			.keyValue("spring.ai.acp.harness.runtime", client.runtimeId());
+			.keyValue(TurnLowCardinalityKeys.RUNTIME.asString(), client.runtimeId());
 		if (options.getSession() != null) {
-			builder = builder.keyValue("spring.ai.acp.harness.session", options.getSession());
+			builder = builder.keyValue(TurnHighCardinalityKeys.SESSION_NAME.asString(), options.getSession());
 		}
 		if (usage != null) {
-			builder = builder.keyValue("spring.ai.acp.harness.context.used", usage.contextUsed())
-				.keyValue("spring.ai.acp.harness.context.size", usage.contextSize());
+			// The same keys as the turn span, so the two carriers cannot drift; cost is
+			// the
+			// exception, kept as a typed amount and currency rather than the span's one
+			// string.
+			builder = builder.keyValue(TurnHighCardinalityKeys.CONTEXT_USED.asString(), usage.contextUsed())
+				.keyValue(TurnHighCardinalityKeys.CONTEXT_SIZE.asString(), usage.contextSize());
 			if (usage.costAmount() != null) {
-				builder = builder.keyValue("spring.ai.acp.harness.cost.amount", usage.costAmount())
-					.keyValue("spring.ai.acp.harness.cost.currency",
-							usage.costCurrency() == null ? "" : usage.costCurrency());
+				builder = builder.keyValue(COST_AMOUNT, usage.costAmount())
+					.keyValue(COST_CURRENCY, usage.costCurrency() == null ? "" : usage.costCurrency());
 			}
 		}
 		return builder.build();

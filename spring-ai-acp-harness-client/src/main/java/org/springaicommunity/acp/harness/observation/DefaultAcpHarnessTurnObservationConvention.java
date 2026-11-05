@@ -38,9 +38,12 @@ public class DefaultAcpHarnessTurnObservationConvention
 	@Override
 	public KeyValues getLowCardinalityKeyValues(AcpHarnessTurnObservationContext context) {
 		AcpHarnessObservations.TurnContext turn = context.turn();
-		return KeyValues.of(TurnLowCardinalityKeys.KIND.withValue(AcpObservationDocumentation.TURN_KIND),
+		String model = turn.model();
+		return KeyValues.of(TurnLowCardinalityKeys.SPRING_AI_KIND.withValue(AcpObservationDocumentation.TURN_KIND),
 				TurnLowCardinalityKeys.RUNTIME.withValue(orUnknown(turn.runtimeId())),
-				TurnLowCardinalityKeys.MODEL.withValue(orUnknown(turn.model())),
+				// Spring AI's spelling of "absent" on this shared key, so both land in
+				// one bucket.
+				TurnLowCardinalityKeys.MODEL.withValue(model == null || model.isBlank() ? KeyValue.NONE_VALUE : model),
 				TurnLowCardinalityKeys.SESSION_KIND.withValue(turn.ephemeral() ? "ephemeral" : "named"),
 				TurnLowCardinalityKeys.OUTCOME.withValue(orUnknown(context.outcome())));
 	}

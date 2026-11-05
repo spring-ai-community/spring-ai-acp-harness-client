@@ -36,9 +36,10 @@ public class DefaultToolCallObservationConvention implements ObservationConventi
 
 	@Override
 	public KeyValues getLowCardinalityKeyValues(ToolCallObservationContext context) {
-		return KeyValues.of(ToolCallLowCardinalityKeys.KIND.withValue(AcpObservationDocumentation.TOOL_CALL_KIND),
+		return KeyValues.of(
+				ToolCallLowCardinalityKeys.SPRING_AI_KIND.withValue(AcpObservationDocumentation.TOOL_CALL_KIND),
 				ToolCallLowCardinalityKeys.RUNTIME.withValue(orUnknown(context.runtimeId())),
-				ToolCallLowCardinalityKeys.TOOL_KIND.withValue(orUnknown(context.kind())),
+				ToolCallLowCardinalityKeys.KIND.withValue(orUnknown(context.kind())),
 				ToolCallLowCardinalityKeys.STATUS.withValue(orUnknown(context.status())));
 	}
 

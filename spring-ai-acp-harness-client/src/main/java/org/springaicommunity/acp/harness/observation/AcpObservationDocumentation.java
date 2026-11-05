@@ -15,10 +15,12 @@ import io.micrometer.observation.docs.ObservationDocumentation;
  *
  * <p>
  * Names follow Spring AI's rule: an OpenTelemetry GenAI key where one means the same
- * thing ({@code gen_ai.response.model}), and otherwise a key scoped under the
- * observation's own name, {@code spring.ai.acp.harness}. Each observation also carries
- * {@code spring.ai.kind}, the tag Spring AI puts on its own observations, so a breakdown
- * by kind includes the harness beside chat clients, advisors and tool calls.
+ * thing ({@code gen_ai.response.model}, with Spring AI's {@code none} for an absent
+ * value), and otherwise a key scoped under the observation's own name,
+ * {@code spring.ai.acp.harness}. Each observation also carries {@code spring.ai.kind},
+ * the tag Spring AI puts on its chat client, advisor, tool call and vector store
+ * observations, so a breakdown by kind includes the harness beside them. No prefix is
+ * declared for the tags, since they deliberately come from three namespaces.
  *
  * <p>
  * The low-cardinality split is the part worth checking against before adding a tag.
@@ -39,11 +41,6 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 		}
 
 		@Override
-		public String getPrefix() {
-			return TURN_NAME;
-		}
-
-		@Override
 		public KeyName[] getLowCardinalityKeyNames() {
 			return TurnLowCardinalityKeys.values();
 		}
@@ -59,11 +56,6 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 		@Override
 		public Class<? extends ObservationConvention<? extends Observation.Context>> getDefaultConvention() {
 			return DefaultToolCallObservationConvention.class;
-		}
-
-		@Override
-		public String getPrefix() {
-			return TOOL_CALL_NAME;
 		}
 
 		@Override
@@ -97,11 +89,11 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 
 	public enum TurnLowCardinalityKeys implements KeyName {
 
-		/** {@code acp_harness_turn}. */
-		KIND {
+		/** {@code spring.ai.kind}, always {@code acp_harness_turn}. */
+		SPRING_AI_KIND {
 			@Override
 			public String asString() {
-				return SPRING_AI_KIND;
+				return AcpObservationDocumentation.SPRING_AI_KIND;
 			}
 		},
 
@@ -115,9 +107,10 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 
 		/**
 		 * The model the session is really using — what the negotiated tier applied, not
-		 * what was requested. {@code unknown} when the agent kept its own default and
-		 * never said which. The OpenTelemetry key, as Spring AI's chat models tag it, so
-		 * one breakdown by model covers both.
+		 * what was requested. {@code none} when the agent kept its own default and never
+		 * said which, as Spring AI's chat models spell an absent value on this key. The
+		 * OpenTelemetry key, as those models tag it, so one breakdown by model covers
+		 * both.
 		 */
 		MODEL {
 			@Override
@@ -204,11 +197,11 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 
 	public enum ToolCallLowCardinalityKeys implements KeyName {
 
-		/** {@code acp_harness_tool_call}. */
-		KIND {
+		/** {@code spring.ai.kind}, always {@code acp_harness_tool_call}. */
+		SPRING_AI_KIND {
 			@Override
 			public String asString() {
-				return SPRING_AI_KIND;
+				return AcpObservationDocumentation.SPRING_AI_KIND;
 			}
 		},
 
@@ -220,7 +213,7 @@ public enum AcpObservationDocumentation implements ObservationDocumentation {
 		},
 
 		/** The ACP {@code ToolKind}: read, edit, execute, think, fetch, other. */
-		TOOL_KIND {
+		KIND {
 			@Override
 			public String asString() {
 				return PREFIX + ".tool.kind";
