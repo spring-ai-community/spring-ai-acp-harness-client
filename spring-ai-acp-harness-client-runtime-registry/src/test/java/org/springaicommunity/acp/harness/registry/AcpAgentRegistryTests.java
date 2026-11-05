@@ -33,7 +33,7 @@ class AcpAgentRegistryTests {
 
 	@Test
 	void readsAnNpxAgent() {
-		RegistryEntry gemini = offlineRegistry().find("gemini").orElseThrow();
+		RegistryEntry gemini = java.util.Objects.requireNonNull(offlineRegistry().find("gemini"));
 
 		assertThat(gemini.distribution()).isInstanceOfSatisfying(RegistryEntry.Distribution.Npx.class, npx -> {
 			assertThat(npx.packageSpec()).startsWith("@google/gemini-cli@");
@@ -46,13 +46,13 @@ class AcpAgentRegistryTests {
 
 	@Test
 	void readsABinaryAgentWithItsDigestPerPlatform() {
-		RegistryEntry goose = offlineRegistry().find("goose").orElseThrow();
+		RegistryEntry goose = java.util.Objects.requireNonNull(offlineRegistry().find("goose"));
 
 		assertThat(goose.distribution()).isInstanceOfSatisfying(RegistryEntry.Distribution.Binary.class, binary -> {
 			RegistryEntry.Artifact artifact = binary.artifacts().get("linux-x86_64");
 			assertThat(artifact.command()).isEqualTo("./goose");
 			assertThat(artifact.args()).containsExactly("acp");
-			assertThat(artifact.findSha256()).isPresent();
+			assertThat(artifact.findSha256()).isNotNull();
 		});
 	}
 
@@ -62,22 +62,22 @@ class AcpAgentRegistryTests {
 		// 9 of the registry's 19 binary agents are like this, which is why
 		// require-checksum exists
 		// as a property rather than as a constant.
-		RegistryEntry cursor = offlineRegistry().find("cursor").orElseThrow();
+		RegistryEntry cursor = java.util.Objects.requireNonNull(offlineRegistry().find("cursor"));
 
 		assertThat(cursor.distribution()).isInstanceOfSatisfying(RegistryEntry.Distribution.Binary.class,
 				binary -> assertThat(binary.artifacts().values())
-					.allSatisfy(artifact -> assertThat(artifact.findSha256()).isEmpty()));
+					.allSatisfy(artifact -> assertThat(artifact.findSha256()).isNull()));
 	}
 
 	@Test
 	void findsAnAgentWhateverCaseItIsAskedIn() {
-		assertThat(offlineRegistry().find("GOOSE")).isPresent();
+		assertThat(offlineRegistry().find("GOOSE")).isNotNull();
 	}
 
 	@Test
 	void hasNeverHeardOfAnAgentThatIsNotThere() {
-		assertThat(offlineRegistry().find("not-an-agent")).isEmpty();
-		assertThat(offlineRegistry().find(null)).isEmpty();
+		assertThat(offlineRegistry().find("not-an-agent")).isNull();
+		assertThat(offlineRegistry().find(null)).isNull();
 	}
 
 	@Test

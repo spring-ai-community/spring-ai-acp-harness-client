@@ -21,8 +21,8 @@ class ExecutablesTests {
 
 	@Test
 	void unsetOrBlankNamesNothing() {
-		assertThat(Executables.fromEnvironment(VARIABLE, Map.<String, String>of()::get)).isEmpty();
-		assertThat(Executables.fromEnvironment(VARIABLE, Map.of(VARIABLE, " ")::get)).isEmpty();
+		assertThat(Executables.fromEnvironment(VARIABLE, Map.<String, String>of()::get)).isNull();
+		assertThat(Executables.fromEnvironment(VARIABLE, Map.of(VARIABLE, " ")::get)).isNull();
 	}
 
 	@Test

@@ -40,6 +40,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <!-- Nullability on the API: @Nullable marks every value that may be absent. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
 
         <!--
           Optional, like the Spring Boot dependencies: AcpAgentObservations names no Micrometer type,

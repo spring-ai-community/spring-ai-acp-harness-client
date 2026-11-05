@@ -2,7 +2,6 @@ package org.springaicommunity.acp.harness.console;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -203,7 +202,7 @@ class ConsoleChatTests {
 	void sessionsListsWhatTheAgentStored() {
 		when(sessions.supports(AcpAgentSessions.Operation.LIST)).thenReturn(true);
 		when(sessions.list()).thenReturn(List.of(new StoredSession("sess-42", temp, "Q3 capacity review", null)));
-		when(agent.session("console")).thenReturn(Optional.empty());
+		when(agent.session("console")).thenReturn(null);
 		TestTerminals.Scripted terminal = TestTerminals.typing("/sessions\n");
 
 		chat(terminal).run();

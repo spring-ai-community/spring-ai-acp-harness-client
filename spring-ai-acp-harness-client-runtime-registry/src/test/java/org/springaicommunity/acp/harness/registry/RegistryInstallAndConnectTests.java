@@ -81,16 +81,15 @@ class RegistryInstallAndConnectTests {
 				Map.of("house-agent", SHELL_AGENT));
 		AcpAgentRegistry registry = registryPublishing(archive, AcpAgentInstallerTests.sha256(archive));
 
-		AcpAgentRuntime runtime = new RegistryAcpAgentRuntimeProvider(registry,
-				new AcpAgentInstaller(registry.settings()))
-			.forId("house-agent")
-			.orElseThrow();
+		AcpAgentRuntime runtime = java.util.Objects
+			.requireNonNull(new RegistryAcpAgentRuntimeProvider(registry, new AcpAgentInstaller(registry.settings()))
+				.forId("house-agent"));
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
 		try (AcpHarnessClient client = AcpHarnessClientFactory.create(runtime,
 				AcpAgentSettings.builder("house-agent", workspace).timeout(Duration.ofSeconds(30)).build())) {
 
-			assertThat(client.agentInfo()).get().extracting(info -> info.name()).isEqualTo("house-agent");
+			assertThat(client.agentInfo()).isNotNull().extracting(info -> info.name()).isEqualTo("house-agent");
 			assertThat(client.protocolVersion()).isEqualTo(1);
 			assertThat(client.prompt("say something").call().content()).isEqualTo("installed from the registry");
 		}
@@ -107,10 +106,9 @@ class RegistryInstallAndConnectTests {
 		AcpAgentRegistry registry = registryPublishing(archive,
 				"0000000000000000000000000000000000000000000000000000000000000000");
 
-		AcpAgentRuntime runtime = new RegistryAcpAgentRuntimeProvider(registry,
-				new AcpAgentInstaller(registry.settings()))
-			.forId("house-agent")
-			.orElseThrow();
+		AcpAgentRuntime runtime = java.util.Objects
+			.requireNonNull(new RegistryAcpAgentRuntimeProvider(registry, new AcpAgentInstaller(registry.settings()))
+				.forId("house-agent"));
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
 		org.assertj.core.api.Assertions

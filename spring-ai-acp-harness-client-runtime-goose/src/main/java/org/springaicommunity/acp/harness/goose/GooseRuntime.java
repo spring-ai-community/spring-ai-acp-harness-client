@@ -12,10 +12,10 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
 import org.springaicommunity.acp.harness.config.ProviderEnvironment;
 import org.springaicommunity.acp.harness.config.ProviderSpec;
@@ -183,11 +183,9 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 */
 	private AcpAgentLaunchSpec serve(AcpAgentSettings settings) {
 		RuntimeOptions options = settings.runtimeOptions();
-		String host = options.text("serve.host").orElse(DEFAULT_SERVE_HOST);
-		int port = options.text("serve.port")
-			.map(Integer::parseInt)
-			.filter(p -> p > 0)
-			.orElseGet(GooseRuntime::freePort);
+		String configuredHost = options.text("serve.host");
+		String host = configuredHost == null ? DEFAULT_SERVE_HOST : configuredHost;
+		int port = port(options.text("serve.port"));
 		String secret = newSecret();
 
 		List<String> args = new ArrayList<>(List.of("serve", "--host", host, "--port", String.valueOf(port)));
@@ -203,13 +201,20 @@ public class GooseRuntime implements AcpAgentRuntime {
 				Map.of(SECRET_KEY_HEADER, secret), process);
 	}
 
-	private static Duration startupTimeout(RuntimeOptions options) {
-		return options.text("serve.startup-timeout").map(Duration::parse).orElse(null);
+	/** The configured port when it is positive, else one the OS hands out. */
+	private static int port(@Nullable String configured) {
+		int port = configured == null ? 0 : Integer.parseInt(configured);
+		return port > 0 ? port : freePort();
+	}
+
+	private static @Nullable Duration startupTimeout(RuntimeOptions options) {
+		String configured = options.text("serve.startup-timeout");
+		return configured == null ? null : Duration.parse(configured);
 	}
 
 	/** Whether tier 3 asked for the served transport. */
 	private static boolean isServed(AcpAgentSettings settings) {
-		return settings.runtimeOptions().text("serve.transport").filter(SERVE_WEBSOCKET::equalsIgnoreCase).isPresent();
+		return SERVE_WEBSOCKET.equalsIgnoreCase(settings.runtimeOptions().text("serve.transport"));
 	}
 
 	/** Goose's builtin extensions are a runtime-specific concern: tier 3, not tier 1. */
@@ -241,7 +246,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * read. Without this, an allowlist policy could only reject.
 	 */
 	@Override
-	public Optional<String> toolNameOf(AcpSchema.ToolCallUpdate toolCall) {
+	public @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
 		return ToolNames.fromRawInputOrTitle(toolCall);
 	}
 
@@ -251,7 +256,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * {@link TodoPlan}.
 	 */
 	@Override
-	public Optional<List<AcpSchema.PlanEntry>> planOf(AcpSchema.ToolCall toolCall) {
+	public @Nullable List<AcpSchema.PlanEntry> planOf(AcpSchema.ToolCall toolCall) {
 		return TodoPlan.of(toolCall);
 	}
 
@@ -276,15 +281,15 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * @see #noticeOf(String)
 	 */
 	@Override
-	public Optional<Path> logDirectory(AcpAgentSettings settings) {
-		Optional<Path> configured = settings.runtimeOptions().text("log-dir").map(Paths::get);
-		if (configured.isPresent()) {
-			return configured.map(Path::toAbsolutePath);
+	public Path logDirectory(AcpAgentSettings settings) {
+		String configured = settings.runtimeOptions().text("log-dir");
+		if (configured != null) {
+			return Paths.get(configured).toAbsolutePath();
 		}
 		String state = System.getenv("XDG_STATE_HOME");
 		Path root = state == null || state.isBlank() ? Paths.get(System.getProperty("user.home"), ".local", "state")
 				: Paths.get(state);
-		return Optional.of(root.resolve("goose").resolve("logs").toAbsolutePath());
+		return root.resolve("goose").resolve("logs").toAbsolutePath();
 	}
 
 	/**
@@ -319,23 +324,23 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * exists to surface.
 	 */
 	@Override
-	public Optional<AcpAgentNotice> noticeOf(String logLine) {
+	public @Nullable AcpAgentNotice noticeOf(@Nullable String logLine) {
 		if (logLine == null) {
-			return Optional.empty();
+			return null;
 		}
 		Matcher matcher = EXTENSION_FAILURE.matcher(logLine);
 		if (matcher.find()) {
-			return Optional.of(notice(matcher.group(1).strip(), matcher.group(2)));
+			return notice(matcher.group(1).strip(), matcher.group(2));
 		}
 		if (!EXTENSION_START_FAILURE.matcher(logLine).find()) {
-			return Optional.empty();
+			return null;
 		}
 		Matcher extension = EXTENSION_FIELD.matcher(logLine);
 		Matcher error = ERROR_FIELD.matcher(logLine);
 		if (!extension.find() || !error.find()) {
-			return Optional.empty();
+			return null;
 		}
-		return Optional.of(notice(unescape(extension.group(1)), error.group(1)));
+		return notice(unescape(extension.group(1)), error.group(1));
 	}
 
 	private static AcpAgentNotice notice(String name, String rest) {
@@ -375,7 +380,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 */
 	@Override
 	public List<McpRequestFilter> mcpRequestFilters(AcpAgentSettings settings) {
-		boolean answer = settings.runtimeOptions().text("mcp.answer-discover").map(Boolean::parseBoolean).orElse(false);
+		boolean answer = Boolean.parseBoolean(settings.runtimeOptions().text("mcp.answer-discover"));
 		return answer ? List.of(new DiscoverProbeFilter()) : List.of();
 	}
 
@@ -431,16 +436,29 @@ public class GooseRuntime implements AcpAgentRuntime {
 		ProviderSpec provider = settings.provider();
 		Map<String, String> env = new LinkedHashMap<>(ProviderEnvironment.of(provider));
 
-		provider.findApiBase().filter(base -> isOpenAiCompatible(provider)).ifPresent(base -> {
+		URI base = provider.findApiBase();
+		if (base != null && isOpenAiCompatible(provider)) {
 			env.remove(ProviderEnvironment.baseUrlVariable(provider.apiType()));
 			env.put(OPENAI_HOST, endpoint(base));
-		});
+		}
 
 		if (provider.isByo()) {
-			provider.findApiType().or(provider::findId).ifPresent(id -> env.put(GOOSE_PROVIDER, id));
-			settings.findModel().ifPresent(model -> env.put(GOOSE_MODEL, model));
+			String id = providerName(provider);
+			if (id != null) {
+				env.put(GOOSE_PROVIDER, id);
+			}
+			String model = settings.findModel();
+			if (model != null) {
+				env.put(GOOSE_MODEL, model);
+			}
 		}
 		return env;
+	}
+
+	/** The api type, else the provider id, else null: what Goose calls the provider. */
+	private static @Nullable String providerName(ProviderSpec provider) {
+		String apiType = provider.findApiType();
+		return apiType != null ? apiType : provider.findId();
 	}
 
 	/**
@@ -456,7 +474,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	}
 
 	private static boolean isOpenAiCompatible(ProviderSpec provider) {
-		return provider.findApiType().filter("openai"::equalsIgnoreCase).isPresent();
+		return "openai".equalsIgnoreCase(provider.findApiType());
 	}
 
 	/**
@@ -472,15 +490,16 @@ public class GooseRuntime implements AcpAgentRuntime {
 	public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
 		ProviderSpec provider = settings.provider();
 		return switch (option) {
-			case MODEL -> provider.isByo() && settings.findModel().isPresent();
-			case PROVIDER -> provider.isByo() && provider.findApiType().or(provider::findId).isPresent();
+			case MODEL -> provider.isByo() && settings.findModel() != null;
+			case PROVIDER -> provider.isByo() && providerName(provider) != null;
 			case MODE -> false;
 		};
 	}
 
 	/** Prefers the explicit path the buildpack exports, then falls back to the PATH. */
 	private static String defaultExecutable() {
-		return Executables.fromEnvironment(CLI_PATH_ENV).orElse("goose");
+		String configured = Executables.fromEnvironment(CLI_PATH_ENV);
+		return configured == null ? "goose" : configured;
 	}
 
 }

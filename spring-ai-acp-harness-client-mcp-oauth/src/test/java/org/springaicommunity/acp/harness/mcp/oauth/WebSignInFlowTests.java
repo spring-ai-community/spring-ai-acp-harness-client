@@ -231,7 +231,7 @@ class WebSignInFlowTests {
 
 		@GetMapping("/connect")
 		String connect() {
-			provider.requireAuthorized(principals.current().orElse(null));
+			provider.requireAuthorized(principals.current());
 			return "connected";
 		}
 

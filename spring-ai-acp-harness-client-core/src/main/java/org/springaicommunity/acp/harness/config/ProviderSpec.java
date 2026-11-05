@@ -3,8 +3,9 @@ package org.springaicommunity.acp.harness.config;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Pattern;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Which model provider to talk to, and the credentials for it.
@@ -29,7 +30,8 @@ import java.util.regex.Pattern;
  * credentials and no way to tell them apart; see {@link AcpAgentOptions} for what a
  * caller genuinely may vary.
  */
-public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey, Map<String, String> headers) {
+public record ProviderSpec(@Nullable String id, @Nullable String apiType, @Nullable URI baseUrl,
+		@Nullable String apiKey, Map<String, String> headers) {
 
 	private static final ProviderSpec NONE = new ProviderSpec(null, null, null, null, Map.of());
 
@@ -70,24 +72,23 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 		return NONE;
 	}
 
-	public static ProviderSpec of(String id) {
+	public static ProviderSpec of(@Nullable String id) {
 		return new ProviderSpec(id, null, null, null, Map.of());
 	}
 
-	public Optional<String> findId() {
-		return Optional.ofNullable(id).filter(s -> !s.isBlank());
+	/** The provider id, or null when none or a blank one was configured. */
+	public @Nullable String findId() {
+		return id == null || id.isBlank() ? null : id;
 	}
 
-	public Optional<String> findApiType() {
-		return Optional.ofNullable(apiType).filter(s -> !s.isBlank());
+	/** The API type, or null when none or a blank one was configured. */
+	public @Nullable String findApiType() {
+		return apiType == null || apiType.isBlank() ? null : apiType;
 	}
 
-	public Optional<URI> findBaseUrl() {
-		return Optional.ofNullable(baseUrl);
-	}
-
-	public Optional<String> findApiKey() {
-		return Optional.ofNullable(apiKey).filter(s -> !s.isEmpty());
+	/** The API key, or null when none or an empty one was configured. */
+	public @Nullable String findApiKey() {
+		return apiKey == null || apiKey.isEmpty() ? null : apiKey;
 	}
 
 	/**
@@ -95,7 +96,7 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 	 * process.
 	 */
 	public boolean hasCredentials() {
-		return findApiKey().isPresent() || findBaseUrl().isPresent() || !headers.isEmpty();
+		return findApiKey() != null || baseUrl != null || !headers.isEmpty();
 	}
 
 	/**
@@ -103,7 +104,7 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 	 * self-hosted model server — rather than the one its agent was built knowing about.
 	 */
 	public boolean isByo() {
-		return findBaseUrl().isPresent();
+		return baseUrl != null;
 	}
 
 	/**
@@ -118,9 +119,10 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 	 * a base URL that does not already end in a version segment gains {@code /v1}.
 	 * Normalising here rather than in each adapter is what lets an adapter derive its own
 	 * vendor spelling from one known shape.
+	 * @return the normalised base URL, or null when no endpoint was configured
 	 */
-	public Optional<URI> findApiBase() {
-		return findBaseUrl().map(ProviderSpec::normalize);
+	public @Nullable URI findApiBase() {
+		return baseUrl == null ? null : normalize(baseUrl);
 	}
 
 	/**
@@ -130,9 +132,11 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 	 * OpenAI-compatible endpoints are the only ones this can be derived for, which is
 	 * also the only case it is needed in — an agent talking to its own vendor already has
 	 * a catalogue.
+	 * @return the listing's URL, or null when no endpoint was configured
 	 */
-	public Optional<URI> findModelsUrl() {
-		return findApiBase().map(base -> URI.create(base + "/models"));
+	public @Nullable URI findModelsUrl() {
+		URI base = findApiBase();
+		return base == null ? null : URI.create(base + "/models");
 	}
 
 	private static URI normalize(URI baseUrl) {
@@ -145,7 +149,7 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 		return URI.create(VERSION_SEGMENT.matcher(segment).matches() ? text : text + "/v1");
 	}
 
-	public ProviderSpec withId(String newId) {
+	public ProviderSpec withId(@Nullable String newId) {
 		return newId == null || newId.equals(id) ? this : new ProviderSpec(newId, apiType, baseUrl, apiKey, headers);
 	}
 
@@ -156,6 +160,6 @@ public record ProviderSpec(String id, String apiType, URI baseUrl, String apiKey
 	@Override
 	public String toString() {
 		return "ProviderSpec[id=" + id + ", apiType=" + apiType + ", baseUrl=" + baseUrl + ", apiKey="
-				+ (findApiKey().isPresent() ? "***" : "none") + ", headers=" + headers.keySet() + "]";
+				+ (findApiKey() != null ? "***" : "none") + ", headers=" + headers.keySet() + "]";
 	}
 }

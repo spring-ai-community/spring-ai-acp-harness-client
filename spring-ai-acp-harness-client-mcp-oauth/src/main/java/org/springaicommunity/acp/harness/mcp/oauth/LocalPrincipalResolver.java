@@ -1,7 +1,5 @@
 package org.springaicommunity.acp.harness.mcp.oauth;
 
-import java.util.Optional;
-
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 
@@ -15,10 +13,10 @@ import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
  */
 public final class LocalPrincipalResolver implements SessionPrincipalResolver {
 
-	private final Optional<SessionPrincipal> user = Optional.of(SessionPrincipal.of(System.getProperty("user.name")));
+	private final SessionPrincipal user = SessionPrincipal.of(System.getProperty("user.name"));
 
 	@Override
-	public Optional<SessionPrincipal> current() {
+	public SessionPrincipal current() {
 		return user;
 	}
 

@@ -1,7 +1,6 @@
 package org.springaicommunity.acp.harness.mcp.oauth;
 
-import java.util.Optional;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,13 +25,13 @@ import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 public final class SecurityContextPrincipalResolver implements SessionPrincipalResolver {
 
 	@Override
-	public Optional<SessionPrincipal> current() {
+	public @Nullable SessionPrincipal current() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication == null || !authentication.isAuthenticated()
 				|| authentication instanceof AnonymousAuthenticationToken) {
-			return Optional.empty();
+			return null;
 		}
-		return Optional.of(SessionPrincipal.of(authentication.getName()));
+		return SessionPrincipal.of(authentication.getName());
 	}
 
 }

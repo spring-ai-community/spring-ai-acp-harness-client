@@ -1,12 +1,11 @@
 package org.springaicommunity.acp.harness.config;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
@@ -81,7 +80,8 @@ public final class ConfigResolver {
 		this(runtime, onUnsupported, ModelCatalog.endpoint());
 	}
 
-	public ConfigResolver(AcpAgentRuntime runtime, OnUnsupported onUnsupported, ModelCatalog catalog) {
+	public ConfigResolver(AcpAgentRuntime runtime, @Nullable OnUnsupported onUnsupported,
+			@Nullable ModelCatalog catalog) {
 		this.runtime = runtime;
 		this.onUnsupported = onUnsupported == null ? OnUnsupported.WARN : onUnsupported;
 		this.catalog = catalog == null ? ModelCatalog.none() : catalog;
@@ -110,13 +110,13 @@ public final class ConfigResolver {
 	}
 
 	private Mono<OptionResolution> resolve(AcpAsyncClient client, AcpAgentSession session, AcpAgentSettings settings,
-			PortableOption option, String value) {
+			PortableOption option, @Nullable String value) {
 		if (value == null || value.isBlank()) {
 			return Mono.just(OptionResolution.notRequested(option));
 		}
-		Optional<String> refusal = endpointRefusal(settings, option, value);
-		if (refusal.isPresent()) {
-			return unsupported(option, value, refusal.get(), null);
+		String refusal = endpointRefusal(settings, option, value);
+		if (refusal != null) {
+			return unsupported(option, value, refusal, null);
 		}
 		return viaConfigOption(client, session, settings, option, value)
 			.switchIfEmpty(Mono.defer(() -> viaLegacyState(client, session, option, value)))
@@ -153,14 +153,14 @@ public final class ConfigResolver {
 		AcpSchema.SessionConfigSelect present = null;
 
 		for (String key : concat(ids, categories)) {
-			Optional<AcpSchema.SessionConfigSelect> candidate = advertised.select(key, key);
-			if (candidate.isEmpty()) {
+			AcpSchema.SessionConfigSelect candidate = advertised.select(key, key);
+			if (candidate == null) {
 				continue;
 			}
-			present = candidate.get();
-			Optional<String> matched = SelectMatcher.match(present, value, qualifier);
-			if (matched.isPresent()) {
-				return set(client, session, option, value, present.id(), matched.get(), Mechanism.CONFIG_OPTION);
+			present = candidate;
+			String matched = SelectMatcher.match(present, value, qualifier);
+			if (matched != null) {
+				return set(client, session, option, value, present.id(), matched, Mechanism.CONFIG_OPTION);
 			}
 		}
 
@@ -197,15 +197,17 @@ public final class ConfigResolver {
 	 * ones the agent shipped knowing about, and it fires before a turn is spent instead
 	 * of arriving as agent prose inside one. An endpoint that publishes no listing
 	 * refuses nothing.
+	 * @return the refusal, or null when the endpoint does serve the model or did not say
 	 */
-	private Optional<String> endpointRefusal(AcpAgentSettings settings, PortableOption option, String value) {
+	private @Nullable String endpointRefusal(AcpAgentSettings settings, PortableOption option, String value) {
 		if (option != PortableOption.MODEL || !settings.provider().isByo()) {
-			return Optional.empty();
+			return null;
 		}
-		return catalog.modelsOf(settings.provider())
-			.filter(models -> models.stream().noneMatch(model -> model.equalsIgnoreCase(value)))
-			.map(models -> "the endpoint at " + settings.provider().findApiBase().orElseThrow() + " serves "
-					+ String.join(", ", models));
+		List<String> models = catalog.modelsOf(settings.provider());
+		if (models == null || models.stream().anyMatch(model -> model.equalsIgnoreCase(value))) {
+			return null;
+		}
+		return "the endpoint at " + settings.provider().findApiBase() + " serves " + String.join(", ", models);
 	}
 
 	private Mono<OptionResolution> set(AcpAsyncClient client, AcpAgentSession session, PortableOption option,
@@ -233,25 +235,31 @@ public final class ConfigResolver {
 			String value) {
 		AdvertisedSessionConfig advertised = session.advertised();
 		return switch (option) {
-			case MODE -> advertised.findModes()
-				.flatMap(state -> state.availableModes()
-					.stream()
-					.filter(m -> matches(value, m.id(), m.name()))
-					.findFirst())
-				.map(mode -> client.setSessionMode(new AcpSchema.SetSessionModeRequest(session.sessionId(), mode.id()))
-					.thenReturn(OptionResolution.applied(option, value, mode.id(), Mechanism.SESSION_MODE,
-							"session/set_mode")))
-				.orElseGet(Mono::empty);
-			case MODEL -> advertised.findModels()
-				.flatMap(state -> state.availableModels()
+			case MODE -> {
+				AcpSchema.SessionModeState state = advertised.findModes();
+				yield state == null ? Mono.empty()
+						: state.availableModes()
+							.stream()
+							.filter(m -> matches(value, m.id(), m.name()))
+							.findFirst()
+							.map(mode -> client
+								.setSessionMode(new AcpSchema.SetSessionModeRequest(session.sessionId(), mode.id()))
+								.thenReturn(OptionResolution.applied(option, value, mode.id(), Mechanism.SESSION_MODE,
+										"session/set_mode")))
+							.orElseGet(Mono::empty);
+			}
+			case MODEL -> {
+				AcpSchema.SessionModelState state = advertised.findModels();
+				yield state == null ? Mono.empty() : state.availableModels()
 					.stream()
 					.filter(m -> matches(value, m.modelId(), m.name()))
-					.findFirst())
-				.map(model -> client
-					.setSessionModel(new AcpSchema.SetSessionModelRequest(session.sessionId(), model.modelId()))
-					.thenReturn(OptionResolution.applied(option, value, model.modelId(), Mechanism.SESSION_MODEL,
-							"session/set_model")))
-				.orElseGet(Mono::empty);
+					.findFirst()
+					.map(model -> client
+						.setSessionModel(new AcpSchema.SetSessionModelRequest(session.sessionId(), model.modelId()))
+						.thenReturn(OptionResolution.applied(option, value, model.modelId(), Mechanism.SESSION_MODEL,
+								"session/set_model")))
+					.orElseGet(Mono::empty);
+			}
 			case PROVIDER -> Mono.empty();
 		};
 	}
@@ -274,7 +282,7 @@ public final class ConfigResolver {
 		ProviderSpec provider = settings.provider();
 		return client
 			.setProvider(new AcpSchema.SetProviderRequest(value, provider.apiType(),
-					provider.findBaseUrl().map(URI::toString).orElse(null), provider.headers()))
+					provider.baseUrl() == null ? null : provider.baseUrl().toString(), provider.headers()))
 			.thenReturn(OptionResolution.applied(option, value, value, Mechanism.PROVIDERS_SET, "providers/set"));
 	}
 
@@ -303,7 +311,8 @@ public final class ConfigResolver {
 				: "the agent has no option for it";
 	}
 
-	private Mono<OptionResolution> unsupported(PortableOption option, String value, String detail, Throwable cause) {
+	private Mono<OptionResolution> unsupported(PortableOption option, String value, String detail,
+			@Nullable Throwable cause) {
 		return switch (onUnsupported) {
 			case FAIL -> Mono.error(
 					new UnsupportedAcpAgentOptionException(option.propertyName(), value, runtime.id(), detail, cause));
@@ -324,7 +333,7 @@ public final class ConfigResolver {
 		}
 	}
 
-	private static boolean matches(String request, String id, String name) {
+	private static boolean matches(String request, @Nullable String id, @Nullable String name) {
 		return request.equalsIgnoreCase(id) || request.equalsIgnoreCase(name);
 	}
 

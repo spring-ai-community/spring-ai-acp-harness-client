@@ -1,10 +1,10 @@
 package org.springaicommunity.acp.harness.executor;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
@@ -153,8 +153,8 @@ class DefaultAcpAgentExecutorTests {
 		}
 
 		@Override
-		public Optional<AcpAgentInfo> agentInfo() {
-			return Optional.of(new AcpAgentInfo("goose", "1.51.0"));
+		public AcpAgentInfo agentInfo() {
+			return new AcpAgentInfo("goose", "1.51.0");
 		}
 
 		@Override
@@ -168,8 +168,8 @@ class DefaultAcpAgentExecutorTests {
 		}
 
 		@Override
-		public Optional<AcpAgentSession> session(String name) {
-			return Optional.empty();
+		public @Nullable AcpAgentSession session(String name) {
+			return null;
 		}
 
 		@Override

@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
 
@@ -30,7 +30,7 @@ import org.springframework.boot.json.JsonParserFactory;
  * @param apiKey the key for it; never logged
  * @param configUrl where the service lists its models, or null
  */
-record TanzuAiBinding(String name, URI apiBase, String apiKey, URI configUrl) {
+record TanzuAiBinding(String name, URI apiBase, String apiKey, @Nullable URI configUrl) {
 
 	/** The capability an agent needs: a model that cannot call tools cannot drive one. */
 	static final String TOOLS = "TOOLS";
@@ -42,7 +42,7 @@ record TanzuAiBinding(String name, URI apiBase, String apiKey, URI configUrl) {
 	}
 
 	/** Every complete Tanzu AI Models binding in {@code vcapServices}, in order. */
-	static List<TanzuAiBinding> all(String vcapServices) {
+	static List<TanzuAiBinding> all(@Nullable String vcapServices) {
 		List<TanzuAiBinding> bindings = new ArrayList<>();
 		if (vcapServices == null || vcapServices.isBlank()) {
 			return bindings;
@@ -52,7 +52,10 @@ record TanzuAiBinding(String name, URI apiBase, String apiKey, URI configUrl) {
 			if (offering.getValue() instanceof List<?> instances) {
 				for (Object instance : instances) {
 					if (instance instanceof Map<?, ?> service && isAiModels(offering.getKey(), service)) {
-						from(service).ifPresent(bindings::add);
+						TanzuAiBinding binding = from(service);
+						if (binding != null) {
+							bindings.add(binding);
+						}
 					}
 				}
 			}
@@ -61,12 +64,14 @@ record TanzuAiBinding(String name, URI apiBase, String apiKey, URI configUrl) {
 	}
 
 	/**
-	 * The binding named {@code serviceName}, or the first one when no name is given.
+	 * The binding named {@code serviceName}, or the first one when no name is given; null
+	 * when there is no such binding.
 	 */
-	static Optional<TanzuAiBinding> find(List<TanzuAiBinding> bindings, String serviceName) {
+	static @Nullable TanzuAiBinding find(List<TanzuAiBinding> bindings, @Nullable String serviceName) {
 		return bindings.stream()
 			.filter(binding -> serviceName == null || serviceName.isBlank() || serviceName.equals(binding.name()))
-			.findFirst();
+			.findFirst()
+			.orElse(null);
 	}
 
 	/**
@@ -84,21 +89,21 @@ record TanzuAiBinding(String name, URI apiBase, String apiKey, URI configUrl) {
 	 * {@code {"wireFormat":"OPENAI","advertisedModels":[{"name":…,"capabilities":[…]}]}}.
 	 *
 	 * @param wireFormat the API the models are served in, or null when it does not say
-	 * @param toolCapableModel the first model that can call tools, if any
+	 * @param toolCapableModel the first model that can call tools, or null when none can
 	 */
-	record Catalog(String wireFormat, Optional<String> toolCapableModel) {
+	record Catalog(@Nullable String wireFormat, @Nullable String toolCapableModel) {
 
 		static Catalog parse(String json) {
 			Map<String, Object> document = JsonParserFactory.getJsonParser().parseMap(json);
 			String wireFormat = text(document.get("wireFormat"));
-			Optional<String> model = Optional.empty();
+			String model = null;
 			if (document.get("advertisedModels") instanceof List<?> models) {
 				for (Object entry : models) {
 					if (entry instanceof Map<?, ?> advertised && advertised.get("name") instanceof String name
 							&& !name.isBlank() && advertised.get("capabilities") instanceof List<?> capabilities
 							&& capabilities.stream()
 								.anyMatch(capability -> TOOLS.equalsIgnoreCase(String.valueOf(capability)))) {
-						model = Optional.of(name);
+						model = name;
 						break;
 					}
 				}
@@ -117,25 +122,30 @@ record TanzuAiBinding(String name, URI apiBase, String apiKey, URI configUrl) {
 				&& tags.stream().anyMatch(tag -> "genai".equalsIgnoreCase(String.valueOf(tag)));
 	}
 
-	private static Optional<TanzuAiBinding> from(Map<?, ?> service) {
+	/** The binding {@code service} describes, or null when it is incomplete. */
+	private static @Nullable TanzuAiBinding from(Map<?, ?> service) {
 		if (!(service.get("credentials") instanceof Map<?, ?> credentials)
 				|| !(credentials.get("endpoint") instanceof Map<?, ?> endpoint)) {
-			return Optional.empty();
+			return null;
 		}
 		String apiBase = text(endpoint.get("api_base"));
 		String apiKey = text(endpoint.get("api_key"));
 		if (apiBase == null || apiKey == null) {
-			return Optional.empty();
+			return null;
 		}
 		String configUrl = text(endpoint.get("config_url"));
-		String name = Optional.ofNullable(text(service.get("name")))
-			.or(() -> Optional.ofNullable(text(service.get("instance_name"))))
-			.orElse("ai-models");
-		return Optional.of(new TanzuAiBinding(name, URI.create(stripTrailingSlashes(apiBase)), apiKey,
-				configUrl == null ? null : URI.create(configUrl)));
+		String name = text(service.get("name"));
+		if (name == null) {
+			name = text(service.get("instance_name"));
+		}
+		if (name == null) {
+			name = "ai-models";
+		}
+		return new TanzuAiBinding(name, URI.create(stripTrailingSlashes(apiBase)), apiKey,
+				configUrl == null ? null : URI.create(configUrl));
 	}
 
-	private static String text(Object value) {
+	private static @Nullable String text(@Nullable Object value) {
 		return value instanceof String s && !s.isBlank() ? s.strip() : null;
 	}
 

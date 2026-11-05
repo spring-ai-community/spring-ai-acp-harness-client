@@ -1,7 +1,6 @@
 package org.springaicommunity.acp.harness.console;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -9,6 +8,7 @@ import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.Terminal;
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.permission.PermissionPrompt;
 import org.springaicommunity.acp.harness.permission.PermissionQuestion;
 
@@ -41,10 +41,10 @@ public class TerminalPermissionPrompt implements PermissionPrompt {
 	}
 
 	@Override
-	public synchronized Optional<AcpSchema.PermissionOption> ask(PermissionQuestion question) {
+	public synchronized AcpSchema.@Nullable PermissionOption ask(PermissionQuestion question) {
 		List<AcpSchema.PermissionOption> options = question.options();
 		if (options.isEmpty()) {
-			return Optional.empty();
+			return null;
 		}
 		renderer.permission(question);
 		while (true) {
@@ -54,24 +54,24 @@ public class TerminalPermissionPrompt implements PermissionPrompt {
 			}
 			catch (UserInterruptException | EndOfFileException ex) {
 				renderer.info("  request cancelled");
-				return Optional.empty();
+				return null;
 			}
-			Optional<AcpSchema.PermissionOption> chosen = choose(answer, options);
-			if (chosen.isPresent()) {
+			AcpSchema.PermissionOption chosen = choose(answer, options);
+			if (chosen != null) {
 				return chosen;
 			}
 			renderer.info("  answer with a number from 1 to " + options.size());
 		}
 	}
 
-	private static Optional<AcpSchema.PermissionOption> choose(String answer,
+	private static AcpSchema.@Nullable PermissionOption choose(String answer,
 			List<AcpSchema.PermissionOption> options) {
 		try {
 			int index = Integer.parseInt(answer.strip()) - 1;
-			return index >= 0 && index < options.size() ? Optional.of(options.get(index)) : Optional.empty();
+			return index >= 0 && index < options.size() ? options.get(index) : null;
 		}
 		catch (NumberFormatException ex) {
-			return Optional.empty();
+			return null;
 		}
 	}
 

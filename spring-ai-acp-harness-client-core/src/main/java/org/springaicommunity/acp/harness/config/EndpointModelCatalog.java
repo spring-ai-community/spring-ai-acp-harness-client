@@ -9,9 +9,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,10 +30,10 @@ import tools.jackson.databind.json.JsonMapper;
  * reveals nothing new and costs one round trip.
  *
  * <p>
- * Every failure is empty rather than an exception, at debug. An endpoint that answers
- * 404, serves a shape nobody standardised, or is simply slow today is not a reason to
- * refuse to start: the consequence of an unknown catalogue is that a model is taken on
- * trust, which is exactly what happened before this class existed.
+ * Every failure is null rather than an exception, at debug. An endpoint that answers 404,
+ * serves a shape nobody standardised, or is simply slow today is not a reason to refuse
+ * to start: the consequence of an unknown catalogue is that a model is taken on trust,
+ * which is exactly what happened before this class existed.
  */
 final class EndpointModelCatalog implements ModelCatalog {
 
@@ -43,8 +43,11 @@ final class EndpointModelCatalog implements ModelCatalog {
 
 	private static final JsonMapper json = JsonMapper.shared();
 
-	/** Keyed by the listing's URL, so two providers onto one gateway ask once. */
-	private final Map<URI, Optional<List<String>>> cache = new ConcurrentHashMap<>();
+	/**
+	 * Keyed by the listing's URL, so two providers onto one gateway ask once. An empty
+	 * list records an endpoint that did not say, so it is not asked again either.
+	 */
+	private final Map<URI, List<String>> cache = new ConcurrentHashMap<>();
 
 	private final HttpClient http;
 
@@ -57,40 +60,48 @@ final class EndpointModelCatalog implements ModelCatalog {
 	}
 
 	@Override
-	public Optional<List<String>> modelsOf(ProviderSpec provider) {
-		return provider == null ? Optional.empty()
-				: provider.findModelsUrl().flatMap(url -> cache.computeIfAbsent(url, key -> fetch(key, provider)));
+	public @Nullable List<String> modelsOf(@Nullable ProviderSpec provider) {
+		URI url = provider == null ? null : provider.findModelsUrl();
+		if (url == null) {
+			return null;
+		}
+		List<String> models = cache.computeIfAbsent(url, key -> fetch(key, provider));
+		return models.isEmpty() ? null : models;
 	}
 
-	private Optional<List<String>> fetch(URI url, ProviderSpec provider) {
+	/** The listing, or an empty list when the endpoint did not say. */
+	private List<String> fetch(URI url, ProviderSpec provider) {
 		try {
 			HttpResponse<String> response = http.send(request(url, provider), HttpResponse.BodyHandlers.ofString());
 			if (response.statusCode() / 100 != 2) {
 				logger.debug("Endpoint {} answered {} for its model listing; models will be taken on trust", url,
 						response.statusCode());
-				return Optional.empty();
+				return List.of();
 			}
 			List<String> models = parse(response.body());
 			if (models.isEmpty()) {
 				logger.debug("Endpoint {} listed no models in a shape this understands", url);
-				return Optional.empty();
+				return List.of();
 			}
 			logger.debug("Endpoint {} serves {}", url, models);
-			return Optional.of(List.copyOf(models));
+			return List.copyOf(models);
 		}
 		catch (IOException | RuntimeException ex) {
 			logger.debug("Could not read the model listing at {}; models will be taken on trust", url, ex);
-			return Optional.empty();
+			return List.of();
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			return Optional.empty();
+			return List.of();
 		}
 	}
 
 	private static HttpRequest request(URI url, ProviderSpec provider) {
 		HttpRequest.Builder request = HttpRequest.newBuilder(url).timeout(TIMEOUT).GET();
-		provider.findApiKey().ifPresent(key -> request.header("Authorization", "Bearer " + key));
+		String apiKey = provider.findApiKey();
+		if (apiKey != null) {
+			request.header("Authorization", "Bearer " + apiKey);
+		}
 		provider.headers().forEach(request::header);
 		return request.build();
 	}

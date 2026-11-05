@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.config;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
 
 /**
@@ -10,9 +11,13 @@ import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
  * Exposed through {@code AcpAgentSession.configuration()} so an application can tell the
  * difference between "the model I asked for" and "the model this agent is really
  * running", which {@code on-unsupported: warn} otherwise hides in a log line.
+ *
+ * @param requested what was asked for, or null when nothing was
+ * @param applied what the agent took, or null when it took nothing
+ * @param detail how or why, in words, or null when there is nothing to say
  */
-public record OptionResolution(PortableOption option, String requested, String applied, Mechanism mechanism,
-		String detail) {
+public record OptionResolution(PortableOption option, @Nullable String requested, @Nullable String applied,
+		Mechanism mechanism, @Nullable String detail) {
 
 	public static OptionResolution notRequested(PortableOption option) {
 		return new OptionResolution(option, null, null, Mechanism.NOT_REQUESTED, null);

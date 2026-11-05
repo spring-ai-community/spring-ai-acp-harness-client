@@ -66,7 +66,7 @@ class EndpointModelCatalogTests {
 		ProviderSpec provider = serving(200, """
 				{"object":"list","data":[{"id":"acme/llm-1","object":"model"},{"id":"acme/llm-2"}]}""");
 
-		assertThat(new EndpointModelCatalog().modelsOf(provider)).contains(List.of("acme/llm-1", "acme/llm-2"));
+		assertThat(new EndpointModelCatalog().modelsOf(provider)).containsExactly("acme/llm-1", "acme/llm-2");
 	}
 
 	@Test
@@ -97,20 +97,20 @@ class EndpointModelCatalogTests {
 		ProviderSpec provider = serving(404, """
 				{"detail":"No endpoint GET /v1/models."}""");
 
-		assertThat(new EndpointModelCatalog().modelsOf(provider)).isEmpty();
+		assertThat(new EndpointModelCatalog().modelsOf(provider)).isNull();
 	}
 
 	@Test
 	void norDoesOneThatAnswersInAShapeNobodyStandardised() throws IOException {
 		ProviderSpec provider = serving(200, "<html>who knows</html>");
 
-		assertThat(new EndpointModelCatalog().modelsOf(provider)).isEmpty();
+		assertThat(new EndpointModelCatalog().modelsOf(provider)).isNull();
 	}
 
 	@Test
 	void aProviderWithNoEndpointIsNotAskedAtAll() {
 		assertThat(new EndpointModelCatalog().modelsOf(new ProviderSpec("openai", "openai", null, "k", Map.of())))
-			.isEmpty();
+			.isNull();
 		assertThat(requests).hasValue(0);
 	}
 

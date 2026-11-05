@@ -3,9 +3,10 @@ package org.springaicommunity.acp.harness.permission;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -22,11 +23,12 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
 public interface PermissionPolicy {
 
 	/**
-	 * @param toolName the tool being requested, when the agent made it knowable
+	 * @param toolName the tool being requested, or null when the agent did not make it
+	 * knowable
 	 * @param options the choices the agent offered; never empty in practice
-	 * @return the option to select, or empty to cancel the request
+	 * @return the option to select, or null to cancel the request
 	 */
-	Optional<AcpSchema.PermissionOption> decide(Optional<String> toolName, List<AcpSchema.PermissionOption> options);
+	AcpSchema.@Nullable PermissionOption decide(@Nullable String toolName, List<AcpSchema.PermissionOption> options);
 
 	/**
 	 * Decides with the whole request in view. The client calls this one; the default
@@ -34,11 +36,12 @@ public interface PermissionPolicy {
 	 * hands the question to a person overrides it, because a person also needs the
 	 * agent's description of the call.
 	 * @param request the agent's request as it arrived
-	 * @param toolName the tool being requested, when the agent made it knowable
+	 * @param toolName the tool being requested, or null when the agent did not make it
+	 * knowable
 	 */
-	default Optional<AcpSchema.PermissionOption> decide(AcpSchema.RequestPermissionRequest request,
-			Optional<String> toolName) {
-		return decide(toolName, request.options());
+	default AcpSchema.@Nullable PermissionOption decide(AcpSchema.RequestPermissionRequest request,
+			@Nullable String toolName) {
+		return decide(toolName, optionsOf(request));
 	}
 
 	/**
@@ -51,22 +54,27 @@ public interface PermissionPolicy {
 		Objects.requireNonNull(prompt, "prompt");
 		return new PermissionPolicy() {
 			@Override
-			public Optional<AcpSchema.PermissionOption> decide(Optional<String> toolName,
+			public AcpSchema.@Nullable PermissionOption decide(@Nullable String toolName,
 					List<AcpSchema.PermissionOption> options) {
 				return offered(prompt.ask(new PermissionQuestion(toolName, null, null, options)), options);
 			}
 
 			@Override
-			public Optional<AcpSchema.PermissionOption> decide(AcpSchema.RequestPermissionRequest request,
-					Optional<String> toolName) {
-				return offered(prompt.ask(PermissionQuestion.of(request, toolName)), request.options());
+			public AcpSchema.@Nullable PermissionOption decide(AcpSchema.RequestPermissionRequest request,
+					@Nullable String toolName) {
+				return offered(prompt.ask(PermissionQuestion.of(request, toolName)), optionsOf(request));
 			}
 		};
 	}
 
-	private static Optional<AcpSchema.PermissionOption> offered(Optional<AcpSchema.PermissionOption> chosen,
+	private static AcpSchema.@Nullable PermissionOption offered(AcpSchema.@Nullable PermissionOption chosen,
 			List<AcpSchema.PermissionOption> options) {
-		return chosen.filter(option -> options != null && options.contains(option));
+		return chosen != null && options.contains(chosen) ? chosen : null;
+	}
+
+	/** The request's options, which the schema leaves nullable, as a list. */
+	private static List<AcpSchema.PermissionOption> optionsOf(AcpSchema.RequestPermissionRequest request) {
+		return request.options() == null ? List.of() : request.options();
 	}
 
 	/** Rejects everything. */
@@ -91,20 +99,21 @@ public interface PermissionPolicy {
 			.map(t -> t.toLowerCase(Locale.ROOT))
 			.collect(Collectors.toUnmodifiableSet());
 		return (toolName, options) -> {
-			boolean permit = toolName.map(n -> allowed.contains(n.toLowerCase(Locale.ROOT))).orElse(false);
+			boolean permit = toolName != null && allowed.contains(toolName.toLowerCase(Locale.ROOT));
 			return permit ? autoApprove().decide(toolName, options) : deny().decide(toolName, options);
 		};
 	}
 
-	private static Optional<AcpSchema.PermissionOption> pick(List<AcpSchema.PermissionOption> options,
+	private static AcpSchema.@Nullable PermissionOption pick(@Nullable List<AcpSchema.PermissionOption> options,
 			AcpSchema.PermissionOptionKind preferred, AcpSchema.PermissionOptionKind fallback) {
 		if (options == null || options.isEmpty()) {
-			return Optional.empty();
+			return null;
 		}
 		return options.stream()
 			.filter(o -> o.kind() == preferred)
 			.findFirst()
-			.or(() -> options.stream().filter(o -> o.kind() == fallback).findFirst());
+			.or(() -> options.stream().filter(o -> o.kind() == fallback).findFirst())
+			.orElse(null);
 	}
 
 }

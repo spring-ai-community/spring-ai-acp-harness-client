@@ -7,9 +7,9 @@ import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
@@ -52,15 +52,15 @@ public final class AcpAgentProbe {
 
 	private final boolean usable;
 
-	private final String failure;
+	private final @Nullable String failure;
 
 	private final List<String> models;
 
-	private final String currentModel;
+	private final @Nullable String currentModel;
 
 	private final List<String> modes;
 
-	private AcpAgentProbe(boolean usable, String failure, List<String> models, String currentModel,
+	private AcpAgentProbe(boolean usable, @Nullable String failure, List<String> models, @Nullable String currentModel,
 			List<String> modes) {
 		this.usable = usable;
 		this.failure = failure;
@@ -96,22 +96,18 @@ public final class AcpAgentProbe {
 				.build();
 			try (AcpHarnessClient client = AcpHarnessClientFactory.create(runtime, settings)) {
 				AcpAgentSession session = client.openSession("probe");
-				Optional<AcpSchema.SessionConfigSelect> model = session.advertised().select("model", "model");
-				List<String> models = model.map(AcpAgentProbe::values).orElseGet(List::of);
-				List<String> legacyModels = session.advertised()
-					.findModels()
-					.map(state -> state.availableModels().stream().map(AcpSchema.ModelInfo::modelId).toList())
-					.orElseGet(List::of);
-				List<String> modes = session.advertised()
-					.select("mode", "mode")
-					.map(AcpAgentProbe::values)
-					.or(() -> session.advertised()
-						.findModes()
-						.map(state -> state.availableModes().stream().map(AcpSchema.SessionMode::id).toList()))
-					.orElseGet(List::of);
+				AcpSchema.SessionConfigSelect model = session.advertised().select("model", "model");
+				List<String> models = model == null ? List.of() : values(model);
+				AcpSchema.SessionModelState modelState = session.advertised().findModels();
+				List<String> legacyModels = modelState == null ? List.of()
+						: modelState.availableModels().stream().map(AcpSchema.ModelInfo::modelId).toList();
+				AcpSchema.SessionConfigSelect mode = session.advertised().select("mode", "mode");
+				AcpSchema.SessionModeState modeState = session.advertised().findModes();
+				List<String> modes = mode != null ? values(mode) : modeState == null ? List.of()
+						: modeState.availableModes().stream().map(AcpSchema.SessionMode::id).toList();
 
 				return new AcpAgentProbe(true, null, models.isEmpty() ? legacyModels : models,
-						model.map(AcpSchema.SessionConfigSelect::currentValue).orElse(null), modes);
+						model == null ? null : model.currentValue(), modes);
 			}
 		}
 		catch (RuntimeException | IOException ex) {
@@ -129,7 +125,7 @@ public final class AcpAgentProbe {
 				: select.options().stream().map(AcpSchema.SessionConfigSelectOption::value).toList();
 	}
 
-	private static void deleteQuietly(Path directory) {
+	private static void deleteQuietly(@Nullable Path directory) {
 		if (directory == null) {
 			return;
 		}
@@ -163,18 +159,23 @@ public final class AcpAgentProbe {
 
 	/**
 	 * The model the agent is already configured with — the one its credentials
-	 * demonstrably reach, and so the only safe choice for a test that runs a turn.
+	 * demonstrably reach, and so the only safe choice for a test that runs a turn. Null
+	 * when the agent advertised none.
 	 */
-	public Optional<String> currentModel() {
-		return Optional.ofNullable(currentModel).filter(m -> !m.isBlank()).or(() -> models.stream().findFirst());
+	public @Nullable String currentModel() {
+		if (currentModel != null && !currentModel.isBlank()) {
+			return currentModel;
+		}
+		return models.isEmpty() ? null : models.get(0);
 	}
 
 	/**
-	 * Some other model the agent advertises, for asserting that a change can be applied.
-	 * Whether this machine could actually prompt with it is unknown and beside the point.
+	 * Some other model the agent advertises, for asserting that a change can be applied,
+	 * or null when there is none. Whether this machine could actually prompt with it is
+	 * unknown and beside the point.
 	 */
-	public Optional<String> alternativeModel() {
-		return models.stream().filter(m -> !m.equals(currentModel)).findFirst();
+	public @Nullable String alternativeModel() {
+		return models.stream().filter(m -> !m.equals(currentModel)).findFirst().orElse(null);
 	}
 
 }

@@ -158,10 +158,11 @@ public class ConsoleRenderer {
 
 	/** The question part of a permission request; the answer is read by the caller. */
 	public synchronized void permission(PermissionQuestion question) {
+		String toolName = question.toolName();
 		String detail = String.join(" · ",
 				Stream
 					.of(question.kind() == null ? null : question.kind().name().toLowerCase(Locale.ROOT),
-							question.toolName().filter(name -> !name.equals(question.describe())).orElse(null))
+							toolName == null || toolName.equals(question.describe()) ? null : toolName)
 					.filter(Objects::nonNull)
 					.toList());
 		line(styled("  ? The agent wants to: " + question.describe(), QUESTION)
@@ -243,7 +244,8 @@ public class ConsoleRenderer {
 		if (usage.contextSize() > 0) {
 			text.append(" / ")
 				.append(tokens(usage.contextSize()))
-				.append(String.format(Locale.ROOT, " (%.0f%%)", usage.contextFraction().orElse(0) * 100));
+				.append(String.format(Locale.ROOT, " (%.0f%%)",
+						(double) usage.contextUsed() / usage.contextSize() * 100));
 		}
 		text.append(" tokens");
 		if (usage.costAmount() != null) {

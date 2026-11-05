@@ -18,6 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +58,7 @@ public class AcpAgentInstaller {
 	 */
 	private final Map<String, Path> installed = new ConcurrentHashMap<>();
 
-	public AcpAgentInstaller(RegistrySettings settings) {
+	public AcpAgentInstaller(@Nullable RegistrySettings settings) {
 		this.settings = settings == null ? RegistrySettings.defaults() : settings;
 	}
 
@@ -80,9 +81,11 @@ public class AcpAgentInstaller {
 	 * when there is not, which is the cost of the entries that publish no digest.
 	 */
 	private String version(RegistryEntry entry, RegistryEntry.Artifact artifact) {
-		return artifact.findSha256()
-			.map(sha -> sha.substring(0, Math.min(16, sha.length())))
-			.orElseGet(() -> entry.version() == null ? "unversioned" : entry.version());
+		String sha = artifact.findSha256();
+		if (sha != null) {
+			return sha.substring(0, Math.min(16, sha.length()));
+		}
+		return entry.version() == null ? "unversioned" : entry.version();
 	}
 
 	private Path doInstall(RegistryEntry entry, RegistryEntry.Artifact artifact, String key) {
@@ -95,7 +98,7 @@ public class AcpAgentInstaller {
 			return command.toAbsolutePath();
 		}
 
-		String sha256 = artifact.findSha256().orElse(null);
+		String sha256 = artifact.findSha256();
 		if (sha256 == null && settings.requireChecksum()) {
 			throw new AcpAgentInstallException("The ACP registry publishes no sha256 for '" + entry.id() + "' on "
 					+ Platform.current().id() + ", and spring.ai.acp.harness.registry.require-checksum is on."

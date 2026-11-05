@@ -19,32 +19,32 @@ class ProviderSpecTests {
 	@Test
 	void aBaseUrlThatAlreadyNamesTheApiVersionIsLeftAlone() {
 		assertThat(withBaseUrl("https://api.example.com/v1").findApiBase())
-			.contains(URI.create("https://api.example.com/v1"));
+			.isEqualTo(URI.create("https://api.example.com/v1"));
 	}
 
 	@Test
 	void aBaseUrlWithoutOneGainsIt() {
 		// What a platform hands out: one endpoint per deployment, no version in the URL.
 		assertThat(withBaseUrl("https://gateway.example.com/team-x/openai").findApiBase())
-			.contains(URI.create("https://gateway.example.com/team-x/openai/v1"));
+			.isEqualTo(URI.create("https://gateway.example.com/team-x/openai/v1"));
 	}
 
 	@Test
 	void trailingSlashesDoNotMakeADifferentEndpoint() {
 		assertThat(withBaseUrl("https://api.example.com/v1/").findApiBase())
-			.contains(URI.create("https://api.example.com/v1"));
+			.isEqualTo(URI.create("https://api.example.com/v1"));
 	}
 
 	@Test
 	void versionsOtherThanV1AreVersionsToo() {
 		assertThat(withBaseUrl("https://api.example.com/v1beta").findApiBase())
-			.contains(URI.create("https://api.example.com/v1beta"));
+			.isEqualTo(URI.create("https://api.example.com/v1beta"));
 	}
 
 	@Test
 	void theModelListingHangsOffTheCanonicalBase() {
 		assertThat(withBaseUrl("https://gateway.example.com/team-x/openai").findModelsUrl())
-			.contains(URI.create("https://gateway.example.com/team-x/openai/v1/models"));
+			.isEqualTo(URI.create("https://gateway.example.com/team-x/openai/v1/models"));
 	}
 
 	@Test
@@ -52,7 +52,7 @@ class ProviderSpecTests {
 		ProviderSpec vendor = new ProviderSpec("openai", "openai", null, "k", Map.of());
 
 		assertThat(vendor.isByo()).isFalse();
-		assertThat(vendor.findModelsUrl()).isEmpty();
+		assertThat(vendor.findModelsUrl()).isNull();
 		assertThat(withBaseUrl("https://api.example.com/v1").isByo()).isTrue();
 	}
 

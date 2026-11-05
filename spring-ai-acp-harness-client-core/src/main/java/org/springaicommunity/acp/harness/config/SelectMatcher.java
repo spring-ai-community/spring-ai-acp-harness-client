@@ -2,7 +2,8 @@ package org.springaicommunity.acp.harness.config;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -38,41 +39,44 @@ final class SelectMatcher {
 	/**
 	 * @param request what the application asked for
 	 * @param qualifier a provider id to try as a prefix, or null
-	 * @return the value to send, or empty when this option does not offer it
+	 * @return the value to send, or null when this option does not offer it
 	 */
-	static Optional<String> match(AcpSchema.SessionConfigSelect select, String request, String qualifier) {
+	static @Nullable String match(AcpSchema.SessionConfigSelect select, String request, @Nullable String qualifier) {
 		List<AcpSchema.SessionConfigSelectOption> options = select.options();
 		if (options == null || options.isEmpty()) {
 			// Not an enumerated select: the agent takes free text, so the request passes
 			// through and the
 			// agent is the one to reject it.
-			return Optional.of(request);
+			return request;
 		}
 		String wanted = lower(request);
 
-		Optional<String> exact = options.stream()
+		String exact = options.stream()
 			.filter(o -> lower(o.value()).equals(wanted))
 			.map(AcpSchema.SessionConfigSelectOption::value)
-			.findFirst();
-		if (exact.isPresent()) {
+			.findFirst()
+			.orElse(null);
+		if (exact != null) {
 			return exact;
 		}
 
-		Optional<String> byName = options.stream()
+		String byName = options.stream()
 			.filter(o -> lower(o.name()).equals(wanted))
 			.map(AcpSchema.SessionConfigSelectOption::value)
-			.findFirst();
-		if (byName.isPresent()) {
+			.findFirst()
+			.orElse(null);
+		if (byName != null) {
 			return byName;
 		}
 
 		if (qualifier != null && !qualifier.isBlank()) {
 			String qualified = lower(qualifier) + "/" + wanted;
-			Optional<String> composite = options.stream()
+			String composite = options.stream()
 				.filter(o -> lower(o.value()).equals(qualified))
 				.map(AcpSchema.SessionConfigSelectOption::value)
-				.findFirst();
-			if (composite.isPresent()) {
+				.findFirst()
+				.orElse(null);
+			if (composite != null) {
 				return composite;
 			}
 		}
@@ -81,7 +85,7 @@ final class SelectMatcher {
 			.map(AcpSchema.SessionConfigSelectOption::value)
 			.filter(v -> lower(v).endsWith("/" + wanted))
 			.toList();
-		return suffixed.size() == 1 ? Optional.of(suffixed.get(0)) : Optional.empty();
+		return suffixed.size() == 1 ? suffixed.get(0) : null;
 	}
 
 	/**
@@ -101,7 +105,7 @@ final class SelectMatcher {
 		return options.size() > 5 ? sample + ", … (" + options.size() + " in all)" : sample;
 	}
 
-	private static String lower(String value) {
+	private static String lower(@Nullable String value) {
 		return value == null ? "" : value.toLowerCase(Locale.ROOT);
 	}
 

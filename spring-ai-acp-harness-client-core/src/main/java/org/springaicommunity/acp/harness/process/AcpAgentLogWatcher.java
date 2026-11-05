@@ -11,13 +11,13 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
@@ -67,7 +67,7 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 
 	private final Path directory;
 
-	private final Function<String, Optional<AcpAgentNotice>> interpret;
+	private final Function<String, @Nullable AcpAgentNotice> interpret;
 
 	private final Consumer<AcpAgentNotice> onNotice;
 
@@ -80,9 +80,12 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 
 	private final long startedAt = System.currentTimeMillis();
 
-	private volatile Thread thread;
+	private volatile @Nullable Thread thread;
 
-	public AcpAgentLogWatcher(Path directory, Function<String, Optional<AcpAgentNotice>> interpret) {
+	/**
+	 * @param interpret what a redacted log line means to a client, or null for nothing
+	 */
+	public AcpAgentLogWatcher(Path directory, Function<String, @Nullable AcpAgentNotice> interpret) {
 		this(directory, interpret, notice -> {
 		});
 	}
@@ -91,7 +94,7 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 	 * @param onNotice called for each new notice, from the watcher's own thread, so an
 	 * implementation that blocks delays only further reading of a log file
 	 */
-	public AcpAgentLogWatcher(Path directory, Function<String, Optional<AcpAgentNotice>> interpret,
+	public AcpAgentLogWatcher(Path directory, Function<String, @Nullable AcpAgentNotice> interpret,
 			Consumer<AcpAgentNotice> onNotice) {
 		this.directory = directory;
 		this.interpret = interpret;
@@ -157,12 +160,13 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 	 * and in no guaranteed order, so a caller that wants to act on one has to be willing
 	 * to wait briefly. Polls rather than waits on a signal because the underlying source
 	 * is a file: there is nothing to signal on.
+	 * @return the notice, or null when none arrived in time
 	 */
-	public Optional<AcpAgentNotice> awaitNotice(String subject, Duration timeout) {
+	public @Nullable AcpAgentNotice awaitNotice(String subject, Duration timeout) {
 		long deadline = System.nanoTime() + Math.max(0, timeout.toNanos());
 		while (true) {
-			Optional<AcpAgentNotice> found = notices.stream().filter(n -> n.concerns(subject)).findFirst();
-			if (found.isPresent() || System.nanoTime() >= deadline) {
+			AcpAgentNotice found = notices.stream().filter(n -> n.concerns(subject)).findFirst().orElse(null);
+			if (found != null || System.nanoTime() >= deadline) {
 				return found;
 			}
 			poll();
@@ -174,7 +178,7 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 			}
 			catch (InterruptedException ex) {
 				Thread.currentThread().interrupt();
-				return Optional.empty();
+				return null;
 			}
 		}
 	}
@@ -235,14 +239,17 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 		lines.forEach(this::interpret);
 	}
 
-	private void interpret(String line) {
+	private void interpret(@Nullable String line) {
 		if (line == null || line.isBlank()) {
 			return;
 		}
 		// Redacted before an adapter sees it: an agent's log quotes the URLs it was
 		// given, and one of
 		// those can carry a token in its query string.
-		interpret.apply(SecretRedactor.redact(line)).ifPresent(this::record);
+		AcpAgentNotice notice = interpret.apply(SecretRedactor.redact(line));
+		if (notice != null) {
+			record(notice);
+		}
 	}
 
 	private void record(AcpAgentNotice notice) {

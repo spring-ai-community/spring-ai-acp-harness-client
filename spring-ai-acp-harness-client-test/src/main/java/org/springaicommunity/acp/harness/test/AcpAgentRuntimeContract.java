@@ -8,9 +8,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +29,7 @@ import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.session.AcpAgentSession;
 import org.springaicommunity.acp.harness.session.AcpAgentSessions;
 import org.springaicommunity.acp.harness.session.UnsupportedAcpAgentOperationException;
 
@@ -127,13 +128,14 @@ public abstract class AcpAgentRuntimeContract {
 			return requested;
 		}
 		AcpAgentProbe probe = AcpAgentProbe.of(runtime());
-		return preferredModels().stream()
-			.filter(probe.models()::contains)
-			.findFirst()
-			.or(probe::currentModel)
-			.orElseThrow(() -> new IllegalStateException("runtime '" + runtime().id()
+		String preferred = preferredModels().stream().filter(probe.models()::contains).findFirst().orElse(null);
+		String model = preferred != null ? preferred : probe.currentModel();
+		if (model == null) {
+			throw new IllegalStateException("runtime '" + runtime().id()
 					+ "' advertised no models, so there is nothing portable to negotiate over; set "
-					+ "-Dspring-ai-acp-harness-client.test." + runtime().id() + ".model to name one"));
+					+ "-Dspring-ai-acp-harness-client.test." + runtime().id() + ".model to name one");
+		}
+		return model;
 	}
 
 	/**
@@ -158,10 +160,11 @@ public abstract class AcpAgentRuntimeContract {
 	}
 
 	/**
-	 * A provider id to qualify {@link #supportedModel()} with, when the agent needs one.
+	 * A provider id to qualify {@link #supportedModel()} with, when the agent needs one;
+	 * null otherwise.
 	 */
-	protected Optional<String> provider() {
-		return Optional.empty();
+	protected @Nullable String provider() {
+		return null;
 	}
 
 	/**
@@ -183,8 +186,8 @@ public abstract class AcpAgentRuntimeContract {
 	 * {@code approve}, Codex {@code read-only}, OpenCode {@code plan} — with nothing in
 	 * the protocol to derive it from.
 	 */
-	protected Optional<String> reviewingMode() {
-		return Optional.empty();
+	protected @Nullable String reviewingMode() {
+		return null;
 	}
 
 	/** Settings for this runtime, already carrying the pinned model. */
@@ -192,7 +195,10 @@ public abstract class AcpAgentRuntimeContract {
 		AcpAgentSettings.Builder builder = AcpAgentSettings.builder(runtime().id(), workspace)
 			.timeout(TURN_TIMEOUT)
 			.model(supportedModel());
-		provider().ifPresent(builder::provider);
+		String provider = provider();
+		if (provider != null) {
+			builder.provider(provider);
+		}
 		return builder;
 	}
 
@@ -291,7 +297,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("a different model the agent advertises can be applied too")
 	void switchesToAnotherAdvertisedModel() {
-		String alternative = AcpAgentProbe.of(runtime()).alternativeModel().orElse(null);
+		String alternative = AcpAgentProbe.of(runtime()).alternativeModel();
 		org.junit.jupiter.api.Assumptions.assumeTrue(alternative != null,
 				"this agent advertises only one model, so there is nothing to switch to");
 
@@ -355,7 +361,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("a turn that needs a tool still ends exactly once, whatever the policy decides")
 	void aToolUsingTurnStillTerminatesExactlyOnce() {
-		org.junit.jupiter.api.Assumptions.assumeTrue(reviewingMode().isEmpty(),
+		org.junit.jupiter.api.Assumptions.assumeTrue(reviewingMode() == null,
 				"this agent has a reviewing mode, so denyByDefaultStopsAWriteWhenTheAgentAsksFirst "
 						+ "covers this invariant in the harder case");
 
@@ -373,7 +379,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("in the agent's reviewing mode, deny-by-default actually stops the write")
 	void denyByDefaultStopsAWriteWhenTheAgentAsksFirst() {
-		String mode = reviewingMode().orElse(null);
+		String mode = reviewingMode();
 		org.junit.jupiter.api.Assumptions.assumeTrue(mode != null,
 				"this agent has no mode in which it asks before acting");
 
@@ -445,7 +451,7 @@ public abstract class AcpAgentRuntimeContract {
 
 		agent.sessions().close("contract-close");
 
-		assertThat(agent.session("contract-close")).isEmpty();
+		assertThat(agent.session("contract-close")).isNull();
 		assertThat(agent.openSession("contract-close").sessionId()).isNotEqualTo(first);
 	}
 
@@ -471,7 +477,9 @@ public abstract class AcpAgentRuntimeContract {
 			.session("contract-load")
 			.user("Remember the number 8675309. Reply with just OK. Do not use tools.")
 			.call();
-		String sessionId = agent.session("contract-load").orElseThrow().sessionId();
+		AcpAgentSession loaded = agent.session("contract-load");
+		assertThat(loaded).isNotNull();
+		String sessionId = loaded.sessionId();
 		agent.sessions().close("contract-load");
 
 		agent.sessions().load("contract-reloaded", sessionId);
@@ -513,7 +521,7 @@ public abstract class AcpAgentRuntimeContract {
 	@Test
 	@DisplayName("an MCP server the agent cannot reach is reported, or the adapter does not claim to")
 	void anUnreachableMcpServerIsReportedOrNotClaimed() {
-		org.junit.jupiter.api.Assumptions.assumeTrue(runtime().logDirectory(settings().build()).isPresent(),
+		org.junit.jupiter.api.Assumptions.assumeTrue(runtime().logDirectory(settings().build()) != null,
 				"this adapter does not claim to read the agent's own diagnostics");
 
 		// Port 9 is the discard port: reserved, and nothing there answers.
@@ -613,7 +621,8 @@ public abstract class AcpAgentRuntimeContract {
 	}
 
 	private SessionConfiguration configurationOf(AcpHarnessClient agent, String session) {
-		return agent.session(session).map(s -> s.configuration()).orElse(SessionConfiguration.empty());
+		AcpAgentSession open = agent.session(session);
+		return open == null ? SessionConfiguration.empty() : open.configuration();
 	}
 
 	private static List<Throwable> chain(Throwable thrown) {

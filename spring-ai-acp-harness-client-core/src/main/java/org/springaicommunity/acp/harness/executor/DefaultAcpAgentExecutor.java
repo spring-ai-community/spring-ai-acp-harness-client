@@ -3,6 +3,8 @@ package org.springaicommunity.acp.harness.executor;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
+import org.springaicommunity.acp.harness.client.AcpAgentInfo;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.config.AcpAgentOptions;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
@@ -68,8 +70,9 @@ public final class DefaultAcpAgentExecutor implements AcpAgentExecutor {
 	}
 
 	@Override
-	public String getVersion() {
-		return client.agentInfo().map(info -> info.version()).orElse(null);
+	public @Nullable String getVersion() {
+		AcpAgentInfo info = client.agentInfo();
+		return info == null ? null : info.version();
 	}
 
 	@Override

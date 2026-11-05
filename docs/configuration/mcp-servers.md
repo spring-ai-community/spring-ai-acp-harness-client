@@ -72,8 +72,8 @@ Static `headers` are handed to the agent and frozen for the session. For expirin
 @Bean
 McpCredentialsProvider mcpCredentials(TokenService tokens) {
     return (server, principal) -> server.name().equals("inventory")
-            ? Optional.of(McpCredentials.bearer(() -> tokens.currentToken(principal)))   // asked per request
-            : Optional.empty();                                                         // as configured
+            ? McpCredentials.bearer(() -> tokens.currentToken(principal))   // asked per request
+            : null;                                                         // as configured
 }
 ```
 

@@ -2,7 +2,8 @@ package org.springaicommunity.acp.harness.runtime;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -20,7 +21,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * Giving up is the important part:
  * {@link org.springaicommunity.acp.harness.permission.PermissionPolicy#allowlist} rejects
  * a request whose tool it cannot name, so a wrong answer here would be a security hole
- * and an empty one is merely a denied tool call.
+ * and a null one is merely a denied tool call.
  */
 public final class ToolNames {
 
@@ -34,15 +35,14 @@ public final class ToolNames {
 	}
 
 	/**
-	 * An identifier from the call's {@code rawInput}, or empty. Never falls back to the
+	 * An identifier from the call's {@code rawInput}, or null. Never falls back to the
 	 * title.
 	 */
-	public static Optional<String> fromRawInput(AcpSchema.ToolCallUpdate toolCall) {
-		return Optional.ofNullable(toolCall)
-			.map(AcpSchema.ToolCallUpdate::rawInput)
-			.filter(Map.class::isInstance)
-			.map(raw -> (Map<?, ?>) raw)
-			.flatMap(ToolNames::firstKnownKey);
+	public static @Nullable String fromRawInput(AcpSchema.@Nullable ToolCallUpdate toolCall) {
+		if (toolCall == null || !(toolCall.rawInput() instanceof Map<?, ?> raw)) {
+			return null;
+		}
+		return firstKnownKey(raw);
 	}
 
 	/**
@@ -53,17 +53,22 @@ public final class ToolNames {
 	 * anything else this trades a denied tool call for an approved one, which is the
 	 * wrong direction.
 	 */
-	public static Optional<String> fromRawInputOrTitle(AcpSchema.ToolCallUpdate toolCall) {
-		return fromRawInput(toolCall).or(() -> Optional.ofNullable(toolCall).map(AcpSchema.ToolCallUpdate::title));
+	public static @Nullable String fromRawInputOrTitle(AcpSchema.@Nullable ToolCallUpdate toolCall) {
+		String fromInput = fromRawInput(toolCall);
+		if (fromInput != null) {
+			return fromInput;
+		}
+		return toolCall == null ? null : toolCall.title();
 	}
 
-	private static Optional<String> firstKnownKey(Map<?, ?> map) {
+	private static @Nullable String firstKnownKey(Map<?, ?> map) {
 		return KEYS.stream()
 			.map(map::get)
 			.filter(String.class::isInstance)
 			.map(String.class::cast)
 			.filter(s -> !s.isBlank())
-			.findFirst();
+			.findFirst()
+			.orElse(null);
 	}
 
 }

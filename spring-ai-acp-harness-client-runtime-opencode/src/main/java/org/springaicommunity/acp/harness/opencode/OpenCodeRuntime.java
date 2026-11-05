@@ -9,8 +9,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
@@ -107,7 +108,8 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 		RuntimeOptions options = settings.runtimeOptions();
 		List<String> args = new ArrayList<>(List.of("acp"));
 		args.addAll(options.textList("args"));
-		return new AcpAgentLaunchSpec.Stdio(options.text("command").orElse(executable), args, environment(settings));
+		String command = options.text("command");
+		return new AcpAgentLaunchSpec.Stdio(command == null ? executable : command, args, environment(settings));
 	}
 
 	/**
@@ -169,26 +171,32 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 
 	private static Map<String, Object> endpointConfig(AcpAgentSettings settings) {
 		ProviderSpec provider = settings.provider();
-		if (!provider.isByo() || provider.findApiType().isEmpty()) {
+		if (!provider.isByo() || provider.findApiType() == null) {
 			return Map.of();
 		}
 		String id = endpointKey(provider);
 		Map<String, Object> options = new LinkedHashMap<>();
-		options.put("baseURL", provider.findApiBase().orElseThrow().toString());
-		provider.findApiKey()
-			.ifPresent(key -> options.put("apiKey",
-					"{env:" + ProviderEnvironment.apiKeyVariable(provider.apiType()) + "}"));
+		options.put("baseURL", Objects.requireNonNull(provider.findApiBase()).toString());
+		if (provider.findApiKey() != null) {
+			options.put("apiKey", "{env:" + ProviderEnvironment.apiKeyVariable(provider.apiType()) + "}");
+		}
 
+		String providerId = provider.findId();
+		String model = settings.findModel();
 		Map<String, Object> endpoint = new LinkedHashMap<>();
 		endpoint.put("npm", COMPATIBLE_PACKAGE);
-		endpoint.put("name", provider.findId().orElse(id));
+		endpoint.put("name", providerId == null ? id : providerId);
 		endpoint.put("options", options);
-		settings.findModel().ifPresent(model -> endpoint.put("models", Map.of(model, Map.of("name", model))));
+		if (model != null) {
+			endpoint.put("models", Map.of(model, Map.of("name", model)));
+		}
 
 		Map<String, Object> config = new LinkedHashMap<>();
 		config.put("provider", Map.of(id, endpoint));
 		config.put("disabled_providers", List.of(provider.apiType()));
-		settings.findModel().ifPresent(model -> config.put("model", id + "/" + model));
+		if (model != null) {
+			config.put("model", id + "/" + model);
+		}
 		return config;
 	}
 
@@ -208,7 +216,8 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	 * request of {@code <model>}.
 	 */
 	private static String endpointKey(ProviderSpec provider) {
-		return provider.findId().filter(id -> !id.equalsIgnoreCase(provider.apiType())).orElse(DEFAULT_PROVIDER_KEY);
+		String id = provider.findId();
+		return id != null && !id.equalsIgnoreCase(provider.apiType()) ? id : DEFAULT_PROVIDER_KEY;
 	}
 
 	@Override
@@ -230,8 +239,8 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	@Override
 	public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
 		return switch (option) {
-			case PROVIDER -> settings.findModel().isPresent() || settings.provider().hasCredentials();
-			case MODEL -> !endpointConfig(settings).isEmpty() && settings.findModel().isPresent();
+			case PROVIDER -> settings.findModel() != null || settings.provider().hasCredentials();
+			case MODEL -> !endpointConfig(settings).isEmpty() && settings.findModel() != null;
 			case MODE -> false;
 		};
 	}
@@ -249,7 +258,7 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	}
 
 	@Override
-	public Optional<String> toolNameOf(AcpSchema.ToolCallUpdate toolCall) {
+	public @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
 		return ToolNames.fromRawInput(toolCall);
 	}
 
@@ -260,15 +269,13 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	}
 
 	private Path configFile(AcpAgentSettings settings) {
-		return settings.runtimeOptions()
-			.text("config-file")
-			.map(Path::of)
-			.map(Path::toAbsolutePath)
-			.orElseGet(() -> settings.runtimeHome().resolve(CONFIG_FILE));
+		String configured = settings.runtimeOptions().text("config-file");
+		return configured == null ? settings.runtimeHome().resolve(CONFIG_FILE) : Path.of(configured).toAbsolutePath();
 	}
 
 	private static String defaultExecutable() {
-		return Executables.fromEnvironment(CLI_PATH_ENV).orElse("opencode");
+		String configured = Executables.fromEnvironment(CLI_PATH_ENV);
+		return configured == null ? "opencode" : configured;
 	}
 
 }

@@ -233,7 +233,7 @@ class TanzuAiEnvironmentPostProcessorTests {
 				.fetch(URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/config"), "secret");
 
 			assertThat(TanzuAiBinding.Catalog.parse(catalog))
-				.isEqualTo(new TanzuAiBinding.Catalog("OPENAI", java.util.Optional.of("gemma-4-31b")));
+				.isEqualTo(new TanzuAiBinding.Catalog("OPENAI", "gemma-4-31b"));
 			assertThat(authorizations).containsExactly("Bearer secret");
 		}
 		finally {

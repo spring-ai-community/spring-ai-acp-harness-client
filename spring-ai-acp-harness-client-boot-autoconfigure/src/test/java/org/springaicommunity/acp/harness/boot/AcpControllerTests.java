@@ -1,8 +1,8 @@
 package org.springaicommunity.acp.harness.boot;
 
 import java.util.List;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -215,8 +215,8 @@ class AcpControllerTests {
 		}
 
 		@Override
-		public Optional<AcpAgentInfo> agentInfo() {
-			return Optional.of(new AcpAgentInfo("fake", "1.0"));
+		public AcpAgentInfo agentInfo() {
+			return new AcpAgentInfo("fake", "1.0");
 		}
 
 		@Override
@@ -225,8 +225,8 @@ class AcpControllerTests {
 		}
 
 		@Override
-		public Optional<AcpAgentSession> session(String name) {
-			return Optional.empty();
+		public @Nullable AcpAgentSession session(String name) {
+			return null;
 		}
 
 		@Override
@@ -321,8 +321,8 @@ class AcpControllerTests {
 			}
 
 			@Override
-			public Optional<AcpAgentSession> find(String name) {
-				return Optional.empty();
+			public @Nullable AcpAgentSession find(String name) {
+				return null;
 			}
 
 			@Override

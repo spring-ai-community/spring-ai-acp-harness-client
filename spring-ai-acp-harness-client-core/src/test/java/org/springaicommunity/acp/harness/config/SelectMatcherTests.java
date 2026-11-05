@@ -25,35 +25,35 @@ class SelectMatcherTests {
 
 	@Test
 	void anExactValueMatches() {
-		assertThat(SelectMatcher.match(CODEX_STYLE, "gpt-5.5", null)).contains("gpt-5.5");
+		assertThat(SelectMatcher.match(CODEX_STYLE, "gpt-5.5", null)).isEqualTo("gpt-5.5");
 	}
 
 	@Test
 	void caseDoesNotMatter() {
-		assertThat(SelectMatcher.match(CODEX_STYLE, "GPT-5.5", null)).contains("gpt-5.5");
+		assertThat(SelectMatcher.match(CODEX_STYLE, "GPT-5.5", null)).isEqualTo("gpt-5.5");
 	}
 
 	@Test
 	void aProviderQualifiedValueIsFoundFromTheBareModelName() {
-		assertThat(SelectMatcher.match(OPENCODE_STYLE, "gpt-5.4-mini", "openai")).contains("openai/gpt-5.4-mini");
+		assertThat(SelectMatcher.match(OPENCODE_STYLE, "gpt-5.4-mini", "openai")).isEqualTo("openai/gpt-5.4-mini");
 	}
 
 	@Test
 	void aUniqueSuffixIsEnoughWithoutAProvider() {
-		assertThat(SelectMatcher.match(OPENCODE_STYLE, "claude-opus-5", null)).contains("anthropic/claude-opus-5");
+		assertThat(SelectMatcher.match(OPENCODE_STYLE, "claude-opus-5", null)).isEqualTo("anthropic/claude-opus-5");
 	}
 
 	@Test
 	void anAmbiguousSuffixIsNotGuessedAt() {
 		AcpSchema.SessionConfigSelect ambiguous = select("model", "a/shared", "a/shared", "b/shared");
 
-		assertThat(SelectMatcher.match(ambiguous, "shared", null)).isEmpty();
-		assertThat(SelectMatcher.match(ambiguous, "shared", "b")).contains("b/shared");
+		assertThat(SelectMatcher.match(ambiguous, "shared", null)).isNull();
+		assertThat(SelectMatcher.match(ambiguous, "shared", "b")).isEqualTo("b/shared");
 	}
 
 	@Test
 	void aValueTheAgentDoesNotHaveDoesNotMatch() {
-		assertThat(SelectMatcher.match(CODEX_STYLE, "no-such-model", null)).isEmpty();
+		assertThat(SelectMatcher.match(CODEX_STYLE, "no-such-model", null)).isNull();
 	}
 
 	@Test

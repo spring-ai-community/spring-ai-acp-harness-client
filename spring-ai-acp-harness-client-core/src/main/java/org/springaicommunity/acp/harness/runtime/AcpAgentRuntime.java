@@ -3,8 +3,8 @@ package org.springaicommunity.acp.harness.runtime;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
 import org.springaicommunity.acp.harness.mcp.McpRequestFilter;
 
@@ -53,7 +53,7 @@ public interface AcpAgentRuntime {
 
 	/**
 	 * The {@code authMethods} id to send {@code authenticate} with before the first
-	 * session, or empty to send nothing.
+	 * session, or null to send nothing.
 	 *
 	 * <p>
 	 * ACP lets an agent refuse {@code session/new} until the client has picked one of the
@@ -65,8 +65,8 @@ public interface AcpAgentRuntime {
 	 * division as {@link #configIdsFor}. Return one only when the settings carry what
 	 * that method needs; an agent already signed in some other way needs nothing.
 	 */
-	default Optional<String> authMethod(AcpAgentSettings settings) {
-		return Optional.empty();
+	default @Nullable String authMethod(AcpAgentSettings settings) {
+		return null;
 	}
 
 	/**
@@ -75,11 +75,11 @@ public interface AcpAgentRuntime {
 	 * <p>
 	 * ACP has no required field for this: {@code toolCall.title} is prose meant for
 	 * humans, and agents that expose a stable identifier do so in their own
-	 * {@code _meta}. A runtime that cannot answer returns empty, and an allowlist policy
+	 * {@code _meta}. A runtime that cannot answer returns null, and an allowlist policy
 	 * then rejects the request rather than guessing.
 	 */
-	default Optional<String> toolNameOf(AcpSchema.ToolCallUpdate toolCall) {
-		return Optional.empty();
+	default @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
+		return null;
 	}
 
 	/**
@@ -97,11 +97,11 @@ public interface AcpAgentRuntime {
 	 * <p>
 	 * Answer only for a call recognised by a stable identifier, never by its title, and
 	 * with the <em>whole</em> plan: each answer replaces the last, as an ACP plan update
-	 * does. Return empty for a call whose content cannot be read as a plan, and it is
+	 * does. Return null for a call whose content cannot be read as a plan, and it is
 	 * reported as the tool call it is.
 	 */
-	default Optional<List<AcpSchema.PlanEntry>> planOf(AcpSchema.ToolCall toolCall) {
-		return Optional.empty();
+	default @Nullable List<AcpSchema.PlanEntry> planOf(AcpSchema.ToolCall toolCall) {
+		return null;
 	}
 
 	/**
@@ -117,15 +117,15 @@ public interface AcpAgentRuntime {
 	 *
 	 * <p>
 	 * A declaration, not an action: the core does the watching, exactly as it does the
-	 * option setting that {@link #configIdsFor} only names. Return empty unless
+	 * option setting that {@link #configIdsFor} only names. Return null unless
 	 * <em>this</em> client can know the path — an adapter that attaches to an agent
 	 * somebody else started does not know what environment that process has, and guessing
 	 * would watch the wrong file.
 	 *
 	 * @see #noticeOf(String)
 	 */
-	default Optional<Path> logDirectory(AcpAgentSettings settings) {
-		return Optional.empty();
+	default @Nullable Path logDirectory(AcpAgentSettings settings) {
+		return null;
 	}
 
 	/**
@@ -134,15 +134,15 @@ public interface AcpAgentRuntime {
 	 * <p>
 	 * The file-based twin of {@link #toolNameOf}: a pure function over the agent's own
 	 * output, reading vendor detail the protocol never standardized. Most lines mean
-	 * nothing to a client and return empty; a client is not a log aggregator, and an
+	 * nothing to a client and return null; a client is not a log aggregator, and an
 	 * adapter that reported everything would make the warnings that matter unfindable.
 	 *
 	 * <p>
 	 * The line arrives already redacted, and what is returned is logged, so an
 	 * implementation must not put anything back that a secret could hide in.
 	 */
-	default Optional<AcpAgentNotice> noticeOf(String logLine) {
-		return Optional.empty();
+	default @Nullable AcpAgentNotice noticeOf(String logLine) {
+		return null;
 	}
 
 	/**
@@ -202,7 +202,8 @@ public interface AcpAgentRuntime {
 	 * goose returns its {@code provider} option with no category at all.
 	 */
 	default List<String> configCategoriesFor(PortableOption option) {
-		return option.defaultCategory().map(List::of).orElseGet(List::of);
+		String category = option.defaultCategory();
+		return category == null ? List.of() : List.of(category);
 	}
 
 	/**
@@ -243,9 +244,9 @@ public interface AcpAgentRuntime {
 
 		private final String defaultConfigId;
 
-		private final String defaultCategory;
+		private final @Nullable String defaultCategory;
 
-		PortableOption(String defaultConfigId, String defaultCategory) {
+		PortableOption(String defaultConfigId, @Nullable String defaultCategory) {
 			this.defaultConfigId = defaultConfigId;
 			this.defaultCategory = defaultCategory;
 		}
@@ -257,10 +258,10 @@ public interface AcpAgentRuntime {
 		/**
 		 * The ACP {@code category} this option corresponds to, where the protocol names
 		 * one. There is no standard category for a provider, which is why that one is
-		 * empty.
+		 * null.
 		 */
-		public Optional<String> defaultCategory() {
-			return Optional.ofNullable(defaultCategory);
+		public @Nullable String defaultCategory() {
+			return defaultCategory;
 		}
 
 		/**

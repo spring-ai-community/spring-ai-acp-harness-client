@@ -4,7 +4,8 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * One agent as the ACP registry publishes it.
@@ -13,8 +14,14 @@ import java.util.Optional;
  * Only the fields that decide how to start it are modelled. The description, icon,
  * authors and licence are catalogue copy for a human choosing an agent, and a server-side
  * library choosing one from a property has no use for them.
+ *
+ * @param name the agent's display name, or null when the registry gives none
+ * @param version the published version, or null when the registry gives none
+ * @param distribution how to obtain it, or null when the registry describes no way this
+ * library understands
  */
-public record RegistryEntry(String id, String name, String version, Distribution distribution) {
+public record RegistryEntry(String id, @Nullable String name, @Nullable String version,
+		@Nullable Distribution distribution) {
 
 	public RegistryEntry {
 		if (id == null || id.isBlank()) {
@@ -48,9 +55,17 @@ public record RegistryEntry(String id, String name, String version, Distribution
 				return Map.of();
 			}
 
-			/** The build for {@code platform}, trying its fallbacks in order. */
-			public Optional<Artifact> forPlatform(Platform platform) {
-				return platform.candidateKeys().stream().map(artifacts::get).filter(Objects::nonNull).findFirst();
+			/**
+			 * The build for {@code platform}, trying its fallbacks in order, or null when
+			 * there is none.
+			 */
+			public @Nullable Artifact forPlatform(Platform platform) {
+				return platform.candidateKeys()
+					.stream()
+					.map(artifacts::get)
+					.filter(Objects::nonNull)
+					.findFirst()
+					.orElse(null);
 			}
 		}
 
@@ -85,7 +100,8 @@ public record RegistryEntry(String id, String name, String version, Distribution
 	 * binary agents publish, and is the whole reason {@code require-checksum} exists as a
 	 * property
 	 */
-	public record Artifact(URI archive, String command, List<String> args, Map<String, String> env, String sha256) {
+	public record Artifact(URI archive, String command, List<String> args, Map<String, String> env,
+			@Nullable String sha256) {
 
 		public Artifact {
 			if (archive == null) {
@@ -95,8 +111,9 @@ public record RegistryEntry(String id, String name, String version, Distribution
 			env = env == null ? Map.of() : Map.copyOf(env);
 		}
 
-		public Optional<String> findSha256() {
-			return Optional.ofNullable(sha256).filter(s -> !s.isBlank());
+		/** The published digest, or null when the registry gives none or a blank one. */
+		public @Nullable String findSha256() {
+			return sha256 == null || sha256.isBlank() ? null : sha256;
 		}
 	}
 }

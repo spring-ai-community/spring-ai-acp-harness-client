@@ -1,7 +1,8 @@
 package org.springaicommunity.acp.harness.permission;
 
 import java.util.List;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -14,20 +15,20 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * one-line description of the call, which is what a human actually needs to see before
  * answering.
  *
- * @param toolName the tool being requested, when the agent made it knowable
+ * @param toolName the tool being requested, or null when the agent did not make it
+ * knowable
  * @param title the agent's description of the call, or null when it gave none
  * @param kind what sort of operation the call is, or null when the agent did not say
  * @param options the choices the agent offered; the answer must be one of them
  */
-public record PermissionQuestion(Optional<String> toolName, String title, AcpSchema.ToolKind kind,
+public record PermissionQuestion(@Nullable String toolName, @Nullable String title, AcpSchema.@Nullable ToolKind kind,
 		List<AcpSchema.PermissionOption> options) {
 
 	public PermissionQuestion {
-		toolName = toolName == null ? Optional.empty() : toolName;
 		options = options == null ? List.of() : List.copyOf(options);
 	}
 
-	static PermissionQuestion of(AcpSchema.RequestPermissionRequest request, Optional<String> toolName) {
+	static PermissionQuestion of(AcpSchema.RequestPermissionRequest request, @Nullable String toolName) {
 		AcpSchema.ToolCallUpdate call = request.toolCall();
 		return new PermissionQuestion(toolName, call == null ? null : call.title(), call == null ? null : call.kind(),
 				request.options());
@@ -41,6 +42,6 @@ public record PermissionQuestion(Optional<String> toolName, String title, AcpSch
 		if (title != null && !title.isBlank()) {
 			return title.strip();
 		}
-		return toolName.orElse("an unnamed tool");
+		return toolName != null ? toolName : "an unnamed tool";
 	}
 }

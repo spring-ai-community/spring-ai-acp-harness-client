@@ -1,6 +1,6 @@
 package org.springaicommunity.acp.harness.permission;
 
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -19,8 +19,8 @@ public interface PermissionPrompt {
 
 	/**
 	 * @param question what the agent wants to do, and the choices it offered
-	 * @return the option the person chose, or empty to cancel the request
+	 * @return the option the person chose, or null to cancel the request
 	 */
-	Optional<AcpSchema.PermissionOption> ask(PermissionQuestion question);
+	AcpSchema.@Nullable PermissionOption ask(PermissionQuestion question);
 
 }

@@ -111,7 +111,7 @@ class SessionRegistryTests {
 			.hasMessageContaining("sid-1")
 			.hasMessageContaining("sid-2");
 
-		assertThat(registry.find("review")).get().extracting(AcpAgentSession::sessionId).isEqualTo("sid-1");
+		assertThat(registry.find("review")).isNotNull().extracting(AcpAgentSession::sessionId).isEqualTo("sid-1");
 	}
 
 	@Test

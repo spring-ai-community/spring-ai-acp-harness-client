@@ -2,11 +2,11 @@ package org.springaicommunity.acp.harness.turn;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
@@ -49,8 +49,8 @@ public final class AcpAgentTurn {
 
 	private final PlanTool planTool;
 
-	private AcpAgentTurn(AcpAsyncClient client, SessionUpdateRouter router, AcpAgentObservations observations,
-			PlanTool planTool) {
+	private AcpAgentTurn(AcpAsyncClient client, SessionUpdateRouter router, @Nullable AcpAgentObservations observations,
+			@Nullable PlanTool planTool) {
 		this.client = client;
 		this.router = router;
 		this.observations = observations == null ? AcpAgentObservations.NONE : observations;
@@ -85,12 +85,13 @@ public final class AcpAgentTurn {
 	public interface PlanTool {
 
 		/** Recognises nothing: every tool call is reported as one. */
-		PlanTool NONE = toolCall -> Optional.empty();
+		PlanTool NONE = toolCall -> null;
 
 		/**
-		 * @return the whole plan the call carries, or empty when it is not a plan
+		 * @return the whole plan the call carries, or null when it is not a plan
 		 */
-		Optional<List<AcpSchema.PlanEntry>> planOf(AcpSchema.ToolCall toolCall);
+		@Nullable
+		List<AcpSchema.PlanEntry> planOf(AcpSchema.ToolCall toolCall);
 
 	}
 
@@ -115,12 +116,12 @@ public final class AcpAgentTurn {
 	 * — are things a turn does not know and its client does.
 	 */
 	public Flux<AcpAgentEvent> prompt(AcpAgentSession session, List<AcpSchema.ContentBlock> content, Duration timeout,
-			AcpAgentObservations.TurnContext context) {
+			AcpAgentObservations.@Nullable TurnContext context) {
 		return Flux.create(sink -> start(sink, session, content, timeout, context), FluxSink.OverflowStrategy.BUFFER);
 	}
 
 	private void start(FluxSink<AcpAgentEvent> sink, AcpAgentSession session, List<AcpSchema.ContentBlock> content,
-			Duration timeout, AcpAgentObservations.TurnContext context) {
+			Duration timeout, AcpAgentObservations.@Nullable TurnContext context) {
 		String sessionId = session.sessionId();
 		AcpAgentObservations.TurnRecording recording = observations.turnStarted(context == null
 				? new AcpAgentObservations.TurnContext("unknown", session.name(), null, false) : context);
@@ -137,10 +138,13 @@ public final class AcpAgentTurn {
 		Set<String> planCalls = ConcurrentHashMap.newKeySet();
 
 		try {
-			router.register(sessionId, update -> map(update, planCalls).ifPresent(event -> {
-				record(recording, event);
-				sink.next(event);
-			}));
+			router.register(sessionId, update -> {
+				AcpAgentEvent event = map(update, planCalls);
+				if (event != null) {
+					record(recording, event);
+					sink.next(event);
+				}
+			});
 		}
 		catch (RuntimeException ex) {
 			// Not unregistered here: the registration that exists belongs to another
@@ -226,34 +230,34 @@ public final class AcpAgentTurn {
 	 * that did not recognise the call: this runs on the transport's inbound thread, and a
 	 * plan that cannot be read is still a tool call worth reporting.
 	 */
-	private Optional<AcpAgentEvent> map(AcpSchema.SessionUpdate update, Set<String> planCalls) {
-		Optional<AcpAgentEvent> event = AcpAgentEventMapper.map(update);
-		if (event.isEmpty()) {
-			return event;
+	private @Nullable AcpAgentEvent map(AcpSchema.SessionUpdate update, Set<String> planCalls) {
+		AcpAgentEvent event = AcpAgentEventMapper.map(update);
+		if (event == null) {
+			return null;
 		}
 		if (update instanceof AcpSchema.ToolCall call) {
-			Optional<List<AcpSchema.PlanEntry>> plan = planOf(call);
-			if (plan.isPresent()) {
+			List<AcpSchema.PlanEntry> plan = planOf(call);
+			if (plan != null) {
 				if (call.toolCallId() != null) {
 					planCalls.add(call.toolCallId());
 				}
-				return Optional.of(new AcpAgentEvent.PlanUpdated(List.copyOf(plan.get())));
+				return new AcpAgentEvent.PlanUpdated(List.copyOf(plan));
 			}
 		}
 		else if (update instanceof AcpSchema.ToolCallUpdateNotification updated
 				&& planCalls.contains(updated.toolCallId())) {
-			return Optional.empty();
+			return null;
 		}
 		return event;
 	}
 
-	private Optional<List<AcpSchema.PlanEntry>> planOf(AcpSchema.ToolCall call) {
+	private @Nullable List<AcpSchema.PlanEntry> planOf(AcpSchema.ToolCall call) {
 		try {
 			return planTool.planOf(call);
 		}
 		catch (RuntimeException ex) {
 			logger.debug("Could not read a plan from tool call {}", call.toolCallId(), ex);
-			return Optional.empty();
+			return null;
 		}
 	}
 
@@ -280,7 +284,7 @@ public final class AcpAgentTurn {
 	 * An exception message names a session id, a model or a path, and a tag that carries
 	 * one turns a counter into a leak. The class name is the fact worth grouping by.
 	 */
-	private static String reasonOf(Throwable cause) {
+	private static String reasonOf(@Nullable Throwable cause) {
 		return cause == null ? "unknown" : cause.getClass().getSimpleName();
 	}
 

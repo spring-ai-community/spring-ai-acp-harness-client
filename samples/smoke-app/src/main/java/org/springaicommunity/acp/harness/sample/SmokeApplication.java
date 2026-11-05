@@ -70,7 +70,9 @@ public class SmokeApplication {
 			// ACP and the three runtimes implement different subsets, so an application
 			// that cares
 			// asks rather than finding out from an error.
-			agent.agentInfo().ifPresent(info -> logger.info("Agent: {}", info));
+			if (agent.agentInfo() != null) {
+				logger.info("Agent: {}", agent.agentInfo());
+			}
 			for (AcpAgentSessions.Operation operation : AcpAgentSessions.Operation.values()) {
 				logger.info("Supports {}: {}", operation.method(), agent.sessions().supports(operation));
 			}

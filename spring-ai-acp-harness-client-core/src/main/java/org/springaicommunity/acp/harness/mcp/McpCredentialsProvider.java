@@ -1,7 +1,6 @@
 package org.springaicommunity.acp.harness.mcp;
 
-import java.util.Optional;
-
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 
@@ -14,9 +13,9 @@ import org.springaicommunity.acp.harness.session.SessionPrincipal;
  * thread. Returning credentials puts that server behind the proxy for that session: the
  * agent is told a {@code http://127.0.0.1} URL unique to the session and never sees a
  * token, and the proxy asks the returned {@link McpCredentials} for headers on every
- * request. Returning empty leaves the server exactly as configured, handed to the agent
+ * request. Returning null leaves the server exactly as configured, handed to the agent
  * verbatim — which is what happens to every server when no provider is configured at all.
- * The exception is a server declared without a URL: returning empty leaves it out of that
+ * The exception is a server declared without a URL: returning null leaves it out of that
  * session, and returning credentials whose {@link McpCredentials#upstream()} names the
  * URL is the only way it is offered.
  *
@@ -34,11 +33,14 @@ public interface McpCredentialsProvider {
 	 * headers
 	 * @param principal who the session is for, or null for a session opened on nobody's
 	 * behalf
+	 * @return the credentials to call the server with, or null to hand it to the agent as
+	 * configured
 	 */
-	Optional<McpCredentials> credentialsFor(McpServerSpec.Http server, SessionPrincipal principal);
+	@Nullable
+	McpCredentials credentialsFor(McpServerSpec.Http server, @Nullable SessionPrincipal principal);
 
 	/** The default: every server is handed to the agent as configured. */
-	McpCredentialsProvider NONE = (server, principal) -> Optional.empty();
+	McpCredentialsProvider NONE = (server, principal) -> null;
 
 	/** {@link #NONE}, one instance, so settings built with it compare equal. */
 	static McpCredentialsProvider none() {

@@ -48,7 +48,7 @@ class LocalSignInTests {
 
 	private final McpServerSpec.Http finops = new McpServerSpec.Http("finops-mcp", fake.mcpUrl(), Map.of());
 
-	private final SessionPrincipal me = new LocalPrincipalResolver().current().orElseThrow();
+	private final SessionPrincipal me = new LocalPrincipalResolver().current();
 
 	private final List<URI> opened = new CopyOnWriteArrayList<>();
 
@@ -99,7 +99,7 @@ class LocalSignInTests {
 	}
 
 	private String bearer(OAuth2McpCredentialsProvider provider) {
-		return provider.credentialsFor(finops, me).orElseThrow().headers().get("Authorization");
+		return java.util.Objects.requireNonNull(provider.credentialsFor(finops, me)).headers().get("Authorization");
 	}
 
 	private int callMcp(String bearer) throws Exception {

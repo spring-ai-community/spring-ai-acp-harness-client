@@ -9,9 +9,9 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.apache.commons.logging.Log;
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.Validation;
 import org.springframework.boot.EnvironmentPostProcessor;
 import org.springframework.boot.SpringApplication;
@@ -110,17 +110,16 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 			}
 		}
 		String serviceName = environment.getProperty("spring.ai.acp.harness.tanzu-ai.service-name");
-		Optional<TanzuAiBinding> found = TanzuAiBinding.find(bindings, serviceName);
-		if (found.isEmpty()) {
+		TanzuAiBinding binding = TanzuAiBinding.find(bindings, serviceName);
+		if (binding == null) {
 			logger.warn("spring.ai.acp.harness.tanzu-ai.service-name is '" + serviceName
 					+ "', but the bound Tanzu AI Models " + "service(s) are "
 					+ bindings.stream().map(TanzuAiBinding::name).toList());
 			return;
 		}
-		TanzuAiBinding binding = found.get();
 
-		Optional<TanzuAiBinding.Catalog> catalog = readCatalog(binding);
-		String wireFormat = catalog.map(TanzuAiBinding.Catalog::wireFormat).orElse(null);
+		TanzuAiBinding.Catalog catalog = readCatalog(binding);
+		String wireFormat = catalog == null ? null : catalog.wireFormat();
 		if (wireFormat == null) {
 			wireFormat = "openai";
 		}
@@ -142,13 +141,15 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 		}
 		String model = environment.getProperty("spring.ai.acp.harness.model");
 		if (!StringUtils.hasText(model)) {
-			Optional<String> chosen = catalog.flatMap(TanzuAiBinding.Catalog::toolCapableModel);
-			if (catalog.isPresent() && chosen.isEmpty()) {
+			String chosen = catalog == null ? null : catalog.toolCapableModel();
+			if (catalog != null && chosen == null) {
 				logger.warn("Tanzu AI Models service '" + binding.name() + "' advertises no TOOLS-capable model; "
 						+ "set spring.ai.acp.harness.model");
 			}
-			chosen.ifPresent(name -> properties.put("spring.ai.acp.harness.model", name));
-			model = chosen.orElse(null);
+			if (chosen != null) {
+				properties.put("spring.ai.acp.harness.model", chosen);
+			}
+			model = chosen;
 		}
 		environment.getPropertySources().addFirst(new MapPropertySource(PROPERTY_SOURCE_NAME, properties));
 		logger.info("Using Tanzu AI Models service '" + binding.name() + "' at " + baseUrl.getHost()
@@ -158,28 +159,28 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 
 	/**
 	 * The service's catalog: which wire format its models speak, and which of them can
-	 * call tools. Empty, with a warning, if it cannot be read; the OpenAI API is then
+	 * call tools. Null, with a warning, if it cannot be read; the OpenAI API is then
 	 * assumed and no model is chosen.
 	 */
-	private Optional<TanzuAiBinding.Catalog> readCatalog(TanzuAiBinding binding) {
-		if (binding.configUrl() == null) {
+	private TanzuAiBinding.@Nullable Catalog readCatalog(TanzuAiBinding binding) {
+		URI configUrl = binding.configUrl();
+		if (configUrl == null) {
 			logger.warn("Tanzu AI Models service '" + binding.name() + "' publishes no config_url; assuming the "
 					+ "OpenAI API, and set spring.ai.acp.harness.model");
-			return Optional.empty();
+			return null;
 		}
 		try {
-			Validation.requireSecureUrl(binding.configUrl(), "Tanzu AI Models config_url");
-			return Optional
-				.of(TanzuAiBinding.Catalog.parse(catalogReader.fetch(binding.configUrl(), binding.apiKey())));
+			Validation.requireSecureUrl(configUrl, "Tanzu AI Models config_url");
+			return TanzuAiBinding.Catalog.parse(catalogReader.fetch(configUrl, binding.apiKey()));
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			return Optional.empty();
+			return null;
 		}
 		catch (IOException | RuntimeException ex) {
 			logger.warn("Could not read the catalog of Tanzu AI Models service '" + binding.name() + "' ("
 					+ ex.getMessage() + "); assuming the OpenAI API, and set spring.ai.acp.harness.model");
-			return Optional.empty();
+			return null;
 		}
 	}
 

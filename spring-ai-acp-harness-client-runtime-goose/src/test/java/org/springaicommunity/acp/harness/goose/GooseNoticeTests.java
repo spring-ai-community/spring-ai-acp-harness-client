@@ -53,9 +53,16 @@ class GooseNoticeTests {
 
 	private final GooseRuntime runtime = new GooseRuntime();
 
+	/** The notice the runtime reads out of {@code line}, which must be one. */
+	private AcpAgentNotice notice(String line) {
+		AcpAgentNotice notice = runtime.noticeOf(line);
+		assertThat(notice).isNotNull();
+		return notice;
+	}
+
 	@Test
 	void anUnreachableHttpServerIsReportedAgainstTheNameTheApplicationGaveIt() {
-		AcpAgentNotice notice = runtime.noticeOf(HTTP_FAILURE).orElseThrow();
+		AcpAgentNotice notice = notice(HTTP_FAILURE);
 
 		assertThat(notice.severity()).isEqualTo(AcpAgentNotice.Severity.WARNING);
 		assertThat(notice.subject()).isEqualTo("finops-mcp");
@@ -65,14 +72,14 @@ class GooseNoticeTests {
 
 	@Test
 	void theRestOfTheJsonRecordIsNotPartOfWhatTheAgentSaid() {
-		AcpAgentNotice notice = runtime.noticeOf(HTTP_FAILURE).orElseThrow();
+		AcpAgentNotice notice = notice(HTTP_FAILURE);
 
 		assertThat(notice.detail()).doesNotContain("goose::agents::agent").doesNotContain("\"target\"");
 	}
 
 	@Test
 	void aStdioServerThatExitedIsReportedTheSameWay() {
-		AcpAgentNotice notice = runtime.noticeOf(STDIO_FAILURE).orElseThrow();
+		AcpAgentNotice notice = notice(STDIO_FAILURE);
 
 		assertThat(notice.subject()).isEqualTo("local-tools");
 		assertThat(notice.detail()).contains("process quit before initialization");
@@ -80,7 +87,7 @@ class GooseNoticeTests {
 
 	@Test
 	void sinceOneFiftyFiveTheNameAndReasonArriveAsFieldsOfTheirOwn() {
-		AcpAgentNotice notice = runtime.noticeOf(HTTP_FAILURE_1_55).orElseThrow();
+		AcpAgentNotice notice = notice(HTTP_FAILURE_1_55);
 
 		assertThat(notice.severity()).isEqualTo(AcpAgentNotice.Severity.WARNING);
 		assertThat(notice.subject()).isEqualTo("spring-ai-acp-harness-client-contract-mcp");
@@ -92,7 +99,7 @@ class GooseNoticeTests {
 
 	@Test
 	void sinceOneFiftyFiveAStdioServerThatExitedIsReportedTheSameWay() {
-		AcpAgentNotice notice = runtime.noticeOf(STDIO_FAILURE_1_55).orElseThrow();
+		AcpAgentNotice notice = notice(STDIO_FAILURE_1_55);
 
 		assertThat(notice.subject()).isEqualTo("silence-probe-mcp");
 		assertThat(notice.detail()).contains("process quit before initialization");
@@ -102,21 +109,21 @@ class GooseNoticeTests {
 	void sinceOneFiftyFiveTheOtherExtensionManagerLinesAreNotNotices() {
 		assertThat(runtime.noticeOf("""
 				{"timestamp":"2026-10-20T13:45:39.648285Z","level":"ERROR","fields":{"message":\
-				"worker quit with fatal: Transport channel closed"},"target":"rmcp::transport::worker"}""")).isEmpty();
+				"worker quit with fatal: Transport channel closed"},"target":"rmcp::transport::worker"}""")).isNull();
 	}
 
 	@Test
 	void everythingElseInTheLogIsNoneOfAClientsBusiness() {
 		assertThat(runtime.noticeOf("""
 				{"timestamp":"2026-09-21T01:27:23.400000Z","level":"INFO","fields":{"message":\
-				"Starting session"},"target":"goose::session"}""")).isEmpty();
-		assertThat(runtime.noticeOf("")).isEmpty();
-		assertThat(runtime.noticeOf(null)).isEmpty();
+				"Starting session"},"target":"goose::session"}""")).isNull();
+		assertThat(runtime.noticeOf("")).isNull();
+		assertThat(runtime.noticeOf(null)).isNull();
 	}
 
 	@Test
 	void theLogDirectoryFollowsTheStateHomeGooseItselfUses() {
-		Path directory = runtime.logDirectory(settings(Map.of())).orElseThrow();
+		Path directory = runtime.logDirectory(settings(Map.of()));
 
 		// Compared as strings: AssertJ's PathAssert.endsWith resolves the real path,
 		// which requires the directory to exist — true on a machine with goose installed,
@@ -127,7 +134,7 @@ class GooseNoticeTests {
 
 	@Test
 	void aDeploymentThatPutsTheLogElsewhereSaysSoInTierThree() {
-		Path directory = runtime.logDirectory(settings(Map.of("log-dir", "/var/log/goose"))).orElseThrow();
+		Path directory = runtime.logDirectory(settings(Map.of("log-dir", "/var/log/goose")));
 
 		assertThat(directory).isEqualTo(Paths.get("/var/log/goose"));
 	}

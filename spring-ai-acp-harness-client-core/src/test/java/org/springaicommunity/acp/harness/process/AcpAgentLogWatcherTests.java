@@ -6,9 +6,9 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
@@ -33,9 +33,8 @@ class AcpAgentLogWatcherTests {
 	 * Stands in for an adapter: the interesting lines name a subject, the rest mean
 	 * nothing.
 	 */
-	private static Optional<AcpAgentNotice> interpret(String line) {
-		return line.startsWith("FAILED ") ? Optional.of(AcpAgentNotice.warning(line.substring(7).split(" ")[0], line))
-				: Optional.empty();
+	private static @Nullable AcpAgentNotice interpret(String line) {
+		return line.startsWith("FAILED ") ? AcpAgentNotice.warning(line.substring(7).split(" ")[0], line) : null;
 	}
 
 	private AcpAgentLogWatcher watcher() {
@@ -132,7 +131,7 @@ class AcpAgentLogWatcherTests {
 			watcher.start();
 			write("agent.log", "FAILED finops-mcp could not connect");
 
-			assertThat(watcher.awaitNotice("finops-mcp", Duration.ofSeconds(5))).isPresent();
+			assertThat(watcher.awaitNotice("finops-mcp", Duration.ofSeconds(5))).isNotNull();
 		}
 	}
 
@@ -141,7 +140,7 @@ class AcpAgentLogWatcherTests {
 		try (AcpAgentLogWatcher watcher = watcher()) {
 			watcher.start();
 
-			assertThat(watcher.awaitNotice("finops-mcp", Duration.ofMillis(200))).isEmpty();
+			assertThat(watcher.awaitNotice("finops-mcp", Duration.ofMillis(200))).isNull();
 		}
 	}
 

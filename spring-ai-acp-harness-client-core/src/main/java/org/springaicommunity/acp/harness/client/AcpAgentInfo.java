@@ -1,8 +1,8 @@
 package org.springaicommunity.acp.harness.client;
 
-import com.agentclientprotocol.sdk.spec.AcpSchema;
+import org.jspecify.annotations.Nullable;
 
-import java.util.Optional;
+import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 /**
  * What the agent said about itself during {@code initialize}.
@@ -11,16 +11,16 @@ import java.util.Optional;
  * Both fields are optional in ACP and at least one agent leaves them out, so this exists
  * rather than exposing {@code AcpSchema.Implementation} directly: a caller asking "which
  * agent am I talking to" gets a stable two-field answer instead of a schema record that
- * may grow fields, and the absent case is an empty {@link Optional} rather than a null
- * inside a record.
+ * may grow fields, and an agent that gave no name is a {@code null} rather than a record
+ * with a null name inside.
  */
-public record AcpAgentInfo(String name, String version) {
+public record AcpAgentInfo(String name, @Nullable String version) {
 
-	static Optional<AcpAgentInfo> from(AcpSchema.Implementation implementation) {
+	static @Nullable AcpAgentInfo from(AcpSchema.@Nullable Implementation implementation) {
 		if (implementation == null || implementation.name() == null) {
-			return Optional.empty();
+			return null;
 		}
-		return Optional.of(new AcpAgentInfo(implementation.name(), implementation.version()));
+		return new AcpAgentInfo(implementation.name(), implementation.version());
 	}
 
 	@Override

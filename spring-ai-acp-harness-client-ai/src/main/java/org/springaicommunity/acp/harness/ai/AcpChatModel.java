@@ -177,7 +177,7 @@ public class AcpChatModel implements ChatModel {
 	 */
 	private String render(Prompt prompt, AcpChatOptions options) {
 		List<Message> messages = prompt.getInstructions();
-		boolean continuing = options.getSession() != null && client.session(options.getSession()).isPresent();
+		boolean continuing = options.getSession() != null && client.session(options.getSession()) != null;
 		List<Message> toSend = continuing ? sinceLastAssistantMessage(messages) : messages;
 		if (toSend.isEmpty()) {
 			throw new IllegalArgumentException(
@@ -337,9 +337,9 @@ public class AcpChatModel implements ChatModel {
 	 */
 	private String modelOf(AcpChatOptions options) {
 		if (options.getSession() != null) {
-			String applied = client.session(options.getSession())
-				.flatMap(session -> session.configuration().applied(AcpAgentRuntime.PortableOption.MODEL))
-				.orElse(null);
+			var session = client.session(options.getSession());
+			String applied = session == null ? null
+					: session.configuration().applied(AcpAgentRuntime.PortableOption.MODEL);
 			if (applied != null) {
 				return applied;
 			}

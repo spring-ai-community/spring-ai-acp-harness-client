@@ -2,8 +2,9 @@ package org.springaicommunity.acp.harness.config;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.stream.Stream;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -26,7 +27,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * returns neither.
  */
 public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> configOptions,
-		AcpSchema.SessionModeState modes, AcpSchema.SessionModelState models) {
+		AcpSchema.@Nullable SessionModeState modes, AcpSchema.@Nullable SessionModelState models) {
 
 	private static final AdvertisedSessionConfig EMPTY = new AdvertisedSessionConfig(List.of(), null, null);
 
@@ -42,16 +43,21 @@ public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> config
 	}
 
 	/**
-	 * The select option matching {@code id}, or failing that {@code category}.
+	 * The select option matching {@code id}, or failing that {@code category}, or null.
 	 *
 	 * <p>
 	 * Both are needed. Goose returns its {@code provider} option with a null category,
 	 * and Codex returns two options in the {@code mode} family under different ids, so
 	 * neither key alone finds everything.
 	 */
-	public Optional<AcpSchema.SessionConfigSelect> select(String id, String category) {
-		Optional<AcpSchema.SessionConfigSelect> byId = selects().filter(o -> equalsIgnoreCase(o.id(), id)).findFirst();
-		return byId.isPresent() ? byId : selects().filter(o -> equalsIgnoreCase(o.category(), category)).findFirst();
+	public AcpSchema.@Nullable SessionConfigSelect select(String id, @Nullable String category) {
+		AcpSchema.SessionConfigSelect byId = selects().filter(o -> equalsIgnoreCase(o.id(), id))
+			.findFirst()
+			.orElse(null);
+		if (byId != null) {
+			return byId;
+		}
+		return selects().filter(o -> equalsIgnoreCase(o.category(), category)).findFirst().orElse(null);
 	}
 
 	/** Every select option the agent advertised, in the order it advertised them. */
@@ -61,16 +67,23 @@ public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> config
 			.map(AcpSchema.SessionConfigSelect.class::cast);
 	}
 
-	public Optional<AcpSchema.SessionModeState> findModes() {
-		return Optional.ofNullable(modes).filter(m -> m.availableModes() != null && !m.availableModes().isEmpty());
+	/**
+	 * The legacy {@code modes} state, or null when the agent sent none or an empty one.
+	 */
+	public AcpSchema.@Nullable SessionModeState findModes() {
+		return modes != null && modes.availableModes() != null && !modes.availableModes().isEmpty() ? modes : null;
 	}
 
-	public Optional<AcpSchema.SessionModelState> findModels() {
-		return Optional.ofNullable(models).filter(m -> m.availableModels() != null && !m.availableModels().isEmpty());
+	/**
+	 * The legacy {@code models} state, or null when the agent sent none or an empty one.
+	 */
+	public AcpSchema.@Nullable SessionModelState findModels() {
+		return models != null && models.availableModels() != null && !models.availableModels().isEmpty() ? models
+				: null;
 	}
 
 	public boolean isEmpty() {
-		return configOptions.isEmpty() && findModes().isEmpty() && findModels().isEmpty();
+		return configOptions.isEmpty() && findModes() == null && findModels() == null;
 	}
 
 	/**
@@ -82,11 +95,11 @@ public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> config
 	 * provider changes which models are legal, so a model resolved against the
 	 * pre-provider list would be resolved against the wrong one.
 	 */
-	public AdvertisedSessionConfig withConfigOptions(List<AcpSchema.SessionConfigOption> options) {
+	public AdvertisedSessionConfig withConfigOptions(@Nullable List<AcpSchema.SessionConfigOption> options) {
 		return options == null || options.isEmpty() ? this : new AdvertisedSessionConfig(options, modes, models);
 	}
 
-	private static boolean equalsIgnoreCase(String a, String b) {
+	private static boolean equalsIgnoreCase(@Nullable String a, @Nullable String b) {
 		return a != null && b != null && a.toLowerCase(Locale.ROOT).equals(b.toLowerCase(Locale.ROOT));
 	}
 }

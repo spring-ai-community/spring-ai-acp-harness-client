@@ -3,7 +3,6 @@ package org.springaicommunity.acp.harness.client;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -14,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AdvertisedSessionConfig;
@@ -67,7 +67,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 	private final ConfigResolver configResolver;
 
-	private final AcpAgentInfo agentInfo;
+	private final @Nullable AcpAgentInfo agentInfo;
 
 	private final AcpAgentSessions sessionOperations;
 
@@ -78,14 +78,14 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	/**
 	 * Null when the transport cannot tell; see {@code AcpHarnessClientFactory.Liveness}.
 	 */
-	private final BooleanSupplier alive;
+	private final @Nullable BooleanSupplier alive;
 
 	private final AtomicBoolean closed = new AtomicBoolean();
 
 	private final Runnable onClose;
 
 	/** Set once by the factory before this client is handed out, or left null. */
-	private volatile AcpAgentLogWatcher watcher;
+	private volatile @Nullable AcpAgentLogWatcher watcher;
 
 	/**
 	 * Each session's MCP servers as the agent is to see them; owns the loopback proxy, if
@@ -93,17 +93,27 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 */
 	private final McpAccess mcpAccess;
 
+	/**
+	 * @param recorder the config-option recorder wrapped around the transport, or null
+	 * for a fresh one
+	 * @param initialized the agent's {@code initialize} answer, or null when none was
+	 * kept
+	 * @param alive whether the transport is still up, or null when it cannot tell
+	 * @param onClose run after the connection closes, or null for nothing
+	 */
 	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
-			SessionRegistry sessions, SessionUpdateRouter router, SessionConfigRecorder recorder,
-			AcpSchema.InitializeResponse initialized, BooleanSupplier alive, Runnable onClose) {
+			SessionRegistry sessions, SessionUpdateRouter router, @Nullable SessionConfigRecorder recorder,
+			AcpSchema.@Nullable InitializeResponse initialized, @Nullable BooleanSupplier alive,
+			@Nullable Runnable onClose) {
 		this(acp, runtime, settings, sessions, router, recorder, initialized, AcpProtocol.V1, AcpAgentObservations.NONE,
 				alive, onClose);
 	}
 
+	/** Same, with the negotiated protocol version and an observation sink. */
 	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
-			SessionRegistry sessions, SessionUpdateRouter router, SessionConfigRecorder recorder,
-			AcpSchema.InitializeResponse initialized, int protocolVersion, AcpAgentObservations observations,
-			BooleanSupplier alive, Runnable onClose) {
+			SessionRegistry sessions, SessionUpdateRouter router, @Nullable SessionConfigRecorder recorder,
+			AcpSchema.@Nullable InitializeResponse initialized, int protocolVersion,
+			@Nullable AcpAgentObservations observations, @Nullable BooleanSupplier alive, @Nullable Runnable onClose) {
 		this.protocolVersion = protocolVersion;
 		this.observations = observations == null ? AcpAgentObservations.NONE : observations;
 		this.acp = acp;
@@ -113,7 +123,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		this.router = router;
 		this.recorder = recorder == null ? new SessionConfigRecorder() : recorder;
 		this.configResolver = new ConfigResolver(runtime, settings.onUnsupported());
-		this.agentInfo = initialized == null ? null : AcpAgentInfo.from(initialized.agentInfo()).orElse(null);
+		this.agentInfo = initialized == null ? null : AcpAgentInfo.from(initialized.agentInfo());
 		this.mcpAccess = new McpAccess(settings.mcp().credentials(), settings.timeout(),
 				runtime.mcpRequestFilters(settings), runtime.mcpScope());
 		this.sessionOperations = new DefaultAcpAgentSessions(acp, runtime.id(), settings,
@@ -132,7 +142,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * the eleventh thing this class is handed; set once, by
 	 * {@code AcpHarnessClientFactory}, before anything can call {@link #notices()}.
 	 */
-	void watch(AcpAgentLogWatcher watcher) {
+	void watch(@Nullable AcpAgentLogWatcher watcher) {
 		this.watcher = watcher;
 	}
 
@@ -153,8 +163,8 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	@Override
-	public Optional<AcpAgentInfo> agentInfo() {
-		return Optional.ofNullable(agentInfo);
+	public @Nullable AcpAgentInfo agentInfo() {
+		return agentInfo;
 	}
 
 	@Override
@@ -240,15 +250,15 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	@Override
-	public AcpAgentSession openSession(String name, SessionPrincipal principal) {
+	public AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
 		return openSession(name, settings, principal);
 	}
 
 	/**
 	 * Asked on the caller's thread, never later: see {@link SessionPrincipalResolver}.
 	 */
-	private SessionPrincipal currentPrincipal() {
-		return settings.mcp().principals().current().orElse(null);
+	private @Nullable SessionPrincipal currentPrincipal() {
+		return settings.mcp().principals().current();
 	}
 
 	/**
@@ -267,7 +277,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * fails; once the session exists the registry owns it and releases it whenever the
 	 * session is forgotten.
 	 */
-	private AcpAgentSession openSession(String name, AcpAgentSettings effective, SessionPrincipal principal) {
+	private AcpAgentSession openSession(String name, AcpAgentSettings effective, @Nullable SessionPrincipal principal) {
 		AtomicReference<AdvertisedSessionConfig> advertised = new AtomicReference<>();
 		AtomicBoolean opened = new AtomicBoolean();
 		AcpAgentSession session = sessions.resolve(name, principal, n -> {
@@ -369,7 +379,10 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * the caller's thread; see {@link #closeRemote}.
 	 */
 	private void forgetAndClose(String name) {
-		sessions.remove(name).ifPresent(session -> closeRemote(session.sessionId()));
+		AcpAgentSession session = sessions.remove(name);
+		if (session != null) {
+			closeRemote(session.sessionId());
+		}
 	}
 
 	/**
@@ -377,7 +390,10 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * {@link #closeRemoteWithoutWaiting}.
 	 */
 	private void forgetAndCloseWithoutWaiting(String name) {
-		sessions.remove(name).ifPresent(session -> closeRemoteWithoutWaiting(session.sessionId()));
+		AcpAgentSession session = sessions.remove(name);
+		if (session != null) {
+			closeRemoteWithoutWaiting(session.sessionId());
+		}
 	}
 
 	/**
@@ -408,14 +424,14 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 			return;
 		}
 		for (McpServerSpec server : effective.mcpServers()) {
-			Optional<AcpAgentNotice> failure = current.awaitNotice(server.name(), effective.mcp().detectTimeout());
-			if (failure.isEmpty()) {
+			AcpAgentNotice failure = current.awaitNotice(server.name(), effective.mcp().detectTimeout());
+			if (failure == null) {
 				continue;
 			}
 			forgetAndClose(name);
 			throw new AcpHarnessClientException("Agent '" + runtime.id() + "' could not load MCP server '"
 					+ server.name() + "', so this session would have run without its tools; the agent reported: "
-					+ failure.get().detail());
+					+ failure.detail());
 		}
 	}
 
@@ -463,11 +479,11 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 				&& same(applied.of(PortableOption.MODE).requested(), effective.mode());
 	}
 
-	private static boolean same(String applied, String requested) {
+	private static boolean same(@Nullable String applied, @Nullable String requested) {
 		return Objects.equals(blankToNull(applied), blankToNull(requested));
 	}
 
-	private static String blankToNull(String value) {
+	private static @Nullable String blankToNull(@Nullable String value) {
 		return value == null || value.isBlank() ? null : value;
 	}
 
@@ -475,11 +491,11 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 		private final StringBuilder text = new StringBuilder();
 
-		private String sessionName;
+		private @Nullable String sessionName;
 
 		private AcpAgentOptions options = AcpAgentOptions.none();
 
-		private SessionPrincipal principal;
+		private @Nullable SessionPrincipal principal;
 
 		@Override
 		public PromptSpec session(String name) {
@@ -488,7 +504,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		}
 
 		@Override
-		public PromptSpec principal(SessionPrincipal principal) {
+		public PromptSpec principal(@Nullable SessionPrincipal principal) {
 			this.principal = principal;
 			return this;
 		}
@@ -505,7 +521,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		}
 
 		@Override
-		public PromptSpec options(AcpAgentOptions options) {
+		public PromptSpec options(@Nullable AcpAgentOptions options) {
 			this.options = options == null ? AcpAgentOptions.none() : options;
 			return this;
 		}
@@ -622,28 +638,32 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 */
 	private static AcpAgentObservations.TurnContext turnContext(AcpAgentSession session, AcpAgentSettings effective,
 			boolean ephemeral) {
-		String model = session.configuration()
-			.applied(PortableOption.MODEL)
-			.or(() -> currentModelOf(session))
-			.orElseGet(effective::model);
+		String model = session.configuration().applied(PortableOption.MODEL);
+		if (model == null) {
+			model = currentModelOf(session);
+		}
+		if (model == null) {
+			model = effective.model();
+		}
 		return new AcpAgentObservations.TurnContext(effective.runtime(), session.name(), model, ephemeral);
 	}
 
 	/**
-	 * The model the agent says this session is set to, when it advertises one.
+	 * The model the agent says this session is set to, or null when it advertises none.
 	 *
 	 * <p>
 	 * Matched by the portable {@code model} category as well as the id, because that pair
 	 * is all ACP standardizes — an adapter's candidate ids belong to the resolver, and a
 	 * tag is not worth threading one through for.
 	 */
-	private static Optional<String> currentModelOf(AcpAgentSession session) {
-		return session.advertised()
-			.select("model", "model")
-			.map(AcpSchema.SessionConfigSelect::currentValue)
-			.filter(value -> !value.isBlank())
-			.or(() -> Optional.ofNullable(session.advertised().findModels().orElse(null))
-				.map(AcpSchema.SessionModelState::currentModelId));
+	private static @Nullable String currentModelOf(AcpAgentSession session) {
+		AcpSchema.SessionConfigSelect select = session.advertised().select("model", "model");
+		String current = select == null ? null : select.currentValue();
+		if (current != null && !current.isBlank()) {
+			return current;
+		}
+		AcpSchema.SessionModelState models = session.advertised().findModels();
+		return models == null ? null : models.currentModelId();
 	}
 
 	private record DefaultAcpAgentResponse(String content,
@@ -654,7 +674,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	@Override
-	public Optional<AcpAgentSession> session(String name) {
+	public @Nullable AcpAgentSession session(String name) {
 		return sessions.find(name);
 	}
 

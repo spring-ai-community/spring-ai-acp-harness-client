@@ -4,8 +4,8 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
 
 /**
@@ -39,9 +39,12 @@ public record SessionConfiguration(Map<PortableOption, OptionResolution> resolut
 		return resolutions.get(option);
 	}
 
-	/** The value the agent actually took for {@code option}, when it took one. */
-	public Optional<String> applied(PortableOption option) {
-		return Optional.of(of(option)).filter(OptionResolution::isApplied).map(OptionResolution::applied);
+	/**
+	 * The value the agent actually took for {@code option}, or null when it took none.
+	 */
+	public @Nullable String applied(PortableOption option) {
+		OptionResolution resolution = of(option);
+		return resolution.isApplied() ? resolution.applied() : null;
 	}
 
 	/** Options that were requested and could not be honored. */

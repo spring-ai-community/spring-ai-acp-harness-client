@@ -17,9 +17,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +63,7 @@ public class AcpAgentRegistry {
 
 	private final AtomicReference<Map<String, RegistryEntry>> entries = new AtomicReference<>();
 
-	public AcpAgentRegistry(RegistrySettings settings) {
+	public AcpAgentRegistry(@Nullable RegistrySettings settings) {
 		this.settings = settings == null ? RegistrySettings.defaults() : settings;
 	}
 
@@ -71,9 +71,9 @@ public class AcpAgentRegistry {
 		return settings;
 	}
 
-	/** The entry for {@code id}, or empty if the catalogue has never heard of it. */
-	public Optional<RegistryEntry> find(String id) {
-		return Optional.ofNullable(id).map(key -> entries().get(key.toLowerCase(Locale.ROOT)));
+	/** The entry for {@code id}, or null if the catalogue has never heard of it. */
+	public @Nullable RegistryEntry find(@Nullable String id) {
+		return id == null ? null : entries().get(id.toLowerCase(Locale.ROOT));
 	}
 
 	/** Every agent id the catalogue knows, sorted. */
@@ -96,63 +96,68 @@ public class AcpAgentRegistry {
 	}
 
 	private Map<String, RegistryEntry> load() {
-		Optional<String> cached = readFreshCache();
-		if (cached.isPresent()) {
-			return parseQuietly(cached.get(), "the cached snapshot").orElseGet(this::bundled);
+		String cached = readFreshCache();
+		if (cached != null) {
+			Map<String, RegistryEntry> parsed = parseQuietly(cached, "the cached snapshot");
+			return parsed != null ? parsed : bundled();
 		}
 		if (!settings.offline()) {
-			Optional<String> fetched = fetch();
-			if (fetched.isPresent()) {
-				Optional<Map<String, RegistryEntry>> parsed = parseQuietly(fetched.get(), settings.url().toString());
-				if (parsed.isPresent()) {
-					writeCache(fetched.get());
-					return parsed.get();
+			String fetched = fetch();
+			if (fetched != null) {
+				Map<String, RegistryEntry> parsed = parseQuietly(fetched, settings.url().toString());
+				if (parsed != null) {
+					writeCache(fetched);
+					return parsed;
 				}
 			}
 		}
 		// A snapshot too old to refresh still names real agents; an unreachable CDN does
 		// not.
-		return readAnyCache().flatMap(json -> parseQuietly(json, "the stale cached snapshot")).orElseGet(this::bundled);
+		String stale = readAnyCache();
+		Map<String, RegistryEntry> parsed = stale == null ? null : parseQuietly(stale, "the stale cached snapshot");
+		return parsed != null ? parsed : bundled();
 	}
 
-	private Optional<String> readFreshCache() {
+	/** The cached snapshot, or null when there is none young enough. */
+	private @Nullable String readFreshCache() {
 		Path file = settings.snapshotFile();
 		try {
 			if (!Files.isRegularFile(file)) {
-				return Optional.empty();
+				return null;
 			}
 			Instant modified = Files.getLastModifiedTime(file).toInstant();
 			if (modified.plus(settings.refresh()).isBefore(Instant.now())) {
-				return Optional.empty();
+				return null;
 			}
-			return Optional.of(Files.readString(file, StandardCharsets.UTF_8));
+			return Files.readString(file, StandardCharsets.UTF_8);
 		}
 		catch (IOException ex) {
 			logger.debug("Could not read the cached ACP registry snapshot at {}", file, ex);
-			return Optional.empty();
+			return null;
 		}
 	}
 
-	private Optional<String> readAnyCache() {
+	/** The cached snapshot whatever its age, or null when there is none. */
+	private @Nullable String readAnyCache() {
 		Path file = settings.snapshotFile();
 		try {
-			return Files.isRegularFile(file) ? Optional.of(Files.readString(file, StandardCharsets.UTF_8))
-					: Optional.empty();
+			return Files.isRegularFile(file) ? Files.readString(file, StandardCharsets.UTF_8) : null;
 		}
 		catch (IOException ex) {
-			return Optional.empty();
+			return null;
 		}
 	}
 
-	private Optional<String> fetch() {
+	/** The published catalogue, or null when it could not be fetched. */
+	private @Nullable String fetch() {
 		URI url = settings.url();
 		if ("file".equalsIgnoreCase(url.getScheme())) {
 			try {
-				return Optional.of(Files.readString(Path.of(url), StandardCharsets.UTF_8));
+				return Files.readString(Path.of(url), StandardCharsets.UTF_8);
 			}
 			catch (IOException | RuntimeException ex) {
 				logger.warn("Could not read the ACP registry from {}: {}", url, ex.toString());
-				return Optional.empty();
+				return null;
 			}
 		}
 		try (HttpClient client = HttpClient.newBuilder()
@@ -165,17 +170,17 @@ public class AcpAgentRegistry {
 			if (response.statusCode() != 200) {
 				logger.warn("The ACP registry at {} answered HTTP {}; using the snapshot on disk", url,
 						response.statusCode());
-				return Optional.empty();
+				return null;
 			}
-			return Optional.of(response.body());
+			return response.body();
 		}
 		catch (IOException ex) {
 			logger.warn("Could not reach the ACP registry at {}: {}", url, ex.toString());
-			return Optional.empty();
+			return null;
 		}
 		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
-			return Optional.empty();
+			return null;
 		}
 	}
 
@@ -207,18 +212,19 @@ public class AcpAgentRegistry {
 		}
 	}
 
-	private Optional<Map<String, RegistryEntry>> parseQuietly(String json, String source) {
+	/** The agents in {@code json}, or null when it lists none or cannot be read. */
+	private @Nullable Map<String, RegistryEntry> parseQuietly(String json, String source) {
 		try {
 			Map<String, RegistryEntry> parsed = parse(json);
 			if (parsed.isEmpty()) {
 				logger.warn("The ACP registry from {} listed no agents", source);
-				return Optional.empty();
+				return null;
 			}
-			return Optional.of(parsed);
+			return parsed;
 		}
 		catch (RuntimeException ex) {
 			logger.warn("Could not read the ACP registry from {}: {}", source, ex.toString());
-			return Optional.empty();
+			return null;
 		}
 	}
 
@@ -260,7 +266,7 @@ public class AcpAgentRegistry {
 				distribution(agent.path("distribution")));
 	}
 
-	private RegistryEntry.Distribution distribution(JsonNode node) {
+	private RegistryEntry.@Nullable Distribution distribution(JsonNode node) {
 		if (node.has("binary")) {
 			Map<String, RegistryEntry.Artifact> artifacts = new LinkedHashMap<>();
 			node.path("binary").properties().forEach(entry -> {
@@ -291,7 +297,7 @@ public class AcpAgentRegistry {
 				strings(node.path("args")), stringMap(node.path("env")), text(node, "sha256"));
 	}
 
-	private static String text(JsonNode node, String field) {
+	private static @Nullable String text(JsonNode node, String field) {
 		JsonNode value = node.path(field);
 		return value.isString() ? value.asString() : null;
 	}

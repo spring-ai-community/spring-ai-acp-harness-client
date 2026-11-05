@@ -1,7 +1,6 @@
 package org.springaicommunity.acp.harness.console;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springaicommunity.acp.harness.permission.PermissionQuestion;
@@ -21,16 +20,16 @@ class TerminalPermissionPromptTests {
 	private static final AcpSchema.PermissionOption REJECT = new AcpSchema.PermissionOption("reject", "Reject",
 			AcpSchema.PermissionOptionKind.REJECT_ONCE);
 
-	private static final PermissionQuestion QUESTION = new PermissionQuestion(Optional.of("developer__shell"),
+	private static final PermissionQuestion QUESTION = new PermissionQuestion("developer__shell",
 			"Run `./send-report.sh`", AcpSchema.ToolKind.EXECUTE, List.of(ALLOW, ALWAYS, REJECT));
 
 	@Test
 	void showsWhatTheAgentWantsAndTakesTheNumberedChoice() {
 		TestTerminals.Scripted terminal = TestTerminals.typing("3\n");
 
-		Optional<AcpSchema.PermissionOption> chosen = prompt(terminal).ask(QUESTION);
+		AcpSchema.PermissionOption chosen = prompt(terminal).ask(QUESTION);
 
-		assertThat(chosen).contains(REJECT);
+		assertThat(chosen).isEqualTo(REJECT);
 		assertThat(terminal.written()).contains("The agent wants to: Run `./send-report.sh`",
 				"(execute · developer__shell)", "1) Allow once", "2) Always allow", "3) Reject");
 	}
@@ -39,7 +38,7 @@ class TerminalPermissionPromptTests {
 	void asksAgainUntilTheAnswerIsOneOfTheOptions() {
 		TestTerminals.Scripted terminal = TestTerminals.typing("yes\n9\n1\n");
 
-		assertThat(prompt(terminal).ask(QUESTION)).contains(ALLOW);
+		assertThat(prompt(terminal).ask(QUESTION)).isEqualTo(ALLOW);
 		assertThat(terminal.written()).contains("answer with a number from 1 to 3");
 	}
 
@@ -47,16 +46,16 @@ class TerminalPermissionPromptTests {
 	void endOfInputCancelsTheRequest() {
 		TestTerminals.Scripted terminal = TestTerminals.typing("");
 
-		assertThat(prompt(terminal).ask(QUESTION)).isEmpty();
+		assertThat(prompt(terminal).ask(QUESTION)).isNull();
 		assertThat(terminal.written()).contains("request cancelled");
 	}
 
 	@Test
 	void aRequestWithNoOptionsIsCancelledWithoutAsking() {
 		TestTerminals.Scripted terminal = TestTerminals.typing("1\n");
-		PermissionQuestion empty = new PermissionQuestion(Optional.empty(), "x", null, List.of());
+		PermissionQuestion empty = new PermissionQuestion(null, "x", null, List.of());
 
-		assertThat(prompt(terminal).ask(empty)).isEmpty();
+		assertThat(prompt(terminal).ask(empty)).isNull();
 		assertThat(terminal.written()).doesNotContain("wants to");
 	}
 

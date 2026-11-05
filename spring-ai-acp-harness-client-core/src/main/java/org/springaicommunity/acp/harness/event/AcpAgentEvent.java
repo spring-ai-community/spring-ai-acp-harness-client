@@ -1,7 +1,8 @@
 package org.springaicommunity.acp.harness.event;
 
 import java.util.List;
-import java.util.OptionalDouble;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -24,13 +25,24 @@ public sealed interface AcpAgentEvent {
 	record Thought(String text) implements AcpAgentEvent {
 	}
 
-	/** A tool invocation has started. */
-	record ToolCallStarted(String id, String title, AcpSchema.ToolKind kind) implements AcpAgentEvent {
+	/**
+	 * A tool invocation has started.
+	 *
+	 * @param title the agent's description of the call, or null when it gave none
+	 * @param kind what sort of operation the call is, or null when the agent did not say
+	 */
+	record ToolCallStarted(String id, @Nullable String title,
+			AcpSchema.@Nullable ToolKind kind) implements AcpAgentEvent {
 	}
 
-	/** Progress or completion of a previously started tool call. */
-	record ToolCallUpdated(String id, AcpSchema.ToolCallStatus status,
-			List<AcpSchema.ToolCallContent> content) implements AcpAgentEvent {
+	/**
+	 * Progress or completion of a previously started tool call.
+	 *
+	 * @param status the call's new status, or null when the update carries none
+	 * @param content what the call produced so far, or null when the update carries none
+	 */
+	record ToolCallUpdated(String id, AcpSchema.@Nullable ToolCallStatus status,
+			@Nullable List<AcpSchema.ToolCallContent> content) implements AcpAgentEvent {
 	}
 
 	/** The agent's current plan. Replaces any plan emitted earlier in the turn. */
@@ -61,18 +73,29 @@ public sealed interface AcpAgentEvent {
 	 * Cumulative for the session, not incremental for the turn. {@code used} counts
 	 * against {@code size}, the context window; {@code cost} is optional and absent from
 	 * most agents.
+	 *
+	 * @param costAmount what the session has cost so far, or null when the agent did not
+	 * say
+	 * @param costCurrency the currency of that amount, or null when the agent did not say
 	 */
-	record UsageUpdated(long contextUsed, long contextSize, Double costAmount,
-			String costCurrency) implements AcpAgentEvent {
+	record UsageUpdated(long contextUsed, long contextSize, @Nullable Double costAmount,
+			@Nullable String costCurrency) implements AcpAgentEvent {
 
-		/** How much of the context window is gone, when the agent said how big it is. */
-		public OptionalDouble contextFraction() {
-			return contextSize <= 0 ? OptionalDouble.empty() : OptionalDouble.of((double) contextUsed / contextSize);
+		/**
+		 * How much of the context window is gone, or null when the agent did not say how
+		 * big it is.
+		 */
+		public @Nullable Double contextFraction() {
+			return contextSize <= 0 ? null : (double) contextUsed / contextSize;
 		}
 	}
 
-	/** Terminal: the turn ended and the agent said why. */
-	record Completed(AcpSchema.StopReason reason) implements AcpAgentEvent {
+	/**
+	 * Terminal: the turn ended and the agent said why.
+	 *
+	 * @param reason why the turn stopped, or null when the agent did not say
+	 */
+	record Completed(AcpSchema.@Nullable StopReason reason) implements AcpAgentEvent {
 	}
 
 	/** Terminal: the turn did not reach the agent's own stop condition. */

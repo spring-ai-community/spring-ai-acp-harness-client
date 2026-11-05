@@ -1,14 +1,15 @@
 package org.springaicommunity.acp.harness.client;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Deque;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
@@ -101,13 +102,15 @@ public final class AcpHarnessClientFactory {
 	 * server the agent could not load is reported nowhere on the wire, and on goose
 	 * 1.51.0 nowhere on stdout or stderr either.
 	 */
-	private static AcpAgentLogWatcher logWatcher(AcpAgentRuntime runtime, AcpAgentSettings settings) {
-		return runtime.logDirectory(settings).map(directory -> {
-			AcpAgentLogWatcher watcher = new AcpAgentLogWatcher(directory, runtime::noticeOf);
-			watcher.start();
-			logger.debug("Watching {} for {}'s own diagnostics", directory, runtime.id());
-			return watcher;
-		}).orElse(null);
+	private static @Nullable AcpAgentLogWatcher logWatcher(AcpAgentRuntime runtime, AcpAgentSettings settings) {
+		Path directory = runtime.logDirectory(settings);
+		if (directory == null) {
+			return null;
+		}
+		AcpAgentLogWatcher watcher = new AcpAgentLogWatcher(directory, runtime::noticeOf);
+		watcher.start();
+		logger.debug("Watching {} for {}'s own diagnostics", directory, runtime.id());
+		return watcher;
 	}
 
 	/**
@@ -166,10 +169,10 @@ public final class AcpHarnessClientFactory {
 	 * @param watcher the agent's own log, or null when there is none to watch
 	 */
 	private record Launched(AcpClientTransport transport, AcpAgentDiagnostics diagnostics, Liveness liveness,
-			Runnable onClose, AcpAgentLogWatcher watcher) {
+			Runnable onClose, @Nullable AcpAgentLogWatcher watcher) {
 
 		/** An agent somebody else started, which this client cannot see the health of. */
-		static Launched attached(AcpClientTransport transport, AcpAgentLogWatcher watcher) {
+		static Launched attached(AcpClientTransport transport, @Nullable AcpAgentLogWatcher watcher) {
 			return new Launched(transport, new AcpAgentDiagnostics(), Liveness.unknowable(), () -> {
 			}, watcher);
 		}
@@ -228,9 +231,10 @@ public final class AcpHarnessClientFactory {
 	 * started the process, so it knows the environment and therefore the path. Here the
 	 * caller is asserting that the watcher belongs to this agent, which only a caller
 	 * that knows both can do. The watcher is closed with the client.
+	 * @param watcher the agent's own log, or null when there is none to watch
 	 */
 	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpClientTransport launched, AcpAgentObservations observations, AcpAgentLogWatcher watcher) {
+			AcpClientTransport launched, AcpAgentObservations observations, @Nullable AcpAgentLogWatcher watcher) {
 		return connect(runtime, settings, Launched.attached(launched, watcher), observations);
 	}
 
@@ -249,7 +253,10 @@ public final class AcpHarnessClientFactory {
 			// Deliberately not sessionUpdateConsumer: see SessionUpdateDecoder for why a
 			// raw handler.
 			.notificationHandler(SESSION_UPDATE, params -> {
-				SessionUpdateDecoder.decode(params, transport).ifPresent(router::accept);
+				AcpSchema.SessionNotification notification = SessionUpdateDecoder.decode(params, transport);
+				if (notification != null) {
+					router.accept(notification);
+				}
 				return Mono.empty();
 			})
 			.requestPermissionHandler(request -> handlePermission(runtime, settings.permissions(), request));
@@ -354,24 +361,24 @@ public final class AcpHarnessClientFactory {
 	 */
 	private static void authenticate(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
 			AcpSchema.InitializeResponse initialized, AcpAgentDiagnostics diagnostics) {
-		Optional<String> method = runtime.authMethod(settings);
-		if (method.isEmpty()) {
+		String method = runtime.authMethod(settings);
+		if (method == null) {
 			return;
 		}
 		List<String> offered = initialized.authMethods() == null ? List.of()
 				: initialized.authMethods().stream().map(AcpSchema.AuthMethod::id).toList();
-		if (!offered.contains(method.get())) {
+		if (!offered.contains(method)) {
 			logger.warn("Runtime '{}' wants to authenticate with '{}', but the agent offers only {}; not sending it",
-					runtime.id(), method.get(), offered);
+					runtime.id(), method, offered);
 			return;
 		}
 		try {
-			acp.authenticate(new AcpSchema.AuthenticateRequest(method.get())).block(settings.timeout());
-			logger.debug("Authenticated {} with '{}'", runtime.id(), method.get());
+			acp.authenticate(new AcpSchema.AuthenticateRequest(method)).block(settings.timeout());
+			logger.debug("Authenticated {} with '{}'", runtime.id(), method);
 		}
 		catch (RuntimeException ex) {
-			throw new AcpHarnessClientException("Runtime '" + runtime.id() + "' refused authentication with '"
-					+ method.get() + "'" + diagnostics.settledSummary(), ex);
+			throw new AcpHarnessClientException("Runtime '" + runtime.id() + "' refused authentication with '" + method
+					+ "'" + diagnostics.settledSummary(), ex);
 		}
 	}
 
@@ -454,14 +461,13 @@ public final class AcpHarnessClientFactory {
 	private static Mono<AcpSchema.RequestPermissionResponse> handlePermission(AcpAgentRuntime runtime,
 			PermissionPolicy policy, AcpSchema.RequestPermissionRequest request) {
 		return Mono.fromSupplier(() -> {
-			Optional<String> toolName = request.toolCall() == null ? Optional.<String>empty()
-					: runtime.toolNameOf(request.toolCall());
-			var chosen = policy.decide(request, toolName);
-			logger.debug("Permission for tool {} -> {}", toolName.orElse("(unknown)"),
-					chosen.map(AcpSchema.PermissionOption::optionId).orElse("cancelled"));
-			return new AcpSchema.RequestPermissionResponse(
-					chosen.<AcpSchema.RequestPermissionOutcome>map(o -> new AcpSchema.PermissionSelected(o.optionId()))
-						.orElseGet(AcpSchema.PermissionCancelled::new));
+			String toolName = request.toolCall() == null ? null : runtime.toolNameOf(request.toolCall());
+			AcpSchema.PermissionOption chosen = policy.decide(request, toolName);
+			logger.debug("Permission for tool {} -> {}", toolName == null ? "(unknown)" : toolName,
+					chosen == null ? "cancelled" : chosen.optionId());
+			AcpSchema.RequestPermissionOutcome outcome = chosen == null ? new AcpSchema.PermissionCancelled()
+					: new AcpSchema.PermissionSelected(chosen.optionId());
+			return new AcpSchema.RequestPermissionResponse(outcome);
 		})
 			// A policy may be a person thinking it over, and the transport's inbound
 			// thread is also the
@@ -491,7 +497,7 @@ public final class AcpHarnessClientFactory {
 		return implementation == null ? "0.1.0-SNAPSHOT" : implementation;
 	}
 
-	private static void closeQuietly(AcpAgentLogWatcher watcher) {
+	private static void closeQuietly(@Nullable AcpAgentLogWatcher watcher) {
 		if (watcher != null) {
 			watcher.close();
 		}

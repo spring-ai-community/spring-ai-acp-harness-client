@@ -6,8 +6,8 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.permission.PermissionPolicy;
 import org.springaicommunity.acp.harness.protocol.ProtocolSettings;
 import org.springaicommunity.acp.harness.workspace.FileSystemAccess;
@@ -40,10 +40,11 @@ import org.springaicommunity.acp.harness.workspace.TerminalAccess;
  * {@link ProtocolSettings} sits under all three: it decides which ACP version the
  * conversation the other tiers are configuring is held in.
  */
-public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome, Duration timeout, String model,
-		ProviderSpec provider, String mode, List<McpServerSpec> mcpServers, McpSettings mcp, List<SkillSpec> skills,
-		PermissionPolicy permissions, FileSystemAccess filesystem, TerminalAccess terminal, OnUnsupported onUnsupported,
-		Duration sessionTtl, PoolSettings pool, RuntimeOptions runtimeOptions, ProtocolSettings protocol) {
+public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome, Duration timeout,
+		@Nullable String model, ProviderSpec provider, @Nullable String mode, List<McpServerSpec> mcpServers,
+		McpSettings mcp, List<SkillSpec> skills, PermissionPolicy permissions, FileSystemAccess filesystem,
+		TerminalAccess terminal, OnUnsupported onUnsupported, Duration sessionTtl, PoolSettings pool,
+		RuntimeOptions runtimeOptions, ProtocolSettings protocol) {
 
 	public static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
 
@@ -101,9 +102,9 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 			.toAbsolutePath();
 	}
 
-	/** The requested model, or empty when none was asked for. */
-	public Optional<String> findModel() {
-		return Optional.ofNullable(model).filter(m -> !m.isBlank());
+	/** The requested model, or null when none was asked for. */
+	public @Nullable String findModel() {
+		return model == null || model.isBlank() ? null : model;
 	}
 
 	public static Builder builder(String runtime, Path workspace) {
@@ -111,14 +112,16 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 	}
 
 	/** Applies per-request overrides on top of these settings. */
-	public AcpAgentSettings merge(AcpAgentOptions options) {
+	public AcpAgentSettings merge(@Nullable AcpAgentOptions options) {
 		if (options == null) {
 			return this;
 		}
-		return new AcpAgentSettings(runtime, workspace, runtimeHome, options.findTimeout().orElse(timeout),
-				options.findModel().orElse(model), options.findProvider().map(provider::withId).orElse(provider),
-				options.findMode().orElse(mode), mcpServers, mcp, skills, permissions, filesystem, terminal,
-				onUnsupported, sessionTtl, pool, runtimeOptions, protocol);
+		return new AcpAgentSettings(runtime, workspace, runtimeHome,
+				options.timeout() != null ? options.timeout() : timeout,
+				options.model() != null ? options.model() : model,
+				options.provider() != null ? provider.withId(options.provider()) : provider,
+				options.mode() != null ? options.mode() : mode, mcpServers, mcp, skills, permissions, filesystem,
+				terminal, onUnsupported, sessionTtl, pool, runtimeOptions, protocol);
 	}
 
 	public static final class Builder {
@@ -127,15 +130,15 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 
 		private final Path workspace;
 
-		private Path runtimeHome;
+		private @Nullable Path runtimeHome;
 
-		private Duration timeout;
+		private @Nullable Duration timeout;
 
-		private String model;
+		private @Nullable String model;
 
 		private ProviderSpec provider = ProviderSpec.none();
 
-		private String mode;
+		private @Nullable String mode;
 
 		private List<McpServerSpec> mcpServers = List.of();
 
@@ -151,7 +154,7 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 
 		private OnUnsupported onUnsupported = OnUnsupported.WARN;
 
-		private Duration sessionTtl;
+		private @Nullable Duration sessionTtl;
 
 		private PoolSettings pool = PoolSettings.defaults();
 
@@ -164,17 +167,17 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 			this.workspace = workspace;
 		}
 
-		public Builder runtimeHome(Path runtimeHome) {
+		public Builder runtimeHome(@Nullable Path runtimeHome) {
 			this.runtimeHome = runtimeHome;
 			return this;
 		}
 
-		public Builder timeout(Duration timeout) {
+		public Builder timeout(@Nullable Duration timeout) {
 			this.timeout = timeout;
 			return this;
 		}
 
-		public Builder model(String model) {
+		public Builder model(@Nullable String model) {
 			this.model = model;
 			return this;
 		}
@@ -184,11 +187,11 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 			return this;
 		}
 
-		public Builder provider(String id) {
+		public Builder provider(@Nullable String id) {
 			return provider(ProviderSpec.of(id));
 		}
 
-		public Builder mode(String mode) {
+		public Builder mode(@Nullable String mode) {
 			this.mode = mode;
 			return this;
 		}
@@ -228,7 +231,7 @@ public record AcpAgentSettings(String runtime, Path workspace, Path runtimeHome,
 			return this;
 		}
 
-		public Builder sessionTtl(Duration sessionTtl) {
+		public Builder sessionTtl(@Nullable Duration sessionTtl) {
 			this.sessionTtl = sessionTtl;
 			return this;
 		}

@@ -127,12 +127,12 @@ class RegistryAcpAgentRuntimeTests {
 		var titled = new com.agentclientprotocol.sdk.spec.AcpSchema.ToolCallUpdate("t1", "Read the build file", null,
 				null, null, null, null, null);
 
-		assertThat(runtime("gemini").toolNameOf(titled)).isEmpty();
+		assertThat(runtime("gemini").toolNameOf(titled)).isNull();
 	}
 
 	@Test
 	void saysWhichPlatformsAnAgentHasWhenItHasNoneForThisOne() {
-		RegistryEntry entry = registry().find("goose").orElseThrow();
+		RegistryEntry entry = java.util.Objects.requireNonNull(registry().find("goose"));
 		RegistryAcpAgentRuntime runtime = new RegistryAcpAgentRuntime(entry, new AcpAgentInstaller(offlineSettings()),
 				new Platform("plan9", "sparc"));
 
@@ -163,8 +163,8 @@ class RegistryAcpAgentRuntimeTests {
 	}
 
 	private AcpAgentRuntime runtime(String id) {
-		return new RegistryAcpAgentRuntimeProvider(registry(), new AcpAgentInstaller(offlineSettings())).forId(id)
-			.orElseThrow();
+		return java.util.Objects.requireNonNull(
+				new RegistryAcpAgentRuntimeProvider(registry(), new AcpAgentInstaller(offlineSettings())).forId(id));
 	}
 
 	private AcpAgentRegistry registry() {

@@ -1,6 +1,6 @@
 package org.springaicommunity.acp.harness.session;
 
-import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Finds the principal a session is being opened for when the caller did not name one.
@@ -22,16 +22,17 @@ import java.util.Optional;
 public interface SessionPrincipalResolver {
 
 	/**
-	 * Empty when there is nobody in particular: a scheduled job, a single-user
+	 * Null when there is nobody in particular: a scheduled job, a single-user
 	 * application.
 	 */
-	Optional<SessionPrincipal> current();
+	@Nullable
+	SessionPrincipal current();
 
 	/**
 	 * The default: no principal, which is what every application without users has always
 	 * had.
 	 */
-	SessionPrincipalResolver NONE = Optional::empty;
+	SessionPrincipalResolver NONE = () -> null;
 
 	/** {@link #NONE}, one instance, so settings built with it compare equal. */
 	static SessionPrincipalResolver none() {

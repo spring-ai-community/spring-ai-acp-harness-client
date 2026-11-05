@@ -316,7 +316,8 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 			out.info("  no stored conversations");
 			return;
 		}
-		String current = agent.session(session).map(AcpAgentSession::sessionId).orElse(null);
+		AcpAgentSession open = agent.session(session);
+		String current = open == null ? null : open.sessionId();
 		for (StoredSession each : stored) {
 			String marker = each.sessionId().equals(current) ? "* " : "  ";
 			String when = each.updatedAt() == null ? "" : "  " + WHEN.format(each.updatedAt());

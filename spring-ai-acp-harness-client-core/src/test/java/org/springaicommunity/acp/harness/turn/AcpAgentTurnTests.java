@@ -3,7 +3,6 @@ package org.springaicommunity.acp.harness.turn;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -271,7 +270,7 @@ class AcpAgentTurnTests {
 				toolCallUpdate("call-2")), AcpSchema.StopReason.END_TURN);
 
 		List<AcpAgentEvent> events = AcpAgentTurn
-			.on(client, router, null, call -> "todo".equals(call.title()) ? Optional.of(plan) : Optional.empty())
+			.on(client, router, null, call -> "todo".equals(call.title()) ? plan : null)
 			.prompt(session, PROMPT, Duration.ofSeconds(5))
 			.collectList()
 			.block(Duration.ofSeconds(5));
@@ -300,7 +299,7 @@ class AcpAgentTurnTests {
 				null, null, Map.of("replay", true));
 		agentStreams(List.of(replayed), AcpSchema.StopReason.END_TURN);
 
-		List<AcpAgentEvent> events = AcpAgentTurn.on(client, router, null, call -> Optional.of(List.of()))
+		List<AcpAgentEvent> events = AcpAgentTurn.on(client, router, null, call -> List.of())
 			.prompt(session, PROMPT, Duration.ofSeconds(5))
 			.collectList()
 			.block(Duration.ofSeconds(5));

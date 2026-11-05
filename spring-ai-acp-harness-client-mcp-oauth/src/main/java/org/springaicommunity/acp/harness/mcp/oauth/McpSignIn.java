@@ -1,8 +1,8 @@
 package org.springaicommunity.acp.harness.mcp.oauth;
 
-import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springframework.security.oauth2.client.ClientAuthorizationRequiredException;
@@ -49,14 +49,16 @@ public interface McpSignIn {
 	 * Security's {@code ClientAuthorizationRequiredException} for its redirect filter to
 	 * act on.
 	 */
-	static McpSignIn redirect(String redirectUri, Supplier<Optional<String>> baseUrl) {
+	static McpSignIn redirect(String redirectUri, Supplier<@Nullable String> baseUrl) {
 		return new McpSignIn() {
 			@Override
 			public String redirectUri(McpServerSpec.Http server) {
-				String base = baseUrl.get()
-					.orElseThrow(() -> new IllegalStateException("Cannot register with the authorization server for "
+				String base = baseUrl.get();
+				if (base == null) {
+					throw new IllegalStateException("Cannot register with the authorization server for "
 							+ "MCP server '" + server.name() + "': the redirect URI needs this application's base URL, "
-							+ "and there is no current request to read it from. Set spring.ai.acp.harness.mcp.oauth.base-url"));
+							+ "and there is no current request to read it from. Set spring.ai.acp.harness.mcp.oauth.base-url");
+				}
 				return redirectUri.replace("{baseUrl}", base).replace("{registrationId}", server.name());
 			}
 

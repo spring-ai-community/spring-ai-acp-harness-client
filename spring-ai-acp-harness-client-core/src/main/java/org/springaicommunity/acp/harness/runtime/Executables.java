@@ -2,8 +2,9 @@ package org.springaicommunity.acp.harness.runtime;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.function.UnaryOperator;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Finds an agent's executable named by an environment variable, as a buildpack or an
@@ -15,7 +16,7 @@ public final class Executables {
 	}
 
 	/**
-	 * The executable {@code variable} names, or empty when it is unset or blank.
+	 * The executable {@code variable} names, or null when it is unset or blank.
 	 *
 	 * <p>
 	 * Checked here rather than left to process start, so that the failure, when there is
@@ -24,21 +25,21 @@ public final class Executables {
 	 * @throws IllegalStateException if the variable names something that is not an
 	 * executable file
 	 */
-	public static Optional<String> fromEnvironment(String variable) {
+	public static @Nullable String fromEnvironment(String variable) {
 		return fromEnvironment(variable, System::getenv);
 	}
 
-	static Optional<String> fromEnvironment(String variable, UnaryOperator<String> environment) {
+	static @Nullable String fromEnvironment(String variable, UnaryOperator<@Nullable String> environment) {
 		String configured = environment.apply(variable);
 		if (configured == null || configured.isBlank()) {
-			return Optional.empty();
+			return null;
 		}
 		Path path = Path.of(configured);
 		if (!Files.isExecutable(path)) {
 			throw new IllegalStateException(
 					variable + " points at '" + configured + "', which is not an executable file");
 		}
-		return Optional.of(path.toString());
+		return path.toString();
 	}
 
 }

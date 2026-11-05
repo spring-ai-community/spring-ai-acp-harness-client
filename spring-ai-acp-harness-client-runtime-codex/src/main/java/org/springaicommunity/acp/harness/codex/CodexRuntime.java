@@ -9,8 +9,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
@@ -98,19 +99,17 @@ public class CodexRuntime implements AcpAgentRuntime {
 
 	private static final Logger logger = LoggerFactory.getLogger(CodexRuntime.class);
 
-	/** A local codex-acp to run instead of fetching the package through npx. */
-	private final Optional<String> executable;
+	/**
+	 * A local codex-acp to run instead of fetching the package through npx; null for npx.
+	 */
+	private final @Nullable String executable;
 
 	public CodexRuntime() {
-		this(defaultExecutable());
+		this.executable = defaultExecutable();
 	}
 
 	public CodexRuntime(String executable) {
-		this(Optional.of(executable));
-	}
-
-	private CodexRuntime(Optional<String> executable) {
-		this.executable = executable;
+		this.executable = Objects.requireNonNull(executable, "executable");
 	}
 
 	@Override
@@ -123,19 +122,22 @@ public class CodexRuntime implements AcpAgentRuntime {
 		RuntimeOptions options = settings.runtimeOptions();
 		// An application that names a package asked for npx; only the default gives way
 		// to a local adapter.
-		Optional<String> command = options.text("command")
-			.or(() -> options.text("package").isPresent() ? Optional.empty() : this.executable);
+		String configuredPackage = options.text("package");
+		String command = options.text("command");
+		if (command == null && configuredPackage == null) {
+			command = this.executable;
+		}
 
 		List<String> args = new ArrayList<>();
-		if (command.isEmpty()) {
+		if (command == null) {
 			// -y so a first run on a clean machine does not block on npx's install
 			// prompt.
 			args.add("-y");
-			args.add(options.text("package").orElse(DEFAULT_PACKAGE));
+			args.add(configuredPackage == null ? DEFAULT_PACKAGE : configuredPackage);
 		}
 		args.addAll(options.textList("args"));
 
-		return new AcpAgentLaunchSpec.Stdio(command.orElse("npx"), args, environment(settings));
+		return new AcpAgentLaunchSpec.Stdio(command == null ? "npx" : command, args, environment(settings));
 	}
 
 	/**
@@ -254,7 +256,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 */
 	private static boolean signsInWithKey(AcpAgentSettings settings) {
 		ProviderSpec provider = settings.provider();
-		return !provider.isByo() && isOpenAiCompatible(provider) && provider.findApiKey().isPresent();
+		return !provider.isByo() && isOpenAiCompatible(provider) && provider.findApiKey() != null;
 	}
 
 	private static Map<String, Object> endpointConfig(AcpAgentSettings settings) {
@@ -265,11 +267,14 @@ public class CodexRuntime implements AcpAgentRuntime {
 		String id = providerKey(provider);
 		Map<String, Object> endpoint = new LinkedHashMap<>();
 		endpoint.put("name", id);
-		endpoint.put("base_url", provider.findApiBase().orElseThrow().toString());
+		endpoint.put("base_url", Objects.requireNonNull(provider.findApiBase()).toString());
 		endpoint.put("env_key", ProviderEnvironment.apiKeyVariable(provider.apiType()));
 
 		Map<String, Object> config = new LinkedHashMap<>();
-		settings.findModel().ifPresent(model -> config.put("model", model));
+		String model = settings.findModel();
+		if (model != null) {
+			config.put("model", model);
+		}
 		config.put("model_provider", id);
 		config.put("model_providers", Map.of(id, endpoint));
 		return config;
@@ -280,11 +285,12 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * ours.
 	 */
 	private static String providerKey(ProviderSpec provider) {
-		return provider.findId().orElse(DEFAULT_PROVIDER_KEY);
+		String id = provider.findId();
+		return id == null ? DEFAULT_PROVIDER_KEY : id;
 	}
 
 	private static boolean isOpenAiCompatible(ProviderSpec provider) {
-		return provider.findApiType().filter("openai"::equalsIgnoreCase).isPresent();
+		return "openai".equalsIgnoreCase(provider.findApiType());
 	}
 
 	/**
@@ -323,7 +329,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 		}
 	}
 
-	private static Optional<String> defaultExecutable() {
+	private static @Nullable String defaultExecutable() {
 		return Executables.fromEnvironment(CLI_PATH_ENV);
 	}
 
@@ -342,8 +348,8 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * it.
 	 */
 	@Override
-	public Optional<String> authMethod(AcpAgentSettings settings) {
-		return signsInWithKey(settings) ? Optional.of(API_KEY_METHOD) : Optional.empty();
+	public @Nullable String authMethod(AcpAgentSettings settings) {
+		return signsInWithKey(settings) ? API_KEY_METHOD : null;
 	}
 
 	@Override
@@ -367,36 +373,34 @@ public class CodexRuntime implements AcpAgentRuntime {
 	public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
 		return switch (option) {
 			case PROVIDER -> settings.provider().hasCredentials();
-			case MODEL -> !endpointConfig(settings).isEmpty() && settings.findModel().isPresent();
+			case MODEL -> !endpointConfig(settings).isEmpty() && settings.findModel() != null;
 			case MODE -> false;
 		};
 	}
 
 	@Override
-	public Optional<String> toolNameOf(AcpSchema.ToolCallUpdate toolCall) {
+	public @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
 		// Codex titles are human prose ("Explored the repository"), so no title fallback.
 		return ToolNames.fromRawInput(toolCall);
 	}
 
 	private Map<String, String> environment(AcpAgentSettings settings) {
-		Map<String, String> home = homeFor(settings).map(path -> Map.of(HOME_ENV, path.toString())).orElse(Map.of());
-		return AcpAgentEnvironment.layered(home, ProviderEnvironment.of(settings.provider()), settings);
+		Path home = homeFor(settings);
+		Map<String, String> homeEnv = home == null ? Map.of() : Map.of(HOME_ENV, home.toString());
+		return AcpAgentEnvironment.layered(homeEnv, ProviderEnvironment.of(settings.provider()), settings);
 	}
 
 	/**
-	 * The home to point Codex at, or empty to inherit whatever the process already has.
+	 * The home to point Codex at, or null to inherit whatever the process already has.
 	 */
-	private Optional<Path> homeFor(AcpAgentSettings settings) {
-		boolean relocated = settings.runtimeOptions().text("home").isPresent() || !configFor(settings).isEmpty();
-		return relocated ? Optional.of(managedHome(settings)) : Optional.empty();
+	private @Nullable Path homeFor(AcpAgentSettings settings) {
+		boolean relocated = settings.runtimeOptions().text("home") != null || !configFor(settings).isEmpty();
+		return relocated ? managedHome(settings) : null;
 	}
 
 	private Path managedHome(AcpAgentSettings settings) {
-		return settings.runtimeOptions()
-			.text("home")
-			.map(Path::of)
-			.map(Path::toAbsolutePath)
-			.orElseGet(settings::runtimeHome);
+		String configured = settings.runtimeOptions().text("home");
+		return configured == null ? settings.runtimeHome() : Path.of(configured).toAbsolutePath();
 	}
 
 }

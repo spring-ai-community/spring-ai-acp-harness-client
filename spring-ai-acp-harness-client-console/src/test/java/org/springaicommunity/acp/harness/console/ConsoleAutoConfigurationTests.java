@@ -1,7 +1,6 @@
 package org.springaicommunity.acp.harness.console;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.jline.terminal.Terminal;
 import org.junit.jupiter.api.Test;
@@ -89,15 +88,14 @@ class ConsoleAutoConfigurationTests {
 	void anApplicationsOwnPermissionPromptWins() {
 		AcpSchema.PermissionOption allow = new AcpSchema.PermissionOption("a", "Allow",
 				AcpSchema.PermissionOptionKind.ALLOW_ONCE);
-		PermissionPrompt own = question -> Optional.of(allow);
+		PermissionPrompt own = question -> allow;
 		runner.withBean(PermissionPrompt.class, () -> own)
 			.withPropertyValues("spring.ai.acp.harness.console.enabled=true",
 					"spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> {
 				assertThat(context).doesNotHaveBean(TerminalPermissionPrompt.class);
-				assertThat(
-						context.getBean(AcpAgentSettings.class).permissions().decide(Optional.of("t"), List.of(allow)))
-					.contains(allow);
+				assertThat(context.getBean(AcpAgentSettings.class).permissions().decide("t", List.of(allow)))
+					.isEqualTo(allow);
 			});
 	}
 

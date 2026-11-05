@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.jspecify.annotations.Nullable;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -80,26 +81,29 @@ final class TodoPlan {
 
 	/**
 	 * @return the whole plan, when {@code toolCall} is goose's todo write and its content
-	 * reads as one
+	 * reads as one; null otherwise
 	 */
-	static Optional<List<AcpSchema.PlanEntry>> of(AcpSchema.ToolCall toolCall) {
+	static @Nullable List<AcpSchema.PlanEntry> of(AcpSchema.@Nullable ToolCall toolCall) {
 		if (toolCall == null || !TOOL_NAME.equals(toolName(toolCall.meta()))
 				|| !(toolCall.rawInput() instanceof Map<?, ?> input)
 				|| !(input.get("content") instanceof String content)) {
-			return Optional.empty();
+			return null;
 		}
 		if (content.isBlank()) {
-			return Optional.of(List.of());
+			return List.of();
 		}
 		List<AcpSchema.PlanEntry> entries = new ArrayList<>();
 		for (String line : content.split("\\R")) {
-			entry(line.strip()).ifPresent(entries::add);
+			AcpSchema.PlanEntry entry = entry(line.strip());
+			if (entry != null) {
+				entries.add(entry);
+			}
 		}
-		return entries.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(entries));
+		return entries.isEmpty() ? null : List.copyOf(entries);
 	}
 
 	/** {@code _meta.goose.toolCall.toolName}, or null. */
-	private static String toolName(Map<String, Object> meta) {
+	private static @Nullable String toolName(@Nullable Map<String, Object> meta) {
 		if (meta != null && meta.get("goose") instanceof Map<?, ?> goose
 				&& goose.get("toolCall") instanceof Map<?, ?> toolCall
 				&& toolCall.get("toolName") instanceof String name) {
@@ -108,7 +112,7 @@ final class TodoPlan {
 		return null;
 	}
 
-	private static Optional<AcpSchema.PlanEntry> entry(String line) {
+	private static AcpSchema.@Nullable PlanEntry entry(String line) {
 		Matcher item = LIST_ITEM.matcher(line);
 		boolean listed = item.matches();
 		String text = listed ? item.group(1).strip() : line;
@@ -134,7 +138,7 @@ final class TodoPlan {
 			return entry(leading.group(2), status(leading.group(1)));
 		}
 		if (!listed) {
-			return Optional.empty();
+			return null;
 		}
 		Matcher checked = CHECKED.matcher(text);
 		if (checked.matches()) {
@@ -151,10 +155,9 @@ final class TodoPlan {
 		return entry(text, AcpSchema.PlanEntryStatus.PENDING);
 	}
 
-	private static Optional<AcpSchema.PlanEntry> entry(String content, AcpSchema.PlanEntryStatus status) {
+	private static AcpSchema.@Nullable PlanEntry entry(String content, AcpSchema.PlanEntryStatus status) {
 		String text = content.strip();
-		return text.isEmpty() ? Optional.empty()
-				: Optional.of(new AcpSchema.PlanEntry(text, AcpSchema.PlanEntryPriority.MEDIUM, status));
+		return text.isEmpty() ? null : new AcpSchema.PlanEntry(text, AcpSchema.PlanEntryPriority.MEDIUM, status);
 	}
 
 	private static AcpSchema.PlanEntryStatus status(String word) {

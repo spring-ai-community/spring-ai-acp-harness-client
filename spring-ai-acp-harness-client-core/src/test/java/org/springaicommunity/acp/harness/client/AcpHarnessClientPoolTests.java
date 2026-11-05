@@ -3,7 +3,6 @@ package org.springaicommunity.acp.harness.client;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -12,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -190,7 +190,7 @@ class AcpHarnessClientPoolTests {
 
 			pool.sessions().close("a");
 
-			assertThat(pool.session("a")).isEmpty();
+			assertThat(pool.session("a")).isNull();
 			assertThat(created.get(0).registry.knows("a")).isFalse();
 		}
 	}
@@ -457,8 +457,8 @@ class AcpHarnessClientPoolTests {
 		}
 
 		@Override
-		public Optional<AcpAgentInfo> agentInfo() {
-			return Optional.of(new AcpAgentInfo("fake", "1." + index));
+		public AcpAgentInfo agentInfo() {
+			return new AcpAgentInfo("fake", "1." + index);
 		}
 
 		@Override
@@ -472,7 +472,7 @@ class AcpHarnessClientPoolTests {
 		}
 
 		@Override
-		public Optional<AcpAgentSession> session(String name) {
+		public @Nullable AcpAgentSession session(String name) {
 			return registry.find(name);
 		}
 
@@ -482,7 +482,7 @@ class AcpHarnessClientPoolTests {
 		}
 
 		@Override
-		public AcpAgentSession openSession(String name, SessionPrincipal principal) {
+		public AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
 			return registry.resolve(name, principal, n -> new SessionRegistry.Opened("sid-" + index + "-" + n, () -> {
 			}));
 		}
@@ -503,7 +503,7 @@ class AcpHarnessClientPoolTests {
 			}
 
 			@Override
-			public PromptSpec principal(SessionPrincipal principal) {
+			public PromptSpec principal(@Nullable SessionPrincipal principal) {
 				return this;
 			}
 
@@ -513,7 +513,7 @@ class AcpHarnessClientPoolTests {
 			}
 
 			@Override
-			public PromptSpec options(AcpAgentOptions options) {
+			public PromptSpec options(@Nullable AcpAgentOptions options) {
 				return this;
 			}
 
@@ -595,7 +595,7 @@ class AcpHarnessClientPoolTests {
 			}
 
 			@Override
-			public Optional<AcpAgentSession> find(String name) {
+			public @Nullable AcpAgentSession find(String name) {
 				return registry.find(name);
 			}
 
@@ -635,12 +635,12 @@ class AcpHarnessClientPoolTests {
 	@DisplayName("asking who the agent is does not start one")
 	void agentInfoDoesNotConnect() {
 		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
-			assertThat(pool.agentInfo()).isEmpty();
+			assertThat(pool.agentInfo()).isNull();
 			assertThat(pool.openConnections()).isZero();
 
 			pool.openSession("a");
 
-			assertThat(pool.agentInfo()).isPresent();
+			assertThat(pool.agentInfo()).isNotNull();
 		}
 	}
 
@@ -675,7 +675,7 @@ class AcpHarnessClientPoolTests {
 			pool.evictIdleSessions();
 			pool.evictIdleSessions();
 
-			assertThat(pool.session("review")).isEmpty();
+			assertThat(pool.session("review")).isNull();
 		}
 	}
 

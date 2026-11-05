@@ -1,9 +1,9 @@
 package org.springaicommunity.acp.harness.ai;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -132,9 +132,9 @@ class AcpChatModelTests {
 					.timeout(java.time.Duration.ofMinutes(9))
 					.build()));
 
-		assertThat(client.options.findModel()).contains("gpt-5.4-mini");
-		assertThat(client.options.findMode()).contains("plan");
-		assertThat(client.options.findTimeout()).contains(java.time.Duration.ofMinutes(9));
+		assertThat(client.options.model()).isEqualTo("gpt-5.4-mini");
+		assertThat(client.options.mode()).isEqualTo("plan");
+		assertThat(client.options.timeout()).isEqualTo(java.time.Duration.ofMinutes(9));
 	}
 
 	@Test
@@ -144,7 +144,7 @@ class AcpChatModelTests {
 
 		model.call(new Prompt("hello", ChatOptions.builder().model("gpt-5.4-mini").build()));
 
-		assertThat(client.options.findModel()).contains("gpt-5.4-mini");
+		assertThat(client.options.model()).isEqualTo("gpt-5.4-mini");
 	}
 
 	@Test
@@ -155,8 +155,8 @@ class AcpChatModelTests {
 
 		withDefaults.call(new Prompt("hello", AcpChatOptions.builder().model("per-call").build()));
 
-		assertThat(client.options.findModel()).contains("per-call");
-		assertThat(client.options.findMode()).contains("plan");
+		assertThat(client.options.model()).isEqualTo("per-call");
+		assertThat(client.options.mode()).isEqualTo("plan");
 	}
 
 	@Test
@@ -331,8 +331,8 @@ class AcpChatModelTests {
 		}
 
 		@Override
-		public Optional<org.springaicommunity.acp.harness.client.AcpAgentInfo> agentInfo() {
-			return Optional.empty();
+		public org.springaicommunity.acp.harness.client.@Nullable AcpAgentInfo agentInfo() {
+			return null;
 		}
 
 		@Override
@@ -341,11 +341,9 @@ class AcpChatModelTests {
 		}
 
 		@Override
-		public Optional<AcpAgentSession> session(String name) {
+		public @Nullable AcpAgentSession session(String name) {
 			return openSessions.contains(name)
-					? Optional
-						.of(new org.springaicommunity.acp.harness.session.SessionRegistry().resolve(name, n -> "sid"))
-					: Optional.empty();
+					? new org.springaicommunity.acp.harness.session.SessionRegistry().resolve(name, n -> "sid") : null;
 		}
 
 		@Override

@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AcpAgentOptions;
@@ -144,7 +145,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * {@link AcpAgentRuntime#mcpScope()}
 	 */
 	public AcpHarnessClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpHarnessClient> connect,
-			McpScope mcpScope) {
+			@Nullable McpScope mcpScope) {
 		this.runtimeId = runtimeId;
 		this.mcpScope = mcpScope == null ? McpScope.SESSION : mcpScope;
 		this.pool = settings.pool();
@@ -172,13 +173,13 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * What the agent said about itself, if this pool has spoken to one.
 	 *
 	 * <p>
-	 * Empty rather than connecting: an agent's identity comes from the handshake, so
+	 * Null rather than connecting: an agent's identity comes from the handshake, so
 	 * answering would mean starting a process, and the caller most likely to ask is a
 	 * health endpoint.
 	 */
 	@Override
-	public Optional<AcpAgentInfo> agentInfo() {
-		return connected().map(AcpHarnessClient::agentInfo).flatMap(Optional::stream).findFirst();
+	public @Nullable AcpAgentInfo agentInfo() {
+		return connected().map(AcpHarnessClient::agentInfo).filter(Objects::nonNull).findFirst().orElse(null);
 	}
 
 	@Override
@@ -210,18 +211,19 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	}
 
 	@Override
-	public AcpAgentSession openSession(String name, SessionPrincipal principal) {
+	public AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
 		return clientFor(name, principal).openSession(name, principal);
 	}
 
-	private SessionPrincipal currentPrincipal() {
-		return principals.current().orElse(null);
+	private @Nullable SessionPrincipal currentPrincipal() {
+		return principals.current();
 	}
 
 	@Override
-	public Optional<AcpAgentSession> session(String name) {
+	public @Nullable AcpAgentSession session(String name) {
 		Slot slot = assignment.get(name);
-		return slot == null ? Optional.empty() : slot.connected().flatMap(client -> client.session(name));
+		AcpHarnessClient client = slot == null ? null : slot.connected();
+		return client == null ? null : client.session(name);
 	}
 
 	@Override
@@ -267,7 +269,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 */
 	private void sweep() {
 		try {
-			slots.forEach(slot -> slot.connected().ifPresent(AcpHarnessClient::evictIdleSessions));
+			connected().forEach(AcpHarnessClient::evictIdleSessions);
 			assignment.entrySet().removeIf(entry -> gone(entry) && !missedLastSweep.add(entry.getKey()));
 			missedLastSweep.retainAll(assignment.keySet());
 		}
@@ -278,7 +280,8 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 
 	/** Whether the connection that owns this name no longer has its session. */
 	private static boolean gone(Map.Entry<String, Slot> entry) {
-		return entry.getValue().connected().map(client -> client.session(entry.getKey()).isEmpty()).orElse(true);
+		AcpHarnessClient client = entry.getValue().connected();
+		return client == null || client.session(entry.getKey()) == null;
 	}
 
 	/**
@@ -292,7 +295,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * opened the session. The conversation would then exist twice, on two processes,
 	 * under one name.
 	 */
-	private AcpHarnessClient clientFor(String name, SessionPrincipal principal) {
+	private AcpHarnessClient clientFor(String name, @Nullable SessionPrincipal principal) {
 		requireOpen();
 		if (mcpScope == McpScope.PROCESS) {
 			Slot slot;
@@ -322,7 +325,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * takes no name, so without the hold the process would look idle to a second
 	 * principal, who would restart it mid-turn.
 	 */
-	private Lease leaseForEphemeral(SessionPrincipal principal) {
+	private Lease leaseForEphemeral(@Nullable SessionPrincipal principal) {
 		requireOpen();
 		if (mcpScope != McpScope.PROCESS) {
 			return new Lease(leastLoaded().client(), () -> {
@@ -351,8 +354,8 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * <p>
 	 * The restart is not counted against {@code max-restarts}: nothing failed.
 	 */
-	private Slot placeFor(SessionPrincipal principal) {
-		Optional<SessionPrincipal> who = Optional.ofNullable(principal);
+	private Slot placeFor(@Nullable SessionPrincipal principal) {
+		Served who = new Served(principal);
 		Slot slot = placeOrNull(who);
 		if (slot == null) {
 			sweep();
@@ -372,7 +375,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		return slot;
 	}
 
-	private Slot placeOrNull(Optional<SessionPrincipal> who) {
+	private @Nullable Slot placeOrNull(Served who) {
 		Slot best = null;
 		int bestLoad = Integer.MAX_VALUE;
 		for (Slot slot : slots) {
@@ -448,7 +451,14 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	}
 
 	private Stream<AcpHarnessClient> connected() {
-		return slots.stream().map(Slot::connected).filter(Optional::isPresent).map(Optional::get);
+		return slots.stream().map(Slot::connected).filter(Objects::nonNull);
+	}
+
+	/**
+	 * Who a connection serves under {@link McpScope#PROCESS}: a principal, or nobody. A
+	 * record so that nobody compares equal to nobody and unequal to everyone else.
+	 */
+	private record Served(@Nullable SessionPrincipal principal) {
 	}
 
 	/**
@@ -484,7 +494,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		 * Atomic because {@link AcpHarnessClientPool#close()} takes it without
 		 * {@link #lock}: see {@link #client()}.
 		 */
-		private final AtomicReference<AcpHarnessClient> client = new AtomicReference<>();
+		private final AtomicReference<@Nullable AcpHarnessClient> client = new AtomicReference<>();
 
 		private int restarts;
 
@@ -493,7 +503,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		 * served; null before its first session. Read and written holding
 		 * {@link #placement}.
 		 */
-		private Optional<SessionPrincipal> owner;
+		private @Nullable Served owner;
 
 		/** Unnamed turns in flight, under {@link McpScope#PROCESS}. */
 		private final AtomicInteger ephemeral = new AtomicInteger();
@@ -502,8 +512,9 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 			this.index = index;
 		}
 
-		private Optional<AcpHarnessClient> connected() {
-			return Optional.ofNullable(client.get());
+		/** The live connection, or null when none is open. */
+		private @Nullable AcpHarnessClient connected() {
+			return client.get();
 		}
 
 		private int load() {
@@ -591,11 +602,11 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 
 		private final List<String> text = new ArrayList<>();
 
-		private String sessionName;
+		private @Nullable String sessionName;
 
 		private AcpAgentOptions options = AcpAgentOptions.none();
 
-		private SessionPrincipal principal;
+		private @Nullable SessionPrincipal principal;
 
 		@Override
 		public PromptSpec session(String name) {
@@ -604,7 +615,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public PromptSpec principal(SessionPrincipal principal) {
+		public PromptSpec principal(@Nullable SessionPrincipal principal) {
 			this.principal = principal;
 			return this;
 		}
@@ -616,7 +627,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public PromptSpec options(AcpAgentOptions options) {
+		public PromptSpec options(@Nullable AcpAgentOptions options) {
 			this.options = options == null ? AcpAgentOptions.none() : options;
 			return this;
 		}
@@ -662,16 +673,16 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 			});
 		}
 
-		private SessionPrincipal owner() {
+		private @Nullable SessionPrincipal owner() {
 			return principal != null ? principal : currentPrincipal();
 		}
 
-		private Lease lease(SessionPrincipal owner) {
+		private Lease lease(@Nullable SessionPrincipal owner) {
 			return sessionName == null ? leaseForEphemeral(owner) : new Lease(clientFor(sessionName, owner), () -> {
 			});
 		}
 
-		private PromptSpec delegate(AcpHarnessClient client, SessionPrincipal owner) {
+		private PromptSpec delegate(AcpHarnessClient client, @Nullable SessionPrincipal owner) {
 			PromptSpec spec = client.prompt().principal(owner);
 			if (sessionName != null) {
 				spec = spec.session(sessionName);
@@ -710,12 +721,12 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public AcpAgentSession load(String name, String sessionId, SessionPrincipal principal) {
+		public AcpAgentSession load(String name, String sessionId, @Nullable SessionPrincipal principal) {
 			return clientFor(name, principal).sessions().load(name, sessionId, principal);
 		}
 
 		@Override
-		public AcpAgentSession resume(String name, String sessionId, SessionPrincipal principal) {
+		public AcpAgentSession resume(String name, String sessionId, @Nullable SessionPrincipal principal) {
 			return clientFor(name, principal).sessions().resume(name, sessionId, principal);
 		}
 
@@ -727,8 +738,9 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		@Override
 		public void close(String name) {
 			Slot slot = assignment.remove(name);
-			if (slot != null) {
-				slot.connected().ifPresent(client -> client.sessions().close(name));
+			AcpHarnessClient client = slot == null ? null : slot.connected();
+			if (client != null) {
+				client.sessions().close(name);
 			}
 		}
 
@@ -738,7 +750,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public Optional<AcpAgentSession> find(String name) {
+		public @Nullable AcpAgentSession find(String name) {
 			return session(name);
 		}
 

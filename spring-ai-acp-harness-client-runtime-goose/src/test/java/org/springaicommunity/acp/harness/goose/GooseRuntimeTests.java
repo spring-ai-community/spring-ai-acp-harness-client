@@ -152,7 +152,7 @@ class GooseRuntimeTests {
 		AcpSchema.ToolCallUpdate call = new AcpSchema.ToolCallUpdate("id", "Ran a shell command", null, null, null,
 				null, Map.of("toolName", "developer__shell"), null);
 
-		assertThat(runtime.toolNameOf(call)).contains("developer__shell");
+		assertThat(runtime.toolNameOf(call)).isEqualTo("developer__shell");
 	}
 
 	@Test
@@ -160,7 +160,7 @@ class GooseRuntimeTests {
 		AcpSchema.ToolCallUpdate call = new AcpSchema.ToolCallUpdate("id", "developer__text_editor", null, null, null,
 				null, null, null);
 
-		assertThat(runtime.toolNameOf(call)).contains("developer__text_editor");
+		assertThat(runtime.toolNameOf(call)).isEqualTo("developer__text_editor");
 	}
 
 	// --- the served transport

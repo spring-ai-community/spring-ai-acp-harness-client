@@ -1,10 +1,11 @@
 package org.springaicommunity.acp.harness.config;
 
 import java.time.Duration;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 /**
- * Per-request overrides. Every field is optional; an empty field defers to
+ * Per-request overrides. Every field is optional; a null field defers to
  * {@link AcpAgentSettings}.
  *
  * <p>
@@ -12,7 +13,8 @@ import java.util.Optional;
  * workspace root and the MCP server set are fixed when the agent process starts, so they
  * are deliberately absent — offering them per call would be a lie.
  */
-public record AcpAgentOptions(Duration timeout, String model, String provider, String mode) {
+public record AcpAgentOptions(@Nullable Duration timeout, @Nullable String model, @Nullable String provider,
+		@Nullable String mode) {
 
 	private static final AcpAgentOptions NONE = new AcpAgentOptions(null, null, null, null);
 
@@ -33,48 +35,32 @@ public record AcpAgentOptions(Duration timeout, String model, String provider, S
 		return new Builder();
 	}
 
-	public Optional<Duration> findTimeout() {
-		return Optional.ofNullable(timeout);
-	}
-
-	public Optional<String> findModel() {
-		return Optional.ofNullable(model);
-	}
-
-	public Optional<String> findProvider() {
-		return Optional.ofNullable(provider);
-	}
-
-	public Optional<String> findMode() {
-		return Optional.ofNullable(mode);
-	}
-
 	public static final class Builder {
 
-		private Duration timeout;
+		private @Nullable Duration timeout;
 
-		private String model;
+		private @Nullable String model;
 
-		private String provider;
+		private @Nullable String provider;
 
-		private String mode;
+		private @Nullable String mode;
 
-		public Builder timeout(Duration timeout) {
+		public Builder timeout(@Nullable Duration timeout) {
 			this.timeout = timeout;
 			return this;
 		}
 
-		public Builder model(String model) {
+		public Builder model(@Nullable String model) {
 			this.model = model;
 			return this;
 		}
 
-		public Builder provider(String provider) {
+		public Builder provider(@Nullable String provider) {
 			this.provider = provider;
 			return this;
 		}
 
-		public Builder mode(String mode) {
+		public Builder mode(@Nullable String mode) {
 			this.mode = mode;
 			return this;
 		}

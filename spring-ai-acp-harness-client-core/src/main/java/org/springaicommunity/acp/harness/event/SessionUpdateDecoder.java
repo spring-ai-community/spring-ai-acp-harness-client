@@ -1,8 +1,8 @@
 package org.springaicommunity.acp.harness.event;
 
 import java.util.Map;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,22 +42,22 @@ public final class SessionUpdateDecoder {
 	/**
 	 * @param params the notification's raw {@code params}, as the transport delivered
 	 * them
-	 * @return the notification, or empty when it is one this SDK version cannot represent
+	 * @return the notification, or null when it is one this SDK version cannot represent
 	 */
-	public static Optional<AcpSchema.SessionNotification> decode(Object params, AcpTransport transport) {
+	public static AcpSchema.@Nullable SessionNotification decode(@Nullable Object params, AcpTransport transport) {
 		if (params instanceof AcpSchema.SessionNotification typed) {
-			return Optional.of(typed);
+			return typed;
 		}
 		if (params == null) {
-			return Optional.empty();
+			return null;
 		}
 		try {
-			return Optional.ofNullable(transport.unmarshalFrom(params, NOTIFICATION));
+			return transport.unmarshalFrom(params, NOTIFICATION);
 		}
 		catch (RuntimeException ex) {
 			logger.debug("Skipping a session/update of kind '{}' that this ACP SDK cannot model: {}", kindOf(params),
 					ex.getMessage());
-			return Optional.empty();
+			return null;
 		}
 	}
 

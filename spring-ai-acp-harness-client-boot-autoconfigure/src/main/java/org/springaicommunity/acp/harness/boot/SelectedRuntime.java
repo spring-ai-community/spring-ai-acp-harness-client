@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,9 +54,9 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 			return new SelectedRuntime(only);
 		}
 
-		Optional<AcpAgentRuntime> adapter = available.stream().filter(r -> r.id().equals(id)).findFirst();
-		AcpAgentRuntime selected = adapter.orElseGet(() -> fromProviders(providers, id, adapterIds));
-		if (adapter.isEmpty()) {
+		AcpAgentRuntime adapter = available.stream().filter(r -> r.id().equals(id)).findFirst().orElse(null);
+		AcpAgentRuntime selected = adapter != null ? adapter : fromProviders(providers, id, adapterIds);
+		if (adapter == null) {
 			logger.info("No adapter claims runtime '{}'; it was resolved from a runtime provider", id);
 		}
 
@@ -95,9 +94,9 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 	private static AcpAgentRuntime fromProviders(List<AcpAgentRuntimeProvider> providers, String id,
 			List<String> adapterIds) {
 		for (AcpAgentRuntimeProvider provider : providers) {
-			Optional<AcpAgentRuntime> resolved = provider.forId(id);
-			if (resolved.isPresent()) {
-				return resolved.get();
+			AcpAgentRuntime resolved = provider.forId(id);
+			if (resolved != null) {
+				return resolved;
 			}
 		}
 		throw new IllegalStateException("No AcpAgentRuntime registered for spring.ai.acp.harness.runtime='" + id
@@ -144,7 +143,7 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 			if (known.contains(id)) {
 				continue;
 			}
-			if (providers.stream().anyMatch(provider -> provider.forId(id).isPresent())) {
+			if (providers.stream().anyMatch(provider -> provider.forId(id) != null)) {
 				continue;
 			}
 			unknown.add(id);

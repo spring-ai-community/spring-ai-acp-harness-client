@@ -48,13 +48,19 @@ public final class ProviderEnvironment {
 	 * api type says what to call the variables.
 	 */
 	public static Map<String, String> of(ProviderSpec provider) {
-		if (provider == null || !provider.hasCredentials() || provider.findApiType().isEmpty()) {
+		if (provider == null || !provider.hasCredentials() || provider.findApiType() == null) {
 			return Map.of();
 		}
 		String apiType = provider.apiType();
 		Map<String, String> env = new LinkedHashMap<>();
-		provider.findApiKey().ifPresent(key -> env.put(apiKeyVariable(apiType), key));
-		provider.findApiBase().ifPresent(url -> env.put(baseUrlVariable(apiType), url.toString()));
+		String apiKey = provider.findApiKey();
+		if (apiKey != null) {
+			env.put(apiKeyVariable(apiType), apiKey);
+		}
+		var apiBase = provider.findApiBase();
+		if (apiBase != null) {
+			env.put(baseUrlVariable(apiType), apiBase.toString());
+		}
 		return Map.copyOf(env);
 	}
 

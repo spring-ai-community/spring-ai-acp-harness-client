@@ -5,7 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +55,7 @@ class OAuth2McpCredentialsProviderTests {
 		fake.close();
 	}
 
-	private OAuth2McpCredentialsProvider provider(Supplier<Optional<String>> baseUrl) {
+	private OAuth2McpCredentialsProvider provider(Supplier<String> baseUrl) {
 		DefaultUrlValidator urlValidator = new DefaultUrlValidator(true);
 		return new OAuth2McpCredentialsProvider(List.of(finops), registrations,
 				new DefaultMcpOAuth2DcrClientManager(registrations, new DynamicClientRegistrationService(urlValidator),
@@ -65,7 +65,14 @@ class OAuth2McpCredentialsProviderTests {
 	}
 
 	private OAuth2McpCredentialsProvider provider() {
-		return provider(() -> Optional.of("https://agent.example.com"));
+		return provider(() -> "https://agent.example.com");
+	}
+
+	/**
+	 * The credentials {@code principal} gets for the protected server, which must exist.
+	 */
+	private McpCredentials credentials(OAuth2McpCredentialsProvider provider, SessionPrincipal principal) {
+		return Objects.requireNonNull(provider.credentialsFor(finops, principal));
 	}
 
 	/**
@@ -114,7 +121,7 @@ class OAuth2McpCredentialsProviderTests {
 		McpServerSpec.Http other = new McpServerSpec.Http("other", URI.create("https://other.example.com/mcp"),
 				Map.of());
 
-		assertThat(provider().credentialsFor(other, ALICE)).isEmpty();
+		assertThat(provider().credentialsFor(other, ALICE)).isNull();
 		assertThat(fake.registrations).isEmpty();
 	}
 
@@ -154,7 +161,7 @@ class OAuth2McpCredentialsProviderTests {
 
 	@Test
 	void withoutABaseUrlTheRegistrationSaysWhatToSet() {
-		assertThatThrownBy(() -> provider(Optional::empty).credentialsFor(finops, ALICE))
+		assertThatThrownBy(() -> provider(() -> null).credentialsFor(finops, ALICE))
 			.isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("spring.ai.acp.harness.mcp.oauth.base-url");
 		assertThat(fake.registrations).isEmpty();
@@ -169,7 +176,7 @@ class OAuth2McpCredentialsProviderTests {
 		register(provider);
 		signIn(ALICE, false);
 
-		McpCredentials credentials = provider.credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials credentials = credentials(provider, ALICE);
 
 		assertThat(token(credentials)).startsWith("Bearer access-");
 		assertThat(fake.refreshCount()).isZero();
@@ -184,7 +191,7 @@ class OAuth2McpCredentialsProviderTests {
 		signIn(ALICE, true);
 		String before = authorizedClients.loadAuthorizedClient("finops-mcp", "alice").getRefreshToken().getTokenValue();
 
-		String bearer = token(provider.credentialsFor(finops, ALICE).orElseThrow());
+		String bearer = token(credentials(provider, ALICE));
 
 		Map<String, String> refresh = fake.tokenRequests.get(0);
 		assertThat(refresh).containsEntry("grant_type", "refresh_token")
@@ -199,7 +206,7 @@ class OAuth2McpCredentialsProviderTests {
 		OAuth2McpCredentialsProvider provider = provider();
 		register(provider);
 		signIn(ALICE, false);
-		McpCredentials credentials = provider.credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials credentials = credentials(provider, ALICE);
 		anHourPasses(ALICE);
 		fake.delayTokens(Duration.ofMillis(200));
 		List<String> seen = new CopyOnWriteArrayList<>();
@@ -240,7 +247,7 @@ class OAuth2McpCredentialsProviderTests {
 		OAuth2McpCredentialsProvider provider = provider();
 		register(provider);
 		signIn(ALICE, false);
-		McpCredentials credentials = provider.credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials credentials = credentials(provider, ALICE);
 		anHourPasses(ALICE);
 		fake.revokeRefreshTokens();
 
@@ -259,7 +266,7 @@ class OAuth2McpCredentialsProviderTests {
 		OAuth2McpCredentialsProvider provider = provider();
 		register(provider);
 		signIn(ALICE, false);
-		McpCredentials credentials = provider.credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials credentials = credentials(provider, ALICE);
 		anHourPasses(ALICE);
 		fake.refuseRefreshesWith(400);
 		fake.revokeRefreshTokens();
@@ -289,7 +296,7 @@ class OAuth2McpCredentialsProviderTests {
 		signIn(ALICE, true);
 		fake.failTokens(503);
 
-		McpCredentials credentials = provider.credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials credentials = credentials(provider, ALICE);
 
 		assertThatThrownBy(() -> token(credentials)).isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("invalid_token_response");
@@ -308,8 +315,8 @@ class OAuth2McpCredentialsProviderTests {
 		signIn(ALICE, false);
 		signIn(BOB, false);
 
-		String alice = token(provider.credentialsFor(finops, ALICE).orElseThrow());
-		String bob = token(provider.credentialsFor(finops, BOB).orElseThrow());
+		String alice = token(credentials(provider, ALICE));
+		String bob = token(credentials(provider, BOB));
 
 		assertThat(alice).isNotEqualTo(bob);
 		assertThat(alice).isEqualTo("Bearer "

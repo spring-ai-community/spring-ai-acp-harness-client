@@ -91,7 +91,7 @@ Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (6
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
 
 SessionConfiguration config = acpHarnessClient.openSession("review-123").configuration();
-config.applied(PortableOption.MODEL);          // Optional: the model this session is really using
+config.applied(PortableOption.MODEL);          // the model this session is really using, or null
 config.unsupported();                          // what was asked for and could not be honoured
 config.resolutions().values().forEach(r ->     // requested, applied, and by which mechanism
         log.info("{}: {} -> {} ({})", r.option(), r.requested(), r.applied(), r.mechanism()));

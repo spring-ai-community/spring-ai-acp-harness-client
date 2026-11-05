@@ -24,6 +24,21 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   `spring.ai.*` convention of the Spring AI Community projects. Update your configuration: the old
   keys are no longer read, and nothing reports them, so a `spring.acp.*.enabled=false` stops taking
   effect. The `acp:` config import prefix, metric names and Java packages are unchanged.
+- **Breaking:** the API no longer returns or accepts `java.util.Optional`. A value that may be
+  absent is now a plain reference annotated with JSpecify's `@Nullable`, as Spring Framework 7 and
+  Spring AI do, so `client.session(name)`, `client.agentInfo()`, `sessions().find(name)`,
+  `SessionConfiguration.applied(option)`, `AcpAgentSession.principal()`, `RuntimeOptions.text(path)`
+  and the `find*` accessors of `ProviderSpec` and `AcpAgentSettings` return null for "none". The
+  SPI follows: `AcpAgentRuntime.authMethod`, `toolNameOf`, `planOf`, `logDirectory` and `noticeOf`,
+  `AcpAgentRuntimeProvider.forId`, `McpCredentialsProvider.credentialsFor`,
+  `McpCredentials.upstream`, `ModelCatalog.modelsOf`, `SessionPrincipalResolver.current`,
+  `PermissionPrompt.ask` and both `PermissionPolicy.decide` methods return null instead of empty,
+  and `decide` and `PermissionQuestion` take a nullable tool name. `AcpAgentOptions` drops its
+  `find*` methods, since its record accessors already say the same thing; `StoredSession` likewise
+  drops `findCwd`, `findTitle` and `findUpdatedAt`, and `ProviderSpec` drops `findBaseUrl`.
+  `AcpAgentEvent.UsageUpdated.contextFraction()` returns a `Double` or null instead of an
+  `OptionalDouble`. Replace `.isPresent()` with a null check and `.orElse(x)` with a conditional
+  to migrate; an IDE that reads JSpecify annotations flags the places that need it.
 - Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs

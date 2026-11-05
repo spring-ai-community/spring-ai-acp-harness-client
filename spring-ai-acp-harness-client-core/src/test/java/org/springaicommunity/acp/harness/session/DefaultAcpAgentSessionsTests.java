@@ -98,8 +98,8 @@ class DefaultAcpAgentSessionsTests {
 
 		StoredSession found = sessions(capabilities(false, all())).list().get(0);
 
-		assertThat(found.findUpdatedAt()).isEmpty();
-		assertThat(found.findTitle()).contains("title");
+		assertThat(found.updatedAt()).isNull();
+		assertThat(found.title()).isEqualTo("title");
 	}
 
 	@Test
@@ -111,7 +111,7 @@ class DefaultAcpAgentSessionsTests {
 
 		assertThat(bound.name()).isEqualTo("review");
 		assertThat(bound.sessionId()).isEqualTo("sid-7");
-		assertThat(registry.find("review")).isPresent();
+		assertThat(registry.find("review")).isNotNull();
 	}
 
 	@Test
@@ -122,7 +122,7 @@ class DefaultAcpAgentSessionsTests {
 		assertThatThrownBy(() -> sessions(capabilities(true, all())).load("review", "sid-7"))
 			.isInstanceOf(RuntimeException.class);
 
-		assertThat(registry.find("review")).isEmpty();
+		assertThat(registry.find("review")).isNull();
 	}
 
 	@Test
@@ -146,7 +146,7 @@ class DefaultAcpAgentSessionsTests {
 
 		open.delete("sid-7");
 
-		assertThat(registry.find("review")).isEmpty();
+		assertThat(registry.find("review")).isNull();
 	}
 
 	@Test
@@ -157,7 +157,7 @@ class DefaultAcpAgentSessionsTests {
 
 		open.close("review");
 
-		assertThat(registry.find("review")).isEmpty();
+		assertThat(registry.find("review")).isNull();
 		verify(acp, never()).closeSession(any());
 	}
 

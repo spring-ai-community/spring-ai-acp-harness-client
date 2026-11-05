@@ -15,7 +15,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -77,8 +76,8 @@ class McpAccessTests {
 	}
 
 	private static McpCredentialsProvider perUser() {
-		return (server, principal) -> Optional
-			.of(McpCredentials.bearer(() -> "token-" + (principal == null ? "nobody" : principal.name())));
+		return (server, principal) -> McpCredentials
+			.bearer(() -> "token-" + (principal == null ? "nobody" : principal.name()));
 	}
 
 	private HttpResponse<String> post(URI url, Map<String, String> headers, String body) throws Exception {
@@ -116,8 +115,8 @@ class McpAccessTests {
 	@Test
 	void aCredentialedServerIsHandedOverAsALoopbackUrlCarryingNoHeaders() {
 		McpServerSpec.Http open = new McpServerSpec.Http("open", URI.create("https://open.example.com/mcp"), Map.of());
-		McpAccess access = access((server, principal) -> server.name().equals("tools")
-				? Optional.of(McpCredentials.bearer(() -> "secret")) : Optional.empty());
+		McpAccess access = access(
+				(server, principal) -> server.name().equals("tools") ? McpCredentials.bearer(() -> "secret") : null);
 
 		McpAccess.Grant grant = access.grant(null, List.of(tools(), open));
 
@@ -159,7 +158,7 @@ class McpAccessTests {
 	void asksForCredentialsOnEveryRequestSoARefreshLandsMidSession() throws Exception {
 		AtomicInteger issued = new AtomicInteger();
 		McpAccess.Grant grant = access(
-				(server, principal) -> Optional.of(McpCredentials.bearer(() -> "token-" + issued.incrementAndGet())))
+				(server, principal) -> McpCredentials.bearer(() -> "token-" + issued.incrementAndGet()))
 			.grant(null, List.of(tools()));
 
 		post(urlOf(grant, "tools"), Map.of(), "{}");
@@ -196,8 +195,8 @@ class McpAccessTests {
 	@Test
 	void aServerWithNoUrlOfItsOwnIsForwardedToTheUpstreamTheProviderNames() throws Exception {
 		McpServerSpec brokered = McpServerSpec.Http.provided("brokered", Map.of());
-		McpAccess.Grant grant = access((server, principal) -> Optional
-			.of(McpCredentials.routed(upstream.url(), McpCredentials.bearer(() -> "token-" + principal.name()))))
+		McpAccess.Grant grant = access((server, principal) -> McpCredentials.routed(upstream.url(),
+				McpCredentials.bearer(() -> "token-" + principal.name())))
 			.grant(SessionPrincipal.of("alice"), List.of(brokered));
 
 		HttpResponse<String> response = post(urlOf(grant, "brokered"), Map.of(), "{}");
@@ -213,7 +212,7 @@ class McpAccessTests {
 		McpServerSpec.Http configured = new McpServerSpec.Http("tools", URI.create("https://stale.example.com/mcp"),
 				Map.of());
 		McpAccess.Grant grant = access(
-				(server, principal) -> Optional.of(McpCredentials.routed(upstream.url(), McpCredentials.NONE)))
+				(server, principal) -> McpCredentials.routed(upstream.url(), McpCredentials.NONE))
 			.grant(null, List.of(configured));
 
 		post(urlOf(grant, "tools"), Map.of(), "{}");
@@ -235,12 +234,12 @@ class McpAccessTests {
 			}
 
 			@Override
-			public Optional<URI> upstream() {
-				return Optional.of(URI.create("http://mcp.example.com/mcp"));
+			public URI upstream() {
+				return URI.create("http://mcp.example.com/mcp");
 			}
 
 		};
-		McpAccess access = access((server, principal) -> Optional.of(sloppy));
+		McpAccess access = access((server, principal) -> sloppy);
 
 		assertThatThrownBy(() -> access.grant(null, List.of(McpServerSpec.Http.provided("brokered", Map.of()))))
 			.isInstanceOf(IllegalArgumentException.class)
@@ -312,8 +311,8 @@ class McpAccessTests {
 
 	@Test
 	void underProcessScopeASecondPrincipalIsRefusedEvenWhenTheFirstHasNothingRouted() {
-		McpAccess access = processScoped((server, principal) -> "alice".equals(principal.name()) ? Optional.empty()
-				: Optional.of(McpCredentials.bearer(() -> "t")));
+		McpAccess access = processScoped(
+				(server, principal) -> "alice".equals(principal.name()) ? null : McpCredentials.bearer(() -> "t"));
 		access.grant(SessionPrincipal.of("alice"), List.of(tools()));
 
 		assertThatThrownBy(() -> access.grant(SessionPrincipal.of("bob"), List.of(tools())))
@@ -329,10 +328,10 @@ class McpAccessTests {
 			// would arrive.
 			if (server.name().equals("more") && asked.get() < 2) {
 				asked.incrementAndGet();
-				return Optional.empty();
+				return null;
 			}
 			asked.incrementAndGet();
-			return Optional.of(McpCredentials.bearer(() -> "token-" + server.name()));
+			return McpCredentials.bearer(() -> "token-" + server.name());
 		});
 		McpAccess.Grant older = access.grant(SessionPrincipal.of("alice"), List.of(tools(), more));
 		URI moreThroughOlder = urlOf(older, "tools")
@@ -385,7 +384,7 @@ class McpAccessTests {
 			if (server.name().equals("second")) {
 				throw new IllegalStateException("alice has not signed in to second");
 			}
-			return Optional.of(McpCredentials.bearer(() -> "t"));
+			return McpCredentials.bearer(() -> "t");
 		});
 
 		assertThatThrownBy(() -> access.grant(SessionPrincipal.of("alice"), List.of(tools(), second)))
@@ -396,12 +395,13 @@ class McpAccessTests {
 	@Test
 	void credentialsThatFailFailOnlyThatRequest() throws Exception {
 		AtomicInteger calls = new AtomicInteger();
-		McpAccess.Grant grant = access((server, principal) -> Optional.of(() -> {
+		McpCredentials flaky = () -> {
 			if (calls.incrementAndGet() == 1) {
 				throw new IllegalStateException("refresh refused");
 			}
 			return Map.of("Authorization", "Bearer recovered");
-		})).grant(null, List.of(tools()));
+		};
+		McpAccess.Grant grant = access((server, principal) -> flaky).grant(null, List.of(tools()));
 
 		assertThat(post(urlOf(grant, "tools"), Map.of(), "{}").statusCode()).isEqualTo(502);
 		assertThat(post(urlOf(grant, "tools"), Map.of(), "{}").statusCode()).isEqualTo(200);

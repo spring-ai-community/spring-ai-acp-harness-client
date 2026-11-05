@@ -2,9 +2,9 @@ package org.springaicommunity.acp.harness.mcp;
 
 import java.net.URI;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.Validation;
 
 /**
@@ -48,19 +48,20 @@ public interface McpCredentials {
 	 * URL at all; see {@code McpServerSpec.Http.provided}. Read once, when the session is
 	 * granted, not per request: the agent is handed one loopback URL per server for the
 	 * life of the session, and it should reach one upstream through it.
-	 * @return the upstream, or empty to use the configured URL
+	 * @return the upstream, or null to use the configured URL
 	 */
-	default Optional<URI> upstream() {
-		return Optional.empty();
+	default @Nullable URI upstream() {
+		return null;
 	}
 
 	/**
 	 * Credentials for an upstream this provider chose, rather than the configured one.
 	 * @param upstream the server's real URL; https, or http only for loopback and
 	 * {@code .apps.internal}
-	 * @param credentials the headers to send there, asked for on every request as usual
+	 * @param credentials the headers to send there, asked for on every request as usual;
+	 * null for none
 	 */
-	static McpCredentials routed(URI upstream, McpCredentials credentials) {
+	static McpCredentials routed(URI upstream, @Nullable McpCredentials credentials) {
 		URI url = Validation.requireSecureUrl(upstream, "mcp server upstream url");
 		McpCredentials headers = credentials == null ? NONE : credentials;
 		return new McpCredentials() {
@@ -71,8 +72,8 @@ public interface McpCredentials {
 			}
 
 			@Override
-			public Optional<URI> upstream() {
-				return Optional.of(url);
+			public URI upstream() {
+				return url;
 			}
 
 		};
@@ -85,7 +86,7 @@ public interface McpCredentials {
 	McpCredentials NONE = Map::of;
 
 	/** A bearer token read at request time, so whatever supplies it can rotate it. */
-	static McpCredentials bearer(Supplier<String> token) {
+	static McpCredentials bearer(Supplier<@Nullable String> token) {
 		return () -> {
 			String value = token.get();
 			return value == null || value.isBlank() ? Map.of() : Map.of("Authorization", "Bearer " + value);

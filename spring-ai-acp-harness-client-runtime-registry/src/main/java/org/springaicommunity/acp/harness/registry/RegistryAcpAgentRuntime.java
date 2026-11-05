@@ -4,8 +4,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
 import org.springaicommunity.acp.harness.config.ProviderEnvironment;
 import org.springaicommunity.acp.harness.runtime.AcpAgentEnvironment;
@@ -92,10 +92,11 @@ public class RegistryAcpAgentRuntime implements AcpAgentRuntime {
 	}
 
 	private AcpAgentLaunchSpec launchBinary(RegistryEntry.Distribution.Binary binary, AcpAgentSettings settings) {
-		RegistryEntry.Artifact artifact = binary.forPlatform(platform)
-			.orElseThrow(() -> new AcpAgentInstaller.AcpAgentInstallException(
-					"The ACP registry publishes no build of '" + entry.id() + "' for " + platform.id() + "; it has "
-							+ binary.artifacts().keySet().stream().sorted().toList()));
+		RegistryEntry.Artifact artifact = binary.forPlatform(platform);
+		if (artifact == null) {
+			throw new AcpAgentInstaller.AcpAgentInstallException("The ACP registry publishes no build of '" + entry.id()
+					+ "' for " + platform.id() + "; it has " + binary.artifacts().keySet().stream().sorted().toList());
+		}
 		Path command = installer.install(entry, artifact);
 		return stdio(command.toString(), prepend(List.of(), artifact.args(), settings), artifact.env(), settings);
 	}
@@ -138,7 +139,7 @@ public class RegistryAcpAgentRuntime implements AcpAgentRuntime {
 	 * and a wrong answer would turn an allowlist into an approval.
 	 */
 	@Override
-	public Optional<String> toolNameOf(AcpSchema.ToolCallUpdate toolCall) {
+	public @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
 		return ToolNames.fromRawInput(toolCall);
 	}
 

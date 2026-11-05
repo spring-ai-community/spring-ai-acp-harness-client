@@ -50,13 +50,11 @@ class RegistryLiveInstallTests {
 	void installsARealAgentFromTheRealRegistry() throws Exception {
 		AcpAgentRegistry registry = new AcpAgentRegistry(
 				new RegistrySettings(null, temp.resolve("cache"), null, false, true, null));
-		RegistryEntry entry = registry.find(AGENT).orElseThrow();
+		RegistryEntry entry = java.util.Objects.requireNonNull(registry.find(AGENT));
 		assertThat(entry.distribution()).isInstanceOf(RegistryEntry.Distribution.Binary.class);
 
-		AcpAgentRuntime runtime = new RegistryAcpAgentRuntimeProvider(registry,
-				new AcpAgentInstaller(registry.settings()))
-			.forId(AGENT)
-			.orElseThrow();
+		AcpAgentRuntime runtime = java.util.Objects.requireNonNull(
+				new RegistryAcpAgentRuntimeProvider(registry, new AcpAgentInstaller(registry.settings())).forId(AGENT));
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
 		// The download, the digest check and the unpack all happen here: launch() is the
@@ -77,11 +75,10 @@ class RegistryLiveInstallTests {
 	void doesNotDownloadAnAgentItAlreadyHas() throws Exception {
 		AcpAgentRegistry registry = new AcpAgentRegistry(
 				new RegistrySettings(null, temp.resolve("cache"), null, false, true, null));
-		RegistryEntry entry = registry.find(AGENT).orElseThrow();
+		RegistryEntry entry = java.util.Objects.requireNonNull(registry.find(AGENT));
 		AcpAgentInstaller installer = new AcpAgentInstaller(registry.settings());
-		RegistryEntry.Artifact artifact = ((RegistryEntry.Distribution.Binary) entry.distribution())
-			.forPlatform(Platform.current())
-			.orElseThrow();
+		RegistryEntry.Artifact artifact = java.util.Objects
+			.requireNonNull(((RegistryEntry.Distribution.Binary) entry.distribution()).forPlatform(Platform.current()));
 
 		Path first = installer.install(entry, artifact);
 		// A fresh installer, so the answer comes off the disk rather than out of the memo

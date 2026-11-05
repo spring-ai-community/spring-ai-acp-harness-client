@@ -4,11 +4,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AdvertisedSessionConfig;
 import org.springaicommunity.acp.harness.config.SessionConfiguration;
 
@@ -41,18 +41,18 @@ public final class AcpAgentSession {
 	private final AtomicReference<SessionConfiguration> configuration = new AtomicReference<>(
 			SessionConfiguration.empty());
 
-	private final SessionPrincipal principal;
+	private final @Nullable SessionPrincipal principal;
 
 	/**
 	 * Whatever must end with the session: today, its MCP proxy routes. Run at most once.
 	 */
-	private final AtomicReference<Runnable> release;
+	private final AtomicReference<@Nullable Runnable> release;
 
 	AcpAgentSession(String name, String sessionId) {
 		this(name, sessionId, null, null);
 	}
 
-	AcpAgentSession(String name, String sessionId, SessionPrincipal principal, Runnable release) {
+	AcpAgentSession(String name, String sessionId, @Nullable SessionPrincipal principal, @Nullable Runnable release) {
 		this.name = name;
 		this.sessionId = sessionId;
 		this.principal = principal;
@@ -67,16 +67,16 @@ public final class AcpAgentSession {
 		return sessionId;
 	}
 
-	/** Who this session was opened for; empty for a session opened on nobody's behalf. */
-	public Optional<SessionPrincipal> principal() {
-		return Optional.ofNullable(principal);
+	/** Who this session was opened for; null for a session opened on nobody's behalf. */
+	public @Nullable SessionPrincipal principal() {
+		return principal;
 	}
 
 	/**
 	 * Whether a caller acting for {@code candidate} (null for nobody) may use this
 	 * session.
 	 */
-	boolean belongsTo(SessionPrincipal candidate) {
+	boolean belongsTo(@Nullable SessionPrincipal candidate) {
 		return Objects.equals(principal, candidate);
 	}
 
@@ -101,7 +101,7 @@ public final class AcpAgentSession {
 		return advertised.get();
 	}
 
-	public void advertised(AdvertisedSessionConfig config) {
+	public void advertised(@Nullable AdvertisedSessionConfig config) {
 		AdvertisedSessionConfig resolved = config == null ? AdvertisedSessionConfig.empty() : config;
 		advertised.set(resolved);
 		configOptions.set(resolved.configOptions());
@@ -116,7 +116,7 @@ public final class AcpAgentSession {
 		return configuration.get();
 	}
 
-	public void configuration(SessionConfiguration resolved) {
+	public void configuration(@Nullable SessionConfiguration resolved) {
 		configuration.set(resolved == null ? SessionConfiguration.empty() : resolved);
 	}
 
@@ -129,7 +129,7 @@ public final class AcpAgentSession {
 		return configOptions.get();
 	}
 
-	public void configOptions(List<AcpSchema.SessionConfigOption> options) {
+	public void configOptions(@Nullable List<AcpSchema.SessionConfigOption> options) {
 		configOptions.set(options == null ? List.of() : List.copyOf(options));
 	}
 

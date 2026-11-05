@@ -43,8 +43,8 @@ class OpenCodeContractTests extends AcpAgentRuntimeContract {
 	}
 
 	@Override
-	protected java.util.Optional<String> reviewingMode() {
-		return java.util.Optional.of("plan");
+	protected String reviewingMode() {
+		return "plan";
 	}
 
 }

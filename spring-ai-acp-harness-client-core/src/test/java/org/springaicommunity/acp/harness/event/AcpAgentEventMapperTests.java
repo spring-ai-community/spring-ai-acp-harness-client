@@ -15,18 +15,18 @@ class AcpAgentEventMapperTests {
 	void mapsAgentTextAndThoughtsToDistinctEvents() {
 		assertThat(AcpAgentEventMapper
 			.map(new AcpSchema.AgentMessageChunk("agent_message_chunk", new AcpSchema.TextContent("hello"))))
-			.contains(new AcpAgentEvent.Text("hello"));
+			.isEqualTo(new AcpAgentEvent.Text("hello"));
 
 		assertThat(AcpAgentEventMapper
 			.map(new AcpSchema.AgentThoughtChunk("agent_thought_chunk", new AcpSchema.TextContent("pondering"))))
-			.contains(new AcpAgentEvent.Thought("pondering"));
+			.isEqualTo(new AcpAgentEvent.Thought("pondering"));
 	}
 
 	@Test
 	void dropsTheEchoOfOurOwnPrompt() {
 		assertThat(AcpAgentEventMapper
 			.map(new AcpSchema.UserMessageChunk("user_message_chunk", new AcpSchema.TextContent("what I just sent"))))
-			.isEmpty();
+			.isNull();
 	}
 
 	@Test
@@ -34,7 +34,7 @@ class AcpAgentEventMapperTests {
 		AcpSchema.AgentMessageChunk replayed = new AcpSchema.AgentMessageChunk("agent_message_chunk",
 				new AcpSchema.TextContent("said last week"), null, Map.of("replay", true));
 
-		assertThat(AcpAgentEventMapper.map(replayed)).isEmpty();
+		assertThat(AcpAgentEventMapper.map(replayed)).isNull();
 	}
 
 	@Test
@@ -45,8 +45,8 @@ class AcpAgentEventMapperTests {
 				null, AcpSchema.ToolCallStatus.COMPLETED, List.of(), null, null, null, null);
 
 		assertThat(AcpAgentEventMapper.map(started))
-			.contains(new AcpAgentEvent.ToolCallStarted("t1", "Read file", AcpSchema.ToolKind.READ));
-		assertThat(AcpAgentEventMapper.map(finished)).get()
+			.isEqualTo(new AcpAgentEvent.ToolCallStarted("t1", "Read file", AcpSchema.ToolKind.READ));
+		assertThat(AcpAgentEventMapper.map(finished))
 			.isEqualTo(new AcpAgentEvent.ToolCallUpdated("t1", AcpSchema.ToolCallStatus.COMPLETED, List.of()));
 	}
 
@@ -55,7 +55,7 @@ class AcpAgentEventMapperTests {
 		AcpSchema.SessionUpdate image = new AcpSchema.AgentMessageChunk("agent_message_chunk",
 				new AcpSchema.ImageContent("image", "data", "image/png", null, null, null));
 
-		assertThat(AcpAgentEventMapper.map(image)).isEmpty();
+		assertThat(AcpAgentEventMapper.map(image)).isNull();
 	}
 
 	@Test
@@ -67,19 +67,19 @@ class AcpAgentEventMapperTests {
 				new AcpSchema.Cost(0.008932, "USD"), null);
 
 		assertThat(AcpAgentEventMapper.map(update))
-			.contains(new AcpAgentEvent.UsageUpdated(4441L, 1_050_000L, 0.008932, "USD"));
+			.isEqualTo(new AcpAgentEvent.UsageUpdated(4441L, 1_050_000L, 0.008932, "USD"));
 	}
 
 	@Test
 	void reportsHowMuchOfTheContextWindowIsGone() {
 		AcpAgentEvent.UsageUpdated usage = new AcpAgentEvent.UsageUpdated(500L, 1000L, null, null);
 
-		assertThat(usage.contextFraction()).hasValue(0.5);
+		assertThat(usage.contextFraction()).isEqualTo(0.5);
 	}
 
 	@Test
 	void hasNoOpinionOnTheContextWindowWhenTheAgentDidNotSayHowBigItIs() {
-		assertThat(new AcpAgentEvent.UsageUpdated(500L, 0L, null, null).contextFraction()).isEmpty();
+		assertThat(new AcpAgentEvent.UsageUpdated(500L, 0L, null, null).contextFraction()).isNull();
 	}
 
 	@Test
@@ -87,13 +87,12 @@ class AcpAgentEventMapperTests {
 		// "0 of 0" would read as an empty context window rather than as no measurement,
 		// and a gauge
 		// cannot tell the difference.
-		assertThat(AcpAgentEventMapper.map(new AcpSchema.UsageUpdate("usage_update", null, null, null, null)))
-			.isEmpty();
+		assertThat(AcpAgentEventMapper.map(new AcpSchema.UsageUpdate("usage_update", null, null, null, null))).isNull();
 	}
 
 	@Test
 	void toleratesANullUpdate() {
-		assertThat(AcpAgentEventMapper.map(null)).isEmpty();
+		assertThat(AcpAgentEventMapper.map(null)).isNull();
 	}
 
 }

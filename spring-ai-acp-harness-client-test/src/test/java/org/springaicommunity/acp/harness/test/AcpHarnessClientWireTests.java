@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
@@ -65,11 +66,8 @@ class AcpHarnessClientWireTests {
 	/** A watcher over a log written by hand, standing in for one the agent wrote. */
 	private org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher(java.nio.file.Path logs) {
 		org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher = new org.springaicommunity.acp.harness.process.AcpAgentLogWatcher(
-				logs,
-				line -> line.startsWith("FAILED ")
-						? java.util.Optional.of(org.springaicommunity.acp.harness.runtime.AcpAgentNotice
-							.warning(line.substring(7).split(" ")[0], line))
-						: java.util.Optional.empty());
+				logs, line -> line.startsWith("FAILED ") ? org.springaicommunity.acp.harness.runtime.AcpAgentNotice
+					.warning(line.substring(7).split(" ")[0], line) : null);
 		watcher.start();
 		return watcher;
 	}
@@ -142,7 +140,7 @@ class AcpHarnessClientWireTests {
 			.select("model", "model", "gpt-5.4-mini", "gpt-5.4-mini", "gpt-6-astra")
 			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
 
-			assertThat(client.openSession("s").advertised().select("model", "model")).get()
+			assertThat(client.openSession("s").advertised().select("model", "model")).isNotNull()
 				.extracting(AcpSchema.SessionConfigSelect::currentValue)
 				.isEqualTo("gpt-5.4-mini");
 		}
@@ -158,8 +156,8 @@ class AcpHarnessClientWireTests {
 	private AcpHarnessClient connectSigningInWith(ScriptedAcpAgent agent, String method) {
 		ScriptedRuntime runtime = new ScriptedRuntime() {
 			@Override
-			public java.util.Optional<String> authMethod(AcpAgentSettings settings) {
-				return java.util.Optional.of(method);
+			public String authMethod(AcpAgentSettings settings) {
+				return method;
 			}
 		};
 		return AcpHarnessClientFactory.connect(runtime, settings().build(), agent.transport());
@@ -226,7 +224,7 @@ class AcpHarnessClientWireTests {
 
 			client.prompt().session("s").user("hi").call();
 
-			assertThat(client.session("s")).get()
+			assertThat(client.session("s")).isNotNull()
 				.satisfies(session -> assertThat(session.advertised().configOptions()).hasSize(1));
 			assertThat(agent.configSets()).containsExactly(Map.of("configId", "model", "value", "b"));
 		}
@@ -264,7 +262,7 @@ class AcpHarnessClientWireTests {
 			client.prompt().session("s").user("hi").call();
 
 			assertThat(agent.configSets()).isEmpty();
-			assertThat(client.session("s")).get()
+			assertThat(client.session("s")).isNotNull()
 				.satisfies(session -> assertThat(session.configuration().of(PortableOption.MODEL).mechanism())
 					.isEqualTo(Mechanism.UNSUPPORTED));
 		}
@@ -289,7 +287,7 @@ class AcpHarnessClientWireTests {
 			client.prompt().session("s").user("hi").call();
 
 			assertThat(agent.methods()).contains("session/set_mode");
-			assertThat(client.session("s")).get()
+			assertThat(client.session("s")).isNotNull()
 				.satisfies(session -> assertThat(session.configuration().of(PortableOption.MODE).mechanism())
 					.isEqualTo(Mechanism.SESSION_MODE));
 		}
@@ -303,7 +301,7 @@ class AcpHarnessClientWireTests {
 			client.prompt().session("s").user("hi").call();
 
 			assertThat(agent.providerSets()).hasSize(1);
-			assertThat(client.session("s")).get()
+			assertThat(client.session("s")).isNotNull()
 				.satisfies(session -> assertThat(session.configuration().of(PortableOption.PROVIDER).mechanism())
 					.isEqualTo(Mechanism.PROVIDERS_SET));
 		}
@@ -330,8 +328,8 @@ class AcpHarnessClientWireTests {
 			List<org.springaicommunity.acp.harness.session.SessionPrincipal> askedFor) {
 		return (server, principal) -> {
 			askedFor.add(principal);
-			return java.util.Optional.of(org.springaicommunity.acp.harness.mcp.McpCredentials
-				.bearer(() -> "token-" + (principal == null ? "nobody" : principal.name())));
+			return org.springaicommunity.acp.harness.mcp.McpCredentials
+				.bearer(() -> "token-" + (principal == null ? "nobody" : principal.name()));
 		};
 	}
 
@@ -458,9 +456,8 @@ class AcpHarnessClientWireTests {
 	void thePrincipalIsReadOnTheCallersThreadNotWhereTheStreamIsSubscribed() {
 		ThreadLocal<String> signedIn = new ThreadLocal<>();
 		List<org.springaicommunity.acp.harness.session.SessionPrincipal> askedFor = new java.util.concurrent.CopyOnWriteArrayList<>();
-		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> java.util.Optional
-			.ofNullable(signedIn.get())
-			.map(org.springaicommunity.acp.harness.session.SessionPrincipal::of);
+		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> signedIn.get() == null
+				? null : org.springaicommunity.acp.harness.session.SessionPrincipal.of(signedIn.get());
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
 				AcpHarnessClient client = connect(agent,
@@ -479,8 +476,9 @@ class AcpHarnessClientWireTests {
 
 			assertThat(askedFor)
 				.containsExactly(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
-			assertThat(client.session("s").orElseThrow().principal())
-				.contains(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
+			assertThat(client.session("s")).isNotNull()
+				.extracting(org.springaicommunity.acp.harness.session.AcpAgentSession::principal)
+				.isEqualTo(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
 		}
 	}
 
@@ -488,9 +486,8 @@ class AcpHarnessClientWireTests {
 	void theSamePathsHoldThroughThePool() {
 		List<org.springaicommunity.acp.harness.session.SessionPrincipal> askedFor = new java.util.concurrent.CopyOnWriteArrayList<>();
 		ThreadLocal<String> signedIn = new ThreadLocal<>();
-		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> java.util.Optional
-			.ofNullable(signedIn.get())
-			.map(org.springaicommunity.acp.harness.session.SessionPrincipal::of);
+		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> signedIn.get() == null
+				? null : org.springaicommunity.acp.harness.session.SessionPrincipal.of(signedIn.get());
 		AcpAgentSettings settings = withProtectedServer(tokensPerUser(askedFor), resolver).build();
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
@@ -533,8 +530,9 @@ class AcpHarnessClientWireTests {
 			});
 			assertThat(askedFor).containsExactly(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"),
 					org.springaicommunity.acp.harness.session.SessionPrincipal.of("bob"));
-			assertThat(client.session("a").orElseThrow().principal())
-				.contains(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
+			assertThat(client.session("a")).isNotNull()
+				.extracting(org.springaicommunity.acp.harness.session.AcpAgentSession::principal)
+				.isEqualTo(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
 		}
 	}
 
@@ -574,7 +572,7 @@ class AcpHarnessClientWireTests {
 					org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice")))
 				.hasMessageContaining("needs a sign-in first");
 			assertThat(agent.newSessions()).isEmpty();
-			assertThat(client.session("s")).isEmpty();
+			assertThat(client.session("s")).isNull();
 		}
 	}
 
@@ -648,7 +646,7 @@ class AcpHarnessClientWireTests {
 				.options(options -> options.model("made-up"))
 				.call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
 
-			assertThat(client.session("kept")).isPresent();
+			assertThat(client.session("kept")).isNotNull();
 			assertThat(agent.methods()).doesNotContain("session/close");
 		}
 	}
@@ -668,7 +666,7 @@ class AcpHarnessClientWireTests {
 			assertThatThrownBy(() -> client.prompt().session("s").user("hi").call())
 				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
 
-			assertThat(client.session("s")).isEmpty();
+			assertThat(client.session("s")).isNull();
 			assertThat(statusOf(declaredUrl(agent.newSessions().get(0)))).isEqualTo(404);
 			assertThat(agent.methods()).contains("session/close");
 		}
@@ -732,7 +730,7 @@ class AcpHarnessClientWireTests {
 			caller.join();
 
 			assertThat(failure.get()).isInstanceOf(AcpHarnessClientException.class).hasMessageContaining("Interrupted");
-			assertThat(client.session("s")).isEmpty();
+			assertThat(client.session("s")).isNull();
 			Awaits.until(() -> agent.methods().contains("session/close"), LIMIT);
 			assertThat(agent.newSessions()).hasSize(1);
 		}
@@ -750,7 +748,7 @@ class AcpHarnessClientWireTests {
 
 			assertThatThrownBy(() -> client.openSession("s")).isInstanceOf(AcpHarnessClientException.class)
 				.hasMessageContaining("did not answer session/new");
-			assertThat(client.session("s")).isEmpty();
+			assertThat(client.session("s")).isNull();
 		}
 	}
 
@@ -1033,7 +1031,7 @@ class AcpHarnessClientWireTests {
 			client.sessions().load("restored", "sid-1");
 
 			assertThat(agent.loaded()).containsExactly("sid-1");
-			assertThat(client.session("restored")).get()
+			assertThat(client.session("restored")).isNotNull()
 				.extracting(session -> session.configuration().of(PortableOption.MODEL).applied())
 				.isEqualTo("b");
 			assertThat(agent.configSets()).contains(Map.of("configId", "model", "value", "b"));
@@ -1054,7 +1052,7 @@ class AcpHarnessClientWireTests {
 				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
 
 			assertThat(agent.loaded()).containsExactly("sid-1");
-			assertThat(client.session("restored")).isEmpty();
+			assertThat(client.session("restored")).isNull();
 			assertThat(agent.methods()).contains("session/close");
 		}
 	}
@@ -1072,7 +1070,7 @@ class AcpHarnessClientWireTests {
 			assertThatThrownBy(() -> client.sessions().resume("restored", "sid-1"))
 				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
 
-			assertThat(client.session("restored")).isEmpty();
+			assertThat(client.session("restored")).isNull();
 			assertThat(agent.methods()).contains("session/resume", "session/close");
 		}
 	}
@@ -1087,7 +1085,7 @@ class AcpHarnessClientWireTests {
 
 			assertThatThrownBy(() -> client.sessions().load("restored", "sid-2")).isInstanceOf(RuntimeException.class);
 
-			assertThat(client.session("restored")).isEmpty();
+			assertThat(client.session("restored")).isNull();
 			assertThat(agent.methods()).doesNotContain("session/close");
 		}
 	}
@@ -1115,7 +1113,7 @@ class AcpHarnessClientWireTests {
 			client.sessions().delete("sid-1");
 
 			assertThat(agent.storedSessions()).containsExactly("sid-2");
-			assertThat(client.session("restored")).isEmpty();
+			assertThat(client.session("restored")).isNull();
 		}
 	}
 
@@ -1124,7 +1122,7 @@ class AcpHarnessClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().agentInfo("pretend", "9.9.9").build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
-			assertThat(client.agentInfo()).get().hasToString("pretend 9.9.9");
+			assertThat(client.agentInfo()).isNotNull().hasToString("pretend 9.9.9");
 		}
 	}
 
@@ -1142,7 +1140,7 @@ class AcpHarnessClientWireTests {
 		}
 
 		@Override
-		public java.util.Optional<String> toolNameOf(AcpSchema.ToolCallUpdate toolCall) {
+		public @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
 			return org.springaicommunity.acp.harness.runtime.ToolNames.fromRawInput(toolCall);
 		}
 

@@ -52,10 +52,10 @@ class RuntimeOptionsTests {
 	}
 
 	@Test
-	void anAbsentPathIsEmptyRatherThanNull() {
+	void anAbsentPathIsNullOrEmpty() {
 		RuntimeOptions options = RuntimeOptions.of(Map.of("a", "1"));
 
-		assertThat(options.text("nope")).isEmpty();
+		assertThat(options.text("nope")).isNull();
 		assertThat(options.textList("nope")).isEmpty();
 		assertThat(options.section("nope")).isEmpty();
 	}
@@ -65,7 +65,7 @@ class RuntimeOptionsTests {
 		RuntimeOptions options = RuntimeOptions.of(Map.of("config.tools.web_search", "true"));
 
 		assertThat(options.section("config")).containsKey("tools");
-		assertThat(options.text("config.tools.web_search")).contains("true");
+		assertThat(options.text("config.tools.web_search")).isEqualTo("true");
 	}
 
 }

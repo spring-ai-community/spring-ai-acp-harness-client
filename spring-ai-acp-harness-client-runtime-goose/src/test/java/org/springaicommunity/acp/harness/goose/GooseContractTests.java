@@ -40,8 +40,8 @@ class GooseContractTests extends AcpAgentRuntimeContract {
 	}
 
 	@Override
-	protected java.util.Optional<String> reviewingMode() {
-		return java.util.Optional.of("approve");
+	protected String reviewingMode() {
+		return "approve";
 	}
 
 }

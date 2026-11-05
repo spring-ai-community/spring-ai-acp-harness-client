@@ -1,9 +1,9 @@
 package org.springaicommunity.acp.harness.client;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AcpAgentOptions;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.protocol.AcpProtocol;
@@ -47,8 +47,12 @@ public interface AcpHarnessClient extends AutoCloseable {
 	/** The id of the runtime behind this client, e.g. {@code goose}. */
 	String runtimeId();
 
-	/** What the agent called itself during {@code initialize}, when it said. */
-	Optional<AcpAgentInfo> agentInfo();
+	/**
+	 * What the agent called itself during {@code initialize}, or null when it did not
+	 * say.
+	 */
+	@Nullable
+	AcpAgentInfo agentInfo();
 
 	/**
 	 * The ACP version this connection settled on.
@@ -114,7 +118,7 @@ public interface AcpHarnessClient extends AutoCloseable {
 	AcpAgentSessions sessions();
 
 	/**
-	 * The named session, once a turn has opened it.
+	 * The named session, once a turn has opened it; null until then.
 	 *
 	 * <p>
 	 * The way to find out what the negotiated tier actually achieved:
@@ -123,7 +127,8 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * mechanism. With {@code on-unsupported: warn} that is the difference between the
 	 * model an application asked for and the model it is talking to.
 	 */
-	Optional<AcpAgentSession> session(String name);
+	@Nullable
+	AcpAgentSession session(String name);
 
 	/**
 	 * Opens the named session now, or returns the one already open, without prompting.
@@ -148,7 +153,7 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * {@code McpSettings.principals()} instead.
 	 * @param principal who the session is for, or null for nobody
 	 */
-	default AcpAgentSession openSession(String name, SessionPrincipal principal) {
+	default AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
 		if (principal == null) {
 			return openSession(name);
 		}
@@ -170,8 +175,8 @@ public interface AcpHarnessClient extends AutoCloseable {
 		/** Appends user text to this turn's prompt. */
 		PromptSpec user(String text);
 
-		/** Per-request overrides. */
-		PromptSpec options(AcpAgentOptions options);
+		/** Per-request overrides; null for none. */
+		PromptSpec options(@Nullable AcpAgentOptions options);
 
 		/** Per-request overrides, built inline. */
 		PromptSpec options(Consumer<AcpAgentOptions.Builder> customizer);
@@ -189,8 +194,9 @@ public interface AcpHarnessClient extends AutoCloseable {
 		 * An implementation that cannot honour a principal must refuse one rather than
 		 * ignore it: silently running a user's turn with nobody's credentials is worse
 		 * than failing.
+		 * @param principal who the turn is for, or null for nobody
 		 */
-		default PromptSpec principal(SessionPrincipal principal) {
+		default PromptSpec principal(@Nullable SessionPrincipal principal) {
 			if (principal == null) {
 				return this;
 			}

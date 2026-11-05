@@ -56,8 +56,8 @@ class CodexContractTests extends AcpAgentRuntimeContract {
 	 * whichever one actually has the value.
 	 */
 	@Override
-	protected java.util.Optional<String> reviewingMode() {
-		return java.util.Optional.of("plan");
+	protected String reviewingMode() {
+		return "plan";
 	}
 
 }

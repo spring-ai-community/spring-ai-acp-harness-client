@@ -51,7 +51,7 @@ class GooseServeTests {
 	@DisplayName("a served agent handshakes and runs a turn that terminates exactly once")
 	void aTurnOverWebSocket() {
 		try (AcpHarnessClient client = AcpHarnessClientFactory.create(new GooseRuntime(), served())) {
-			assertThat(client.agentInfo()).get().extracting(info -> info.name()).isEqualTo("goose");
+			assertThat(client.agentInfo()).isNotNull().extracting(info -> info.name()).isEqualTo("goose");
 
 			List<AcpAgentEvent> events = client.prompt("Reply with exactly the word READY. Do not use tools.")
 				.stream()

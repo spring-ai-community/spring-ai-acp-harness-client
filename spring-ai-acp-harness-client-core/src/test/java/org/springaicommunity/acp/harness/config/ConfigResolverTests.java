@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -77,7 +76,7 @@ class ConfigResolverTests {
 	}
 
 	private static ModelCatalog serving(String... models) {
-		return provider -> Optional.of(List.of(models));
+		return provider -> List.of(models);
 	}
 
 	// --- the good path
@@ -91,7 +90,7 @@ class ConfigResolverTests {
 		SessionConfiguration resolved = resolve(new FakeRuntime(), settings(b -> b.model("gpt-5.6")));
 
 		assertThat(resolved.of(PortableOption.MODEL).mechanism()).isEqualTo(Mechanism.CONFIG_OPTION);
-		assertThat(resolved.applied(PortableOption.MODEL)).contains("gpt-5.6");
+		assertThat(resolved.applied(PortableOption.MODEL)).isEqualTo("gpt-5.6");
 	}
 
 	@Test
@@ -178,7 +177,7 @@ class ConfigResolverTests {
 		SessionConfiguration resolved = resolve(new FakeRuntime(), settings(b -> b.model("Model B")));
 
 		assertThat(resolved.of(PortableOption.MODEL).mechanism()).isEqualTo(Mechanism.SESSION_MODEL);
-		assertThat(resolved.applied(PortableOption.MODEL)).contains("b");
+		assertThat(resolved.applied(PortableOption.MODEL)).isEqualTo("b");
 	}
 
 	@Test
@@ -290,7 +289,7 @@ class ConfigResolverTests {
 
 		resolve(new FakeRuntime(), settings(b -> b.model("b")));
 
-		assertThat(session.configuration().applied(PortableOption.MODEL)).contains("b");
+		assertThat(session.configuration().applied(PortableOption.MODEL)).isEqualTo("b");
 	}
 
 	// --- an endpoint of the application's own
@@ -308,7 +307,7 @@ class ConfigResolverTests {
 				serving("acme/llm-1"));
 
 		assertThat(resolved.of(PortableOption.MODEL).mechanism()).isEqualTo(Mechanism.ENDPOINT);
-		assertThat(resolved.applied(PortableOption.MODEL)).contains("acme/llm-1");
+		assertThat(resolved.applied(PortableOption.MODEL)).isEqualTo("acme/llm-1");
 	}
 
 	@Test

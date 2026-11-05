@@ -132,9 +132,9 @@ public class AcpController {
 	@GetMapping("${spring.ai.acp.harness.controller.path:/api/acp}/health")
 	public ResponseEntity<HealthResponse> health() {
 		boolean available = agent.isAlive();
+		var info = agent.agentInfo();
 		return ResponseEntity.status(available ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
-			.body(new HealthResponse(available, agent.runtimeId(),
-					agent.agentInfo().map(info -> info.toString()).orElse(null)));
+			.body(new HealthResponse(available, agent.runtimeId(), info == null ? null : info.toString()));
 	}
 
 	private AcpHarnessClient.PromptSpec spec(PromptRequest request) {

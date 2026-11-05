@@ -4,10 +4,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.Validation;
@@ -56,7 +56,8 @@ public final class SessionRegistry {
 	 * release whatever it acquired if it throws
 	 * @throws SessionOwnershipException if the name is open for someone else
 	 */
-	public AcpAgentSession resolve(String name, SessionPrincipal principal, Function<String, Opened> factory) {
+	public AcpAgentSession resolve(String name, @Nullable SessionPrincipal principal,
+			Function<String, Opened> factory) {
 		Validation.requireName(name, "session name");
 		AcpAgentSession session = sessions.computeIfAbsent(name, n -> {
 			Opened opened = factory.apply(n);
@@ -74,7 +75,7 @@ public final class SessionRegistry {
 	 *
 	 * @param release run once when the registry forgets the session; null for nothing
 	 */
-	public record Opened(String sessionId, Runnable release) {
+	public record Opened(String sessionId, @Nullable Runnable release) {
 	}
 
 	/**
@@ -97,7 +98,8 @@ public final class SessionRegistry {
 	 * @param release run once when the registry forgets the session — including when the
 	 * name turns out to be taken, so the caller never has to clean up after a refusal
 	 */
-	public AcpAgentSession adopt(String name, String sessionId, SessionPrincipal principal, Runnable release) {
+	public AcpAgentSession adopt(String name, String sessionId, @Nullable SessionPrincipal principal,
+			@Nullable Runnable release) {
 		Validation.requireName(name, "session name");
 		AcpAgentSession adopted = new AcpAgentSession(name, sessionId, principal, release);
 		AcpAgentSession existing = sessions.putIfAbsent(name, adopted);
@@ -110,8 +112,9 @@ public final class SessionRegistry {
 		return adopted;
 	}
 
-	public Optional<AcpAgentSession> find(String name) {
-		return Optional.ofNullable(sessions.get(name));
+	/** The session open under {@code name}, or null. */
+	public @Nullable AcpAgentSession find(String name) {
+		return sessions.get(name);
 	}
 
 	public boolean knows(String name) {
@@ -121,13 +124,14 @@ public final class SessionRegistry {
 	/**
 	 * Forgets a session and releases what it held here. Does not close it on the agent —
 	 * the caller owns that.
+	 * @return the session forgotten, or null if the name was not open
 	 */
-	public Optional<AcpAgentSession> remove(String name) {
+	public @Nullable AcpAgentSession remove(String name) {
 		AcpAgentSession removed = sessions.remove(name);
 		if (removed != null) {
 			removed.release();
 		}
-		return Optional.ofNullable(removed);
+		return removed;
 	}
 
 	/**

@@ -3,7 +3,6 @@ package org.springaicommunity.acp.harness.boot;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -75,7 +74,7 @@ class AcpAutoConfigurationTests {
 			AcpSchema.PermissionOption reject = new AcpSchema.PermissionOption("r", "Reject",
 					AcpSchema.PermissionOptionKind.REJECT_ONCE);
 
-			assertThat(policy.decide(Optional.of("developer__shell"), List.of(allow, reject))).contains(reject);
+			assertThat(policy.decide("developer__shell", List.of(allow, reject))).isEqualTo(reject);
 		});
 	}
 
@@ -86,14 +85,14 @@ class AcpAutoConfigurationTests {
 		List<String> asked = new java.util.ArrayList<>();
 		org.springaicommunity.acp.harness.permission.PermissionPrompt prompt = question -> {
 			asked.add(question.describe());
-			return Optional.of(allow);
+			return allow;
 		};
 		runner.withBean(org.springaicommunity.acp.harness.permission.PermissionPrompt.class, () -> prompt)
 			.withPropertyValues("spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> {
 				PermissionPolicy policy = context.getBean(AcpAgentSettings.class).permissions();
 
-				assertThat(policy.decide(Optional.of("developer__shell"), List.of(allow))).contains(allow);
+				assertThat(policy.decide("developer__shell", List.of(allow))).isEqualTo(allow);
 				assertThat(asked).containsExactly("developer__shell");
 			});
 	}
@@ -117,9 +116,8 @@ class AcpAutoConfigurationTests {
 				AcpSchema.PermissionOption reject = new AcpSchema.PermissionOption("r", "Reject",
 						AcpSchema.PermissionOptionKind.REJECT_ONCE);
 
-				assertThat(
-						context.getBean(AcpAgentSettings.class).permissions().decide(Optional.of("t"), List.of(reject)))
-					.contains(reject);
+				assertThat(context.getBean(AcpAgentSettings.class).permissions().decide("t", List.of(reject)))
+					.isEqualTo(reject);
 			});
 	}
 
@@ -203,9 +201,9 @@ class AcpAutoConfigurationTests {
 
 	@Test
 	void anMcpCredentialsProviderAndPrincipalResolverAreTakenFromTheContext() {
-		org.springaicommunity.acp.harness.mcp.McpCredentialsProvider provider = (server, principal) -> Optional.empty();
-		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> Optional
-			.of(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
+		org.springaicommunity.acp.harness.mcp.McpCredentialsProvider provider = (server, principal) -> null;
+		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> org.springaicommunity.acp.harness.session.SessionPrincipal
+			.of("alice");
 		runner.withBean(org.springaicommunity.acp.harness.mcp.McpCredentialsProvider.class, () -> provider)
 			.withBean(org.springaicommunity.acp.harness.session.SessionPrincipalResolver.class, () -> resolver)
 			.withPropertyValues("spring.ai.acp.harness.mcp.on-server-failure=fail")
@@ -311,7 +309,7 @@ class AcpAutoConfigurationTests {
 			.run(context -> {
 				RuntimeOptions options = context.getBean(AcpAgentSettings.class).runtimeOptions();
 				assertThat(options.textList("builtins")).containsExactly("developer", "todo");
-				assertThat(options.text("package")).isEmpty();
+				assertThat(options.text("package")).isNull();
 			});
 	}
 
@@ -326,7 +324,7 @@ class AcpAutoConfigurationTests {
 			.run(context -> {
 				RuntimeOptions options = context.getBean(AcpAgentSettings.class).runtimeOptions();
 				assertThat(options.section("config-toml")).containsKey("model_reasoning_effort");
-				assertThat(options.text("config-toml.sandbox.mode")).contains("read-only");
+				assertThat(options.text("config-toml.sandbox.mode")).isEqualTo("read-only");
 			});
 	}
 
@@ -461,7 +459,7 @@ class AcpAutoConfigurationTests {
 				ProviderSpec provider = context.getBean(AcpAgentSettings.class).provider();
 				assertThat(provider.id()).isEqualTo("acme-ai");
 				assertThat(provider.apiType()).isEqualTo("openai");
-				assertThat(provider.findApiKey()).contains("sk-secret");
+				assertThat(provider.findApiKey()).isEqualTo("sk-secret");
 				assertThat(provider.headers()).containsEntry("X-Tenant", "acme");
 				assertThat(provider)
 					.hasToString("ProviderSpec[id=acme-ai, apiType=openai, baseUrl=https://ai.example.com/v1, "

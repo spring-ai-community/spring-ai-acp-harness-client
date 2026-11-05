@@ -202,7 +202,7 @@ class CodexRuntimeTests {
 		AcpAgentSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
 			.build();
 
-		assertThat(runtime.authMethod(settings)).contains(CodexRuntime.API_KEY_METHOD);
+		assertThat(runtime.authMethod(settings)).isEqualTo(CodexRuntime.API_KEY_METHOD);
 		assertThat(((AcpAgentLaunchSpec.Stdio) runtime.launch(settings)).env()).containsEntry("OPENAI_API_KEY", "sk-x");
 	}
 
@@ -244,9 +244,9 @@ class CodexRuntimeTests {
 		ProviderSpec byo = new ProviderSpec("acme", "openai", URI.create("https://ai.example.com/v1"), "sk-x",
 				Map.of());
 
-		assertThat(runtime.authMethod(settings().build())).isEmpty();
-		assertThat(runtime.authMethod(settings().provider("openai").build())).isEmpty();
-		assertThat(runtime.authMethod(settings().provider(byo).build())).isEmpty();
+		assertThat(runtime.authMethod(settings().build())).isNull();
+		assertThat(runtime.authMethod(settings().provider("openai").build())).isNull();
+		assertThat(runtime.authMethod(settings().provider(byo).build())).isNull();
 	}
 
 	@Test

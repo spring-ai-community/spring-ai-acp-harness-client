@@ -1,7 +1,8 @@
 package org.springaicommunity.acp.harness.config;
 
 import java.util.List;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * What an endpoint of the application's own says it serves.
@@ -14,7 +15,7 @@ import java.util.Optional;
  * decides.
  *
  * <p>
- * A catalogue that cannot answer returns empty, which is not the same as an empty list.
+ * A catalogue that cannot answer returns null, which is not the same as an empty list.
  * Plenty of OpenAI-compatible endpoints serve completions and nothing else, and refusing
  * to run against one because it declined to enumerate itself would be worse than the
  * problem being solved.
@@ -22,12 +23,13 @@ import java.util.Optional;
 @FunctionalInterface
 public interface ModelCatalog {
 
-	/** The model ids {@code provider}'s endpoint serves, or empty when it did not say. */
-	Optional<List<String>> modelsOf(ProviderSpec provider);
+	/** The model ids {@code provider}'s endpoint serves, or null when it did not say. */
+	@Nullable
+	List<String> modelsOf(ProviderSpec provider);
 
 	/** A catalogue that never answers: every model is taken on trust. */
 	static ModelCatalog none() {
-		return provider -> Optional.empty();
+		return provider -> null;
 	}
 
 	/** Asks the endpoint itself, once per endpoint. */

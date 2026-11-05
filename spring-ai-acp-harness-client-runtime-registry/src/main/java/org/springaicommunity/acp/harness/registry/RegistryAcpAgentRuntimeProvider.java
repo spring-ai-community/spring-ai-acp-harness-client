@@ -1,8 +1,8 @@
 package org.springaicommunity.acp.harness.registry;
 
 import java.util.List;
-import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
 import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
 
@@ -31,8 +31,9 @@ public class RegistryAcpAgentRuntimeProvider implements AcpAgentRuntimeProvider 
 	}
 
 	@Override
-	public Optional<AcpAgentRuntime> forId(String runtimeId) {
-		return registry.find(runtimeId).map(entry -> new RegistryAcpAgentRuntime(entry, installer));
+	public @Nullable AcpAgentRuntime forId(String runtimeId) {
+		RegistryEntry entry = registry.find(runtimeId);
+		return entry == null ? null : new RegistryAcpAgentRuntime(entry, installer);
 	}
 
 	@Override

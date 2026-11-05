@@ -4,9 +4,9 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
@@ -46,7 +46,7 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 
 	private final AcpAgentSettings settings;
 
-	private final AcpSchema.AgentCapabilities capabilities;
+	private final AcpSchema.@Nullable AgentCapabilities capabilities;
 
 	private final SessionRegistry registry;
 
@@ -72,14 +72,14 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 	 * passes the one it owns.
 	 */
 	public DefaultAcpAgentSessions(com.agentclientprotocol.sdk.client.AcpAsyncClient acp, String runtimeId,
-			AcpAgentSettings settings, AcpSchema.AgentCapabilities capabilities, SessionRegistry registry,
+			AcpAgentSettings settings, AcpSchema.@Nullable AgentCapabilities capabilities, SessionRegistry registry,
 			SessionConfigRecorder recorder, Consumer<AcpAgentSession> configure) {
 		this(acp, runtimeId, settings, capabilities, registry, recorder, configure,
 				new McpAccess(settings.mcp().credentials(), settings.timeout()));
 	}
 
 	public DefaultAcpAgentSessions(com.agentclientprotocol.sdk.client.AcpAsyncClient acp, String runtimeId,
-			AcpAgentSettings settings, AcpSchema.AgentCapabilities capabilities, SessionRegistry registry,
+			AcpAgentSettings settings, AcpSchema.@Nullable AgentCapabilities capabilities, SessionRegistry registry,
 			SessionConfigRecorder recorder, Consumer<AcpAgentSession> configure, McpAccess mcpAccess) {
 		this.mcpAccess = mcpAccess;
 		this.acp = acp;
@@ -136,19 +136,19 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 	}
 
 	@Override
-	public AcpAgentSession load(String name, String sessionId, SessionPrincipal principal) {
+	public AcpAgentSession load(String name, String sessionId, @Nullable SessionPrincipal principal) {
 		require(Operation.LOAD);
 		return attach(name, sessionId, Operation.LOAD, principal);
 	}
 
 	@Override
-	public AcpAgentSession resume(String name, String sessionId, SessionPrincipal principal) {
+	public AcpAgentSession resume(String name, String sessionId, @Nullable SessionPrincipal principal) {
 		require(Operation.RESUME);
 		return attach(name, sessionId, Operation.RESUME, principal);
 	}
 
-	private SessionPrincipal currentPrincipal() {
-		return settings.mcp().principals().current().orElse(null);
+	private @Nullable SessionPrincipal currentPrincipal() {
+		return settings.mcp().principals().current();
 	}
 
 	/**
@@ -161,7 +161,8 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 	 * caller was told does not exist must not stay loaded on the agent, where it would
 	 * count against its capacity until the process ends.
 	 */
-	private AcpAgentSession attach(String name, String sessionId, Operation operation, SessionPrincipal principal) {
+	private AcpAgentSession attach(String name, String sessionId, Operation operation,
+			@Nullable SessionPrincipal principal) {
 		Validation.requireText(sessionId, "session id");
 		McpAccess.Grant grant = mcpAccess.grant(principal, settings.mcpServers());
 		AcpAgentSession session = registry.adopt(name, sessionId, principal, grant::close);
@@ -247,18 +248,20 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 
 	@Override
 	public void close(String name) {
-		registry.remove(name).ifPresent(session -> {
-			recorder.forget(session.sessionId());
-			if (!supports(Operation.CLOSE)) {
-				return;
-			}
-			try {
-				acp.closeSession(new AcpSchema.CloseSessionRequest(session.sessionId())).block(Duration.ofSeconds(5));
-			}
-			catch (RuntimeException ex) {
-				logger.debug("Could not close session {} on the agent", session.sessionId(), ex);
-			}
-		});
+		AcpAgentSession session = registry.remove(name);
+		if (session == null) {
+			return;
+		}
+		recorder.forget(session.sessionId());
+		if (!supports(Operation.CLOSE)) {
+			return;
+		}
+		try {
+			acp.closeSession(new AcpSchema.CloseSessionRequest(session.sessionId())).block(Duration.ofSeconds(5));
+		}
+		catch (RuntimeException ex) {
+			logger.debug("Could not close session {} on the agent", session.sessionId(), ex);
+		}
 	}
 
 	@Override
@@ -267,7 +270,7 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 	}
 
 	@Override
-	public Optional<AcpAgentSession> find(String name) {
+	public @Nullable AcpAgentSession find(String name) {
 		return registry.find(name);
 	}
 

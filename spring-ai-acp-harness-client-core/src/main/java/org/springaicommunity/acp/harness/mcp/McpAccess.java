@@ -8,10 +8,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
@@ -58,18 +58,19 @@ public final class McpAccess implements AutoCloseable {
 
 	/**
 	 * Under {@link McpScope#PROCESS}, the principal whose sessions hold grants: at most
-	 * one entry. Keyed by an optional so an application without principals is one.
+	 * one entry. Keyed by a wrapper so an application without principals is one, with a
+	 * null inside.
 	 */
-	private final Map<Optional<SessionPrincipal>, Shared> shared = new HashMap<>();
+	private final Map<Owner, Shared> shared = new HashMap<>();
 
-	private McpProxy proxy;
+	private @Nullable McpProxy proxy;
 
 	private boolean closed;
 
 	/**
 	 * @param requestTimeout how long the proxy waits for an upstream to start answering
 	 */
-	public McpAccess(McpCredentialsProvider provider, Duration requestTimeout) {
+	public McpAccess(@Nullable McpCredentialsProvider provider, Duration requestTimeout) {
 		this(provider, requestTimeout, List.of());
 	}
 
@@ -78,7 +79,8 @@ public final class McpAccess implements AutoCloseable {
 	 * server goes through the proxy, credentialed or not, since a workaround in the proxy
 	 * does nothing for a server the agent reaches directly
 	 */
-	public McpAccess(McpCredentialsProvider provider, Duration requestTimeout, List<McpRequestFilter> filters) {
+	public McpAccess(@Nullable McpCredentialsProvider provider, Duration requestTimeout,
+			@Nullable List<McpRequestFilter> filters) {
 		this(provider, requestTimeout, filters, McpScope.SESSION);
 	}
 
@@ -86,8 +88,8 @@ public final class McpAccess implements AutoCloseable {
 	 * @param scope where the agent keeps a session's MCP servers; see
 	 * {@link org.springaicommunity.acp.harness.runtime.AcpAgentRuntime#mcpScope()}
 	 */
-	public McpAccess(McpCredentialsProvider provider, Duration requestTimeout, List<McpRequestFilter> filters,
-			McpScope scope) {
+	public McpAccess(@Nullable McpCredentialsProvider provider, Duration requestTimeout,
+			@Nullable List<McpRequestFilter> filters, @Nullable McpScope scope) {
 		this.provider = provider == null ? McpCredentialsProvider.none() : provider;
 		this.requestTimeout = requestTimeout;
 		this.filters = filters == null ? List.of() : List.copyOf(filters);
@@ -111,20 +113,21 @@ public final class McpAccess implements AutoCloseable {
 	 * @throws IllegalStateException under {@link McpScope#PROCESS}, when another
 	 * principal's sessions still hold grants
 	 */
-	public Grant grant(SessionPrincipal principal, List<McpServerSpec> servers) {
+	public Grant grant(@Nullable SessionPrincipal principal, List<McpServerSpec> servers) {
 		Map<String, McpProxy.Upstream> upstreams = new LinkedHashMap<>();
 		List<String> omitted = new ArrayList<>();
 		for (McpServerSpec server : servers) {
 			if (server instanceof McpServerSpec.Http http) {
-				Optional<McpCredentials> credentials = provider.credentialsFor(http, principal);
-				URI url = credentials.flatMap(McpCredentials::upstream).orElse(http.url());
+				McpCredentials credentials = provider.credentialsFor(http, principal);
+				URI upstream = credentials == null ? null : credentials.upstream();
+				URI url = upstream != null ? upstream : http.url();
 				if (url == null) {
 					omitted.add(http.name());
 				}
-				else if (credentials.isPresent() || !filters.isEmpty()) {
+				else if (credentials != null || !filters.isEmpty()) {
 					Validation.requireSecureUrl(url, "mcp server '" + http.name() + "' upstream url");
 					upstreams.put(http.name(), new McpProxy.Upstream(http.name(), url, http.headers(),
-							credentials.orElse(McpCredentials.NONE)));
+							credentials == null ? McpCredentials.NONE : credentials));
 				}
 			}
 		}
@@ -134,7 +137,7 @@ public final class McpAccess implements AutoCloseable {
 		}
 		List<McpServerSpec> offered = servers.stream().filter(server -> !omitted.contains(server.name())).toList();
 		if (scope == McpScope.PROCESS) {
-			return sharedGrant(Optional.ofNullable(principal), offered, upstreams);
+			return sharedGrant(new Owner(principal), offered, upstreams);
 		}
 		if (upstreams.isEmpty()) {
 			return new Grant(offered, null);
@@ -156,17 +159,16 @@ public final class McpAccess implements AutoCloseable {
 	 * through whatever route the agent already holds — so a second principal is refused
 	 * whenever the first holds any grant at all, not just a routed one.
 	 */
-	private Grant sharedGrant(Optional<SessionPrincipal> principal, List<McpServerSpec> offered,
-			Map<String, McpProxy.Upstream> upstreams) {
+	private Grant sharedGrant(Owner owner, List<McpServerSpec> offered, Map<String, McpProxy.Upstream> upstreams) {
 		synchronized (lock) {
 			if (closed) {
 				throw new IllegalStateException("MCP access is closed");
 			}
-			if (!shared.isEmpty() && !shared.containsKey(principal)) {
+			if (!shared.isEmpty() && !shared.containsKey(owner)) {
 				throw new IllegalStateException("This agent shares MCP servers across its sessions, so its "
 						+ "process serves one principal at a time, and another principal's sessions are open");
 			}
-			Shared current = shared.computeIfAbsent(principal, key -> new Shared());
+			Shared current = shared.computeIfAbsent(owner, key -> new Shared());
 			List<McpServerSpec> handed = offered;
 			if (!upstreams.isEmpty()) {
 				McpProxy running = proxy();
@@ -181,17 +183,17 @@ public final class McpAccess implements AutoCloseable {
 						upstreams.keySet());
 			}
 			current.refs++;
-			return new Grant(handed, () -> release(principal));
+			return new Grant(handed, () -> release(owner));
 		}
 	}
 
-	private void release(Optional<SessionPrincipal> principal) {
+	private void release(Owner owner) {
 		synchronized (lock) {
-			Shared current = shared.get(principal);
+			Shared current = shared.get(owner);
 			if (current == null || --current.refs > 0) {
 				return;
 			}
-			shared.remove(principal);
+			shared.remove(owner);
 			if (current.token != null && proxy != null) {
 				proxy.unregister(current.token);
 			}
@@ -276,11 +278,11 @@ public final class McpAccess implements AutoCloseable {
 
 		private final List<McpServerSpec> servers;
 
-		private final Runnable release;
+		private final @Nullable Runnable release;
 
 		private final AtomicBoolean closed = new AtomicBoolean();
 
-		private Grant(List<McpServerSpec> servers, Runnable release) {
+		private Grant(List<McpServerSpec> servers, @Nullable Runnable release) {
 			this.servers = List.copyOf(servers);
 			this.release = release;
 		}
@@ -307,10 +309,14 @@ public final class McpAccess implements AutoCloseable {
 	 */
 	private static final class Shared {
 
-		private String token;
+		private @Nullable String token;
 
 		private int refs;
 
+	}
+
+	/** Who holds the process: a principal, or nobody. A record so nobody has a hash. */
+	private record Owner(@Nullable SessionPrincipal principal) {
 	}
 
 }

@@ -6,7 +6,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Tier-3 configuration: whatever {@code spring.ai.acp.harness.runtimes.<id>.*} said,
@@ -41,7 +42,7 @@ public final class RuntimeOptions {
 		return EMPTY;
 	}
 
-	public static RuntimeOptions of(Map<String, ?> values) {
+	public static RuntimeOptions of(@Nullable Map<String, ?> values) {
 		if (values == null || values.isEmpty()) {
 			return EMPTY;
 		}
@@ -85,24 +86,24 @@ public final class RuntimeOptions {
 	}
 
 	/**
-	 * The value at {@code path}, or empty. A path segment matches case- and
+	 * The value at {@code path}, or null. A path segment matches case- and
 	 * separator-insensitively.
 	 */
-	public Optional<Object> find(String path) {
+	public @Nullable Object find(String path) {
 		Object node = tree;
 		for (String segment : path.split("\\.")) {
 			if (!(node instanceof Map<?, ?> map)) {
-				return Optional.empty();
+				return null;
 			}
 			node = lookup(map, segment);
 			if (node == null) {
-				return Optional.empty();
+				return null;
 			}
 		}
-		return Optional.of(node);
+		return node;
 	}
 
-	private static Object lookup(Map<?, ?> map, String segment) {
+	private static @Nullable Object lookup(Map<?, ?> map, String segment) {
 		Object direct = map.get(segment);
 		if (direct != null) {
 			return direct;
@@ -121,13 +122,16 @@ public final class RuntimeOptions {
 	}
 
 	/**
-	 * The scalar at {@code path}, rendered as text. Empty when absent or when it is a map
-	 * or list.
+	 * The scalar at {@code path}, rendered as text. Null when absent, blank, or when it
+	 * is a map or list.
 	 */
-	public Optional<String> text(String path) {
-		return find(path).filter(v -> !(v instanceof Map) && !(v instanceof List))
-			.map(String::valueOf)
-			.filter(s -> !s.isBlank());
+	public @Nullable String text(String path) {
+		Object value = find(path);
+		if (value == null || value instanceof Map || value instanceof List) {
+			return null;
+		}
+		String text = String.valueOf(value);
+		return text.isBlank() ? null : text;
 	}
 
 	/**
@@ -135,11 +139,11 @@ public final class RuntimeOptions {
 	 * that is how a list reaches us through an environment variable.
 	 */
 	public List<String> textList(String path) {
-		Optional<Object> value = find(path);
-		if (value.isEmpty()) {
+		Object value = find(path);
+		if (value == null) {
 			return List.of();
 		}
-		if (value.get() instanceof List<?> list) {
+		if (value instanceof List<?> list) {
 			return list.stream()
 				.filter(Objects::nonNull)
 				.map(String::valueOf)
@@ -147,22 +151,23 @@ public final class RuntimeOptions {
 				.filter(s -> !s.isEmpty())
 				.toList();
 		}
-		if (value.get() instanceof Map<?, ?> map) {
+		if (value instanceof Map<?, ?> map) {
 			// An indexed list bound as a map: {0: a, 1: b}.
 			List<String> ordered = new ArrayList<>();
 			map.values().forEach(v -> ordered.add(String.valueOf(v)));
 			return List.copyOf(ordered);
 		}
-		return List.of(String.valueOf(value.get()).split("\\s*,\\s*"));
+		return List.of(String.valueOf(value).split("\\s*,\\s*"));
 	}
 
 	/** The block at {@code path}, with its keys spelled as they were declared. */
 	public Map<String, Object> section(String path) {
-		return find(path).filter(Map.class::isInstance).map(v -> {
+		if (find(path) instanceof Map<?, ?> found) {
 			@SuppressWarnings("unchecked")
-			Map<String, Object> map = (Map<String, Object>) v;
+			Map<String, Object> map = (Map<String, Object>) found;
 			return Map.copyOf(map);
-		}).orElseGet(Map::of);
+		}
+		return Map.of();
 	}
 
 	/**

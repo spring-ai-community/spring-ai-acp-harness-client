@@ -2,7 +2,8 @@ package org.springaicommunity.acp.harness.session;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * The conversations an agent has, as opposed to the turns run in them.
@@ -53,7 +54,7 @@ public interface AcpAgentSessions {
 	 * the re-declared servers are called with. The two-argument form asks
 	 * {@code McpSettings.principals()}.
 	 */
-	default AcpAgentSession load(String name, String sessionId, SessionPrincipal principal) {
+	default AcpAgentSession load(String name, String sessionId, @Nullable SessionPrincipal principal) {
 		if (principal == null) {
 			return load(name, sessionId);
 		}
@@ -61,7 +62,7 @@ public interface AcpAgentSessions {
 	}
 
 	/** {@link #resume(String, String)} on behalf of {@code principal}. */
-	default AcpAgentSession resume(String name, String sessionId, SessionPrincipal principal) {
+	default AcpAgentSession resume(String name, String sessionId, @Nullable SessionPrincipal principal) {
 		if (principal == null) {
 			return resume(name, sessionId);
 		}
@@ -87,8 +88,9 @@ public interface AcpAgentSessions {
 	/** The named sessions this client currently holds open. */
 	List<AcpAgentSession> open();
 
-	/** One of them, by name. */
-	Optional<AcpAgentSession> find(String name);
+	/** One of them, by name, or null when no session of that name is open. */
+	@Nullable
+	AcpAgentSession find(String name);
 
 	/** Whether the agent advertised {@code operation}. */
 	boolean supports(Operation operation);

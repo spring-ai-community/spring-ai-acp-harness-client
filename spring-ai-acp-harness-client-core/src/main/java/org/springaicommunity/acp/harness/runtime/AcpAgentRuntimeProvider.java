@@ -1,7 +1,8 @@
 package org.springaicommunity.acp.harness.runtime;
 
 import java.util.List;
-import java.util.Optional;
+
+import org.jspecify.annotations.Nullable;
 
 /**
  * Makes an {@link AcpAgentRuntime} for an id nobody registered a bean for.
@@ -25,10 +26,10 @@ import java.util.Optional;
 public interface AcpAgentRuntimeProvider {
 
 	/**
-	 * A runtime for {@code runtimeId}, or empty if this provider does not know that
-	 * agent.
+	 * A runtime for {@code runtimeId}, or null if this provider does not know that agent.
 	 */
-	Optional<AcpAgentRuntime> forId(String runtimeId);
+	@Nullable
+	AcpAgentRuntime forId(String runtimeId);
 
 	/**
 	 * Ids this provider could answer for, for error messages and for validating a tier-3

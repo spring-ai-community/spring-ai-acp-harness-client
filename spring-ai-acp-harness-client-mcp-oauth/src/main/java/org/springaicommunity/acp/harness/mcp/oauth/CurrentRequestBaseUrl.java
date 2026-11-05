@@ -1,8 +1,8 @@
 package org.springaicommunity.acp.harness.mcp.oauth;
 
-import java.util.Optional;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -18,31 +18,32 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * ({@code server.forward-headers-strategy}); where it cannot know, set
  * {@code spring.ai.acp.harness.mcp.oauth.base-url}, which wins.
  */
-final class CurrentRequestBaseUrl implements Supplier<Optional<String>> {
+final class CurrentRequestBaseUrl implements Supplier<@Nullable String> {
 
 	private static final boolean SERVLET = ClassUtils.isPresent("jakarta.servlet.http.HttpServletRequest",
 			CurrentRequestBaseUrl.class.getClassLoader());
 
-	private final String configured;
+	private final @Nullable String configured;
 
-	CurrentRequestBaseUrl(String configured) {
+	CurrentRequestBaseUrl(@Nullable String configured) {
 		this.configured = configured == null || configured.isBlank() ? null : trimSlash(configured);
 	}
 
+	/** The base URL, or null when none is configured and there is no current request. */
 	@Override
-	public Optional<String> get() {
+	public @Nullable String get() {
 		if (configured != null) {
-			return Optional.of(configured);
+			return configured;
 		}
 		if (!SERVLET || !(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes)) {
-			return Optional.empty();
+			return null;
 		}
 		var request = attributes.getRequest();
 		int port = request.getServerPort();
 		boolean defaultPort = ("http".equals(request.getScheme()) && port == 80)
 				|| ("https".equals(request.getScheme()) && port == 443);
-		return Optional.of(request.getScheme() + "://" + request.getServerName() + (defaultPort ? "" : ":" + port)
-				+ request.getContextPath());
+		return request.getScheme() + "://" + request.getServerName() + (defaultPort ? "" : ":" + port)
+				+ request.getContextPath();
 	}
 
 	private static String trimSlash(String value) {

@@ -5,9 +5,9 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.mcp.security.client.sync.oauth2.registration.DynamicClientRegistrationRequest;
@@ -130,15 +130,15 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 	}
 
 	@Override
-	public Optional<McpCredentials> credentialsFor(McpServerSpec.Http server, SessionPrincipal principal) {
+	public @Nullable McpCredentials credentialsFor(McpServerSpec.Http server, @Nullable SessionPrincipal principal) {
 		McpServerSpec.Http protectedServer = servers.get(server.name());
 		if (protectedServer == null) {
-			return Optional.empty();
+			return null;
 		}
 		requireAuthorized(protectedServer, principal);
 		String registrationId = protectedServer.name();
 		String principalName = principal.name();
-		return Optional.of(() -> Map.of("Authorization", "Bearer " + accessToken(registrationId, principalName)));
+		return () -> Map.of("Authorization", "Bearer " + accessToken(registrationId, principalName));
 	}
 
 	/**
@@ -160,7 +160,7 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 	/**
 	 * Whether {@code principal} holds a token for the named server. Registers nothing.
 	 */
-	public boolean isAuthorized(String serverName, SessionPrincipal principal) {
+	public boolean isAuthorized(String serverName, @Nullable SessionPrincipal principal) {
 		return principal != null && servers.containsKey(serverName)
 				&& authorizedClients.loadAuthorizedClient(serverName, principal.name()) != null;
 	}
@@ -170,7 +170,7 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 		return List.copyOf(servers.keySet());
 	}
 
-	private void requireAuthorized(McpServerSpec.Http server, SessionPrincipal principal) {
+	private void requireAuthorized(McpServerSpec.Http server, @Nullable SessionPrincipal principal) {
 		if (principal == null) {
 			throw new IllegalStateException("MCP server '" + server.name() + "' is called with each user's own "
 					+ "OAuth token, and this session was opened on nobody's behalf; pass a SessionPrincipal or "

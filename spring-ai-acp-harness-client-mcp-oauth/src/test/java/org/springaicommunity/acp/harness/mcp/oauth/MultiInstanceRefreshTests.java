@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -87,8 +87,7 @@ class MultiInstanceRefreshTests {
 				new DefaultMcpOAuth2DcrClientManager(registrations, new DynamicClientRegistrationService(urlValidator),
 						new McpMetadataDiscoveryService(urlValidator), urlValidator),
 				tokens, McpAuthorizedClientManagers.create(registrations, tokens), "Capacity Agent",
-				McpSignIn.redirect("{baseUrl}/login/oauth2/code/{registrationId}",
-						() -> Optional.of("https://agent.example.com")),
+				McpSignIn.redirect("{baseUrl}/login/oauth2/code/{registrationId}", () -> "https://agent.example.com"),
 				lock.apply(jdbc));
 		return new Instance(provider, tokens, registrations);
 	}
@@ -128,8 +127,8 @@ class MultiInstanceRefreshTests {
 	 * each at once, all needing Alice's token.
 	 */
 	private Race race(Instance first, Instance second) throws InterruptedException {
-		McpCredentials a = first.provider().credentialsFor(finops, ALICE).orElseThrow();
-		McpCredentials b = second.provider().credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials a = Objects.requireNonNull(first.provider().credentialsFor(finops, ALICE));
+		McpCredentials b = Objects.requireNonNull(second.provider().credentialsFor(finops, ALICE));
 		anHourPasses(first);
 		fake.delayTokens(Duration.ofMillis(300));
 		List<String> tokens = new CopyOnWriteArrayList<>();
@@ -203,7 +202,7 @@ class MultiInstanceRefreshTests {
 		Instance first = instance(MultiInstanceRefreshTests::databaseLock);
 		Instance second = instance(MultiInstanceRefreshTests::databaseLock);
 		aliceSignsIn(first);
-		McpCredentials credentials = first.provider().credentialsFor(finops, ALICE).orElseThrow();
+		McpCredentials credentials = Objects.requireNonNull(first.provider().credentialsFor(finops, ALICE));
 		anHourPasses(first);
 		fake.revokeRefreshTokens();
 
@@ -238,8 +237,9 @@ class MultiInstanceRefreshTests {
 							new OAuth2RefreshToken(tokens[1], now)),
 					new TestingAuthenticationToken("alice", null));
 
-		assertThat(instance.provider().credentialsFor(finops, ALICE).orElseThrow().headers().get("Authorization"))
-			.isEqualTo("Bearer " + tokens[0]);
+		assertThat(Objects.requireNonNull(instance.provider().credentialsFor(finops, ALICE))
+			.headers()
+			.get("Authorization")).isEqualTo("Bearer " + tokens[0]);
 	}
 
 }
