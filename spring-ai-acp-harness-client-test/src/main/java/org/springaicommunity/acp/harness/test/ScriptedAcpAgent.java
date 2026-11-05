@@ -187,7 +187,8 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		return switch (request.method()) {
 			case "initialize" -> Mono.just(initialize(request));
 			case "authenticate" -> Mono.just(authenticate(request));
-			case "session/new" -> Mono.just(newSession(request));
+			case "session/new" -> script.newSessionDelay == null ? Mono.just(newSession(request))
+					: Mono.just(newSession(request)).delayElement(script.newSessionDelay);
 			case "session/set_config_option" -> Mono.just(setConfigOption(request));
 			case "session/set_mode" -> Mono.just(setMode(request));
 			case "session/set_model" -> Mono.just(setModel(request));
@@ -539,6 +540,8 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 
 		private Duration promptDelay;
 
+		private Duration newSessionDelay;
+
 		/** A {@code select} config option with an explicit set of legal values. */
 		public Builder select(String id, String category, String current, String... values) {
 			selects.put(id, new Select(id, category, current, List.of(values)));
@@ -637,6 +640,15 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		 */
 		public Builder promptDelay(Duration delay) {
 			promptDelay = delay;
+			return this;
+		}
+
+		/**
+		 * Create the session at once but answer {@code session/new} late, as an agent
+		 * slow to load its MCP servers does.
+		 */
+		public Builder newSessionDelay(Duration delay) {
+			newSessionDelay = delay;
 			return this;
 		}
 

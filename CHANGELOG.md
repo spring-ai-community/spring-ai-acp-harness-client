@@ -29,6 +29,26 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
 
+### Fixed
+
+- A new session that failed while being configured, such as an unsupported model with
+  `on-unsupported: fail`, stayed open on the agent until `session-ttl`, with its MCP route still
+  live. In a pool these sessions used up capacity, so later turns were refused with a "holding its
+  maximum" error instead of reporting the real failure. A session that was already open is kept, so
+  a bad per-turn override does not end a conversation. The same applied to a session attached with
+  `sessions().load` or `resume`, which stayed loaded on the agent; it is now closed there too.
+- A `session/new` the agent answered after the caller stopped waiting, as when a cancelled turn
+  interrupts its thread, named a session nothing could close; it is now closed when the answer
+  arrives. A `session/new` not answered within `timeout` now fails with an
+  `AcpHarnessClientException` instead of an `IllegalStateException`; an answer after that is
+  dropped by the ACP SDK, so a session created that late still stays on the agent.
+- Subscribing twice to one throwaway `AcpAgentStream` now runs two sessions. They used to share one,
+  so the first to finish could close it under the other.
+- A closed `AcpHarnessClientPool` would start new agents on request, and a connection still being
+  built when the pool closed was never closed. A closed pool now refuses work with an
+  `AcpHarnessClientException`, and a connection that finishes building after the close is closed at
+  once. Closing does not interrupt or wait for a connect in progress.
+
 ## [0.5.0] - 2026-10-20
 
 ### Changed

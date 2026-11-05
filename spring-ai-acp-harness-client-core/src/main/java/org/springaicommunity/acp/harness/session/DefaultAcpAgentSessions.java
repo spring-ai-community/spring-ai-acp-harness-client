@@ -156,12 +156,16 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 	 *
 	 * <p>
 	 * The registration comes first and is undone if the call fails, so a failed load
-	 * cannot leave a name pointing at a session this client never attached to.
+	 * cannot leave a name pointing at a session this client never attached to. Once the
+	 * agent has attached the session, undoing means closing it there too: a session the
+	 * caller was told does not exist must not stay loaded on the agent, where it would
+	 * count against its capacity until the process ends.
 	 */
 	private AcpAgentSession attach(String name, String sessionId, Operation operation, SessionPrincipal principal) {
 		Validation.requireText(sessionId, "session id");
 		McpAccess.Grant grant = mcpAccess.grant(principal, settings.mcpServers());
 		AcpAgentSession session = registry.adopt(name, sessionId, principal, grant::close);
+		boolean attached = false;
 		try {
 			List<AcpSchema.McpServer> servers = mcpServers(grant);
 			AdvertisedSessionConfig advertised;
@@ -169,13 +173,19 @@ public final class DefaultAcpAgentSessions implements AcpAgentSessions {
 				advertised = operation == Operation.LOAD ? sendLoad(sessionId, servers)
 						: sendResume(sessionId, servers);
 			}
+			attached = true;
 			session.advertised(advertised);
 			configure.accept(session);
 			logger.debug("Bound session '{}' to {} via {}", name, sessionId, operation.method());
 			return session;
 		}
 		catch (RuntimeException ex) {
-			registry.remove(name);
+			if (attached) {
+				close(name);
+			}
+			else {
+				registry.remove(name);
+			}
 			throw ex;
 		}
 	}

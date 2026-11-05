@@ -8,11 +8,14 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
+import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
+import org.springaicommunity.acp.harness.client.AcpHarnessClientPool;
 import org.springaicommunity.acp.harness.config.AcpAgentSettings;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.config.OnUnsupported;
 import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
+import org.springaicommunity.acp.harness.config.PoolSettings;
 import org.springaicommunity.acp.harness.config.UnsupportedAcpAgentOptionException;
 import org.springaicommunity.acp.harness.event.AcpAgentEvent;
 import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
@@ -575,6 +578,222 @@ class AcpHarnessClientWireTests {
 		}
 	}
 
+	// --- a throwaway turn that fails before it starts
+	// ----------------------------------------------------------
+
+	@Test
+	void aThrowawayTurnThatCannotBeConfiguredLeavesNoSessionBehind() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.select("model", "model", "a", "a")
+			.sessionOperations("close")
+			.build();
+				AcpHarnessClient client = connect(agent,
+						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
+
+			assertThatThrownBy(() -> client.prompt("hi").call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(client.sessions().open()).isEmpty();
+			assertThat(agent.methods()).contains("session/close");
+		}
+	}
+
+	@Test
+	void aThrowawayTurnThatCannotBeConfiguredReleasesItsMcpRoute() throws Exception {
+		AcpAgentSettings settings = withProtectedServer(
+				tokensPerUser(new java.util.concurrent.CopyOnWriteArrayList<>()), null)
+			.model("made-up")
+			.onUnsupported(OnUnsupported.FAIL)
+			.build();
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a").build();
+				AcpHarnessClient client = connect(agent, settings)) {
+
+			assertThatThrownBy(() -> client.prompt("hi").call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(statusOf(declaredUrl(agent.newSessions().get(0)))).isEqualTo(404);
+		}
+	}
+
+	/**
+	 * Each failure took a place in the pool until its TTL, so failures became refusals.
+	 */
+	@Test
+	void failedThrowawayTurnsDoNotFillThePool() {
+		AcpAgentSettings settings = settings().model("made-up")
+			.onUnsupported(OnUnsupported.FAIL)
+			.pool(new PoolSettings(1, 2, PoolSettings.DEFAULT_MAX_RESTARTS))
+			.build();
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a").build();
+				AcpHarnessClient pool = new AcpHarnessClientPool("scripted", settings,
+						() -> connect(agent, settings))) {
+
+			for (int i = 0; i < 4; i++) {
+				assertThatThrownBy(() -> pool.prompt("hi").call())
+					.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+			}
+			assertThat(pool.sessions().open()).isEmpty();
+		}
+	}
+
+	@Test
+	void aNamedSessionSurvivesATurnThatCannotBeConfigured() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.select("model", "model", "a", "a")
+			.sessionOperations("close")
+			.build(); AcpHarnessClient client = connect(agent, settings().onUnsupported(OnUnsupported.FAIL).build())) {
+			client.openSession("kept");
+
+			assertThatThrownBy(() -> client.prompt()
+				.session("kept")
+				.user("hi")
+				.options(options -> options.model("made-up"))
+				.call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(client.session("kept")).isPresent();
+			assertThat(agent.methods()).doesNotContain("session/close");
+		}
+	}
+
+	@Test
+	void aNewNamedSessionThatCannotBeConfiguredLeavesNoSessionBehind() throws Exception {
+		AcpAgentSettings settings = withProtectedServer(
+				tokensPerUser(new java.util.concurrent.CopyOnWriteArrayList<>()), null)
+			.model("made-up")
+			.onUnsupported(OnUnsupported.FAIL)
+			.build();
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.select("model", "model", "a", "a")
+			.sessionOperations("close")
+			.build(); AcpHarnessClient client = connect(agent, settings)) {
+
+			assertThatThrownBy(() -> client.prompt().session("s").user("hi").call())
+				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(client.session("s")).isEmpty();
+			assertThat(statusOf(declaredUrl(agent.newSessions().get(0)))).isEqualTo(404);
+			assertThat(agent.methods()).contains("session/close");
+		}
+	}
+
+	@Test
+	void newNamedSessionsThatCannotBeConfiguredDoNotFillThePool() {
+		AcpAgentSettings settings = settings().model("made-up")
+			.onUnsupported(OnUnsupported.FAIL)
+			.pool(new PoolSettings(1, 2, PoolSettings.DEFAULT_MAX_RESTARTS))
+			.build();
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a").build();
+				AcpHarnessClient pool = new AcpHarnessClientPool("scripted", settings,
+						() -> connect(agent, settings))) {
+
+			for (int i = 0; i < 4; i++) {
+				String name = "conversation-" + i;
+				assertThatThrownBy(() -> pool.prompt().session(name).user("hi").call())
+					.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+			}
+			assertThat(pool.sessions().open()).isEmpty();
+		}
+	}
+
+	@Test
+	void aNameWhoseFirstOpenFailedCanBeRetried() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a").reply("ok").build();
+				AcpHarnessClient client = connect(agent, settings().onUnsupported(OnUnsupported.FAIL).build())) {
+
+			assertThatThrownBy(
+					() -> client.prompt().session("s").user("hi").options(options -> options.model("made-up")).call())
+				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(client.prompt().session("s").user("hi").call().content()).isEqualTo("ok");
+			assertThat(agent.newSessions()).hasSize(2);
+			assertThat(client.sessions().open()).hasSize(1);
+		}
+	}
+
+	/**
+	 * A cancelled turn on {@code boundedElastic} interrupts the thread waiting on
+	 * {@code session/new}; the answer still comes, and names a session.
+	 */
+	@Test
+	void aSessionNewAnsweredAfterTheCallerWasInterruptedIsClosedWhenItArrives() throws Exception {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.newSessionDelay(Duration.ofMillis(500))
+			.sessionOperations("close")
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
+			java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+			Thread caller = new Thread(() -> {
+				Thread.currentThread().interrupt();
+				try {
+					client.openSession("s");
+				}
+				catch (RuntimeException ex) {
+					failure.set(ex);
+				}
+			});
+			caller.start();
+			caller.join();
+
+			assertThat(failure.get()).isInstanceOf(AcpHarnessClientException.class).hasMessageContaining("Interrupted");
+			assertThat(client.session("s")).isEmpty();
+			Awaits.until(() -> agent.methods().contains("session/close"), LIMIT);
+			assertThat(agent.newSessions()).hasSize(1);
+		}
+	}
+
+	/**
+	 * The SDK drops an answer that comes after its timeout, so no close can follow. The
+	 * timeout bounds every request, the handshake inside {@code connect} included, so it
+	 * is kept well above what a cold JVM needs for those.
+	 */
+	@Test
+	void aSessionNewNotAnsweredInTimeFailsAsAClientError() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().newSessionDelay(Duration.ofSeconds(3)).build();
+				AcpHarnessClient client = connect(agent, settings().timeout(Duration.ofSeconds(1)).build())) {
+
+			assertThatThrownBy(() -> client.openSession("s")).isInstanceOf(AcpHarnessClientException.class)
+				.hasMessageContaining("did not answer session/new");
+			assertThat(client.session("s")).isEmpty();
+		}
+	}
+
+	/**
+	 * It must not take down the session of the subscriber that is mid-turn. The scripted
+	 * agent answers {@code session/new} synchronously, so the interrupt survives the open
+	 * and lands in the wait for the turn, which is the path under test; on a real
+	 * transport it could land in the open instead.
+	 */
+	@Test
+	void aSecondSubscriberThatFailsLeavesTheFirstTurnAlone() throws Exception {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.reply("ok")
+			.promptDelay(Duration.ofSeconds(2))
+			.sessionOperations("close")
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
+			AcpHarnessClient.AcpAgentStream stream = client.prompt("hi").stream();
+			java.util.concurrent.CompletableFuture<Void> first = new java.util.concurrent.CompletableFuture<>();
+			stream.events().subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).subscribe(event -> {
+			}, first::completeExceptionally, () -> first.complete(null));
+			Awaits.until(() -> agent.prompts() == 1, LIMIT);
+
+			java.util.concurrent.atomic.AtomicReference<Throwable> secondFailure = new java.util.concurrent.atomic.AtomicReference<>();
+			Thread second = new Thread(() -> {
+				Thread.currentThread().interrupt();
+				try {
+					stream.events().blockLast();
+				}
+				catch (RuntimeException ex) {
+					secondFailure.set(ex);
+				}
+			});
+			second.start();
+			second.join();
+
+			assertThat(secondFailure.get()).isNotNull();
+			assertThat(agent.newSessions()).hasSize(2);
+			assertThat(first).isNotDone();
+			assertThat(client.sessions().open()).hasSize(1);
+			first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+		}
+	}
+
 	// --- the portable tier
 	// ------------------------------------------------------------------
 
@@ -818,6 +1037,58 @@ class AcpHarnessClientWireTests {
 				.extracting(session -> session.configuration().of(PortableOption.MODEL).applied())
 				.isEqualTo("b");
 			assertThat(agent.configSets()).contains(Map.of("configId", "model", "value", "b"));
+		}
+	}
+
+	@Test
+	void aLoadedSessionThatCannotBeConfiguredIsClosedOnTheAgent() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.sessionOperations("load", "close")
+			.storedSessions("sid-1")
+			.select("model", "model", "a", "a")
+			.build();
+				AcpHarnessClient client = connect(agent,
+						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
+
+			assertThatThrownBy(() -> client.sessions().load("restored", "sid-1"))
+				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(agent.loaded()).containsExactly("sid-1");
+			assertThat(client.session("restored")).isEmpty();
+			assertThat(agent.methods()).contains("session/close");
+		}
+	}
+
+	@Test
+	void aResumedSessionThatCannotBeConfiguredIsClosedOnTheAgent() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.sessionOperations("resume", "close")
+			.storedSessions("sid-1")
+			.select("model", "model", "a", "a")
+			.build();
+				AcpHarnessClient client = connect(agent,
+						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
+
+			assertThatThrownBy(() -> client.sessions().resume("restored", "sid-1"))
+				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+
+			assertThat(client.session("restored")).isEmpty();
+			assertThat(agent.methods()).contains("session/resume", "session/close");
+		}
+	}
+
+	/** Nothing was attached, so there is nothing on the agent to close. */
+	@Test
+	void aLoadTheAgentRefusesSendsNoClose() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.sessionOperations("load", "close")
+			.storedSessions("sid-1")
+			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
+
+			assertThatThrownBy(() -> client.sessions().load("restored", "sid-2")).isInstanceOf(RuntimeException.class);
+
+			assertThat(client.session("restored")).isEmpty();
+			assertThat(agent.methods()).doesNotContain("session/close");
 		}
 	}
 

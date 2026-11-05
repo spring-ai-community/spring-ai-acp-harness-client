@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -40,6 +44,7 @@ import com.agentclientprotocol.sdk.client.AcpAsyncClient;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * The default {@link AcpHarnessClient}: one agent connection, many named sessions.
@@ -270,10 +275,10 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 			McpAccess.Grant grant = mcpAccess.grant(principal, effective.mcpServers());
 			try {
 				logMcpServers(effective, grant, "session/new");
-				AcpSchema.NewSessionResponse response = acp
-					.newSession(new AcpSchema.NewSessionRequest(effective.workspace().toString(),
-							grant.servers().stream().map(m -> m.toAcp()).toList()))
-					.block(effective.timeout());
+				AcpSchema.NewSessionResponse response = awaitNewSession(n,
+						acp.newSession(new AcpSchema.NewSessionRequest(effective.workspace().toString(),
+								grant.servers().stream().map(m -> m.toAcp()).toList())),
+						effective.timeout());
 				if (response == null || response.sessionId() == null) {
 					throw new AcpHarnessClientException("Agent did not return a session id for '" + n + "'");
 				}
@@ -292,8 +297,87 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		if (opened.get()) {
 			failIfAnMcpServerDidNotLoad(name, session, effective);
 		}
-		configure(session, effective);
+		try {
+			configure(session, effective);
+		}
+		catch (RuntimeException ex) {
+			// A session this call created has no conversation to keep yet, and a caller
+			// that gets an error has no reason to think it exists.
+			if (opened.get()) {
+				forgetAndClose(name);
+			}
+			throw ex;
+		}
 		return session;
+	}
+
+	/**
+	 * Waits for {@code session/new}, and if the caller stops waiting first, closes the
+	 * session the agent may still be creating: the request is already on the wire, and an
+	 * answer that arrives after the caller has gone would name a session nothing could
+	 * close.
+	 *
+	 * <p>
+	 * That covers an interrupt, which is what a cancelled turn on {@code boundedElastic}
+	 * delivers. It cannot cover the timeout: the SDK bounds every request by the same
+	 * {@code timeout} and drops an answer that comes after it, so a session the agent
+	 * creates that late stays on the agent.
+	 */
+	private AcpSchema.NewSessionResponse awaitNewSession(String name, Mono<AcpSchema.NewSessionResponse> request,
+			Duration timeout) {
+		CompletableFuture<AcpSchema.NewSessionResponse> answer = request.toFuture();
+		try {
+			return answer.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+		}
+		catch (TimeoutException ex) {
+			closeWhenAnswered(name, answer);
+			throw notAnswered(name, timeout);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			closeWhenAnswered(name, answer);
+			throw new AcpHarnessClientException("Interrupted waiting for session/new for '" + name + "'", ex);
+		}
+		catch (ExecutionException ex) {
+			if (ex.getCause() instanceof TimeoutException) {
+				throw notAnswered(name, timeout);
+			}
+			if (ex.getCause() instanceof RuntimeException failure) {
+				throw failure;
+			}
+			throw new AcpHarnessClientException("session/new failed for '" + name + "'", ex.getCause());
+		}
+	}
+
+	private AcpHarnessClientException notAnswered(String name, Duration timeout) {
+		return new AcpHarnessClientException("Agent did not answer session/new for '" + name + "' within " + timeout);
+	}
+
+	/** Runs on the thread delivering the late answer, so it must not wait. */
+	private void closeWhenAnswered(String name, CompletableFuture<AcpSchema.NewSessionResponse> answer) {
+		answer.thenAccept(late -> {
+			if (late != null && late.sessionId() != null) {
+				logger.warn("Agent answered session/new for '{}' after the caller gave up; closing session {}", name,
+						late.sessionId());
+				closeRemoteWithoutWaiting(late.sessionId());
+			}
+		});
+	}
+
+	/**
+	 * Forgets a session and closes it on the agent, waiting for the acknowledgement. For
+	 * the caller's thread; see {@link #closeRemote}.
+	 */
+	private void forgetAndClose(String name) {
+		sessions.remove(name).ifPresent(session -> closeRemote(session.sessionId()));
+	}
+
+	/**
+	 * Same without waiting, for teardown at the end of a turn; see
+	 * {@link #closeRemoteWithoutWaiting}.
+	 */
+	private void forgetAndCloseWithoutWaiting(String name) {
+		sessions.remove(name).ifPresent(session -> closeRemoteWithoutWaiting(session.sessionId()));
 	}
 
 	/**
@@ -328,8 +412,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 			if (failure.isEmpty()) {
 				continue;
 			}
-			sessions.remove(name);
-			closeRemote(session.sessionId());
+			forgetAndClose(name);
 			throw new AcpHarnessClientException("Agent '" + runtime.id() + "' could not load MCP server '"
 					+ server.name() + "', so this session would have run without its tools; the agent reported: "
 					+ failure.get().detail());
@@ -468,13 +551,23 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 			AcpAgentSettings effective = settings.merge(options);
 			// Resolved now, on the caller's thread, not inside the deferred turn below.
 			SessionPrincipal owner = principal != null ? principal : currentPrincipal();
-			boolean ephemeral = sessionName == null;
-			String name = ephemeral ? "turn-" + UUID.randomUUID() : sessionName;
+			String named = sessionName;
+			boolean ephemeral = named == null;
 			List<AcpSchema.ContentBlock> prompt = List.of(new AcpSchema.TextContent(text.toString()));
 
 			Flux<AcpAgentEvent> events = Flux.defer(() -> {
+				// Named per subscription, so subscribing twice is two throwaway turns.
+				String name = ephemeral ? "turn-" + UUID.randomUUID() : named;
 				AcpAgentSession session = openSession(name, effective, owner);
-				acquireTurn(session, effective.timeout());
+				try {
+					acquireTurn(session, effective.timeout());
+				}
+				catch (RuntimeException ex) {
+					if (ephemeral) {
+						forgetAndCloseWithoutWaiting(name);
+					}
+					throw ex;
+				}
 				try {
 					// A turn with per-request overrides re-negotiates; an unchanged one
 					// does not.
@@ -483,8 +576,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 				catch (RuntimeException ex) {
 					session.endTurn();
 					if (ephemeral) {
-						sessions.remove(name);
-						closeRemoteWithoutWaiting(session.sessionId());
+						forgetAndCloseWithoutWaiting(name);
 					}
 					throw ex;
 				}
@@ -493,8 +585,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 					.doFinally(signal -> {
 						session.endTurn();
 						if (ephemeral) {
-							sessions.remove(name);
-							closeRemoteWithoutWaiting(session.sessionId());
+							forgetAndCloseWithoutWaiting(name);
 						}
 					});
 			});

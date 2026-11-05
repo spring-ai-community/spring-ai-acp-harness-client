@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -292,6 +293,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * under one name.
 	 */
 	private AcpHarnessClient clientFor(String name, SessionPrincipal principal) {
+		requireOpen();
 		if (mcpScope == McpScope.PROCESS) {
 			Slot slot;
 			synchronized (placement) {
@@ -321,6 +323,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * principal, who would restart it mid-turn.
 	 */
 	private Lease leaseForEphemeral(SessionPrincipal principal) {
+		requireOpen();
 		if (mcpScope != McpScope.PROCESS) {
 			return new Lease(leastLoaded().client(), () -> {
 			});
@@ -453,7 +456,18 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * particular.
 	 */
 	private AcpHarnessClient any() {
+		requireOpen();
 		return connected().findFirst().orElseGet(() -> leastLoaded().client());
+	}
+
+	/**
+	 * Checked before any pool state is touched, and again by {@link Slot#client()} for a
+	 * close that arrives after this.
+	 */
+	private void requireOpen() {
+		if (closed.get()) {
+			throw new AcpHarnessClientException("The pool for runtime '" + runtimeId + "' is closed");
+		}
 	}
 
 	/**
@@ -466,7 +480,11 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 
 		private final Object lock = new Object();
 
-		private AcpHarnessClient client;
+		/**
+		 * Atomic because {@link AcpHarnessClientPool#close()} takes it without
+		 * {@link #lock}: see {@link #client()}.
+		 */
+		private final AtomicReference<AcpHarnessClient> client = new AtomicReference<>();
 
 		private int restarts;
 
@@ -485,12 +503,11 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		private Optional<AcpHarnessClient> connected() {
-			AcpHarnessClient current = client;
-			return Optional.ofNullable(current);
+			return Optional.ofNullable(client.get());
 		}
 
 		private int load() {
-			AcpHarnessClient current = client;
+			AcpHarnessClient current = client.get();
 			return current == null ? 0 : current.sessions().open().size();
 		}
 
@@ -505,13 +522,22 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		 * Under a lock because two threads finding a dead connection at the same moment
 		 * would otherwise start two agents and keep one, and the one they discarded would
 		 * be a process nobody closes.
+		 *
+		 * <p>
+		 * Closing the pool does not take that lock, so shutdown never waits on an agent
+		 * that is slow to start. Instead the pool sets {@code closed} and then takes the
+		 * connection, while this publishes the connection and then checks {@code closed}.
+		 * At least one of them sees the other, and because taking is an atomic swap,
+		 * exactly one of them ends up holding the connection to close.
 		 */
 		private AcpHarnessClient client() {
 			synchronized (lock) {
-				if (client != null && client.isAlive()) {
-					return client;
+				requireOpen();
+				AcpHarnessClient current = client.get();
+				if (current != null && current.isAlive()) {
+					return current;
 				}
-				if (client != null) {
+				if (current != null) {
 					logger.warn("Connection {} to runtime '{}' is no longer alive; replacing it", index, runtimeId);
 					discard();
 					restarts++;
@@ -520,8 +546,13 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 								+ "' has been replaced " + pool.maxRestarts() + " times and is being left down");
 					}
 				}
-				client = connect.get();
-				return client;
+				AcpHarnessClient connected = connect.get();
+				client.set(connected);
+				if (closed.get()) {
+					discard();
+					requireOpen();
+				}
+				return connected;
 			}
 		}
 
@@ -536,8 +567,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		private void discard() {
-			AcpHarnessClient current = client;
-			client = null;
+			AcpHarnessClient current = client.getAndSet(null);
 			if (current == null) {
 				return;
 			}

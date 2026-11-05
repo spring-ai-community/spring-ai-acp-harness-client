@@ -4,6 +4,11 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -201,6 +206,83 @@ class AcpHarnessClientPoolTests {
 
 		assertThat(created).allSatisfy(client -> assertThat(client.closed).isTrue());
 		assertThat(pool.openConnections()).isZero();
+	}
+
+	@Test
+	@DisplayName("a connection still being built when the pool closes is closed, not left running")
+	void closeDoesNotOrphanAConnectionBeingBuilt() throws Exception {
+		CountDownLatch connecting = new CountDownLatch(1);
+		CountDownLatch finish = new CountDownLatch(1);
+		AcpHarnessClientPool pool = new AcpHarnessClientPool("fake", settings(1, 32), () -> {
+			connecting.countDown();
+			awaitQuietly(finish);
+			return newClient();
+		});
+		ExecutorService caller = Executors.newSingleThreadExecutor();
+		try {
+			Future<AcpAgentSession> opening = caller.submit(() -> pool.openSession("a"));
+			assertThat(connecting.await(5, TimeUnit.SECONDS)).isTrue();
+
+			pool.close();
+			finish.countDown();
+
+			assertThatThrownBy(() -> opening.get(5, TimeUnit.SECONDS))
+				.hasCauseInstanceOf(AcpHarnessClientException.class);
+			assertThat(created).hasSize(1);
+			assertThat(created.get(0).closed).isTrue();
+			assertThat(pool.openConnections()).isZero();
+		}
+		finally {
+			finish.countDown();
+			caller.shutdownNow();
+		}
+	}
+
+	@Test
+	@DisplayName("a closed pool refuses work instead of starting an agent nobody will close")
+	void aClosedPoolStartsNothing() {
+		AcpHarnessClientPool pool = pool(settings(2, 32));
+		pool.close();
+
+		assertThatThrownBy(() -> pool.openSession("a")).isInstanceOf(AcpHarnessClientException.class)
+			.hasMessageContaining("closed");
+		assertThatThrownBy(() -> pool.prompt().user("hi").call()).isInstanceOf(AcpHarnessClientException.class)
+			.hasMessageContaining("closed");
+
+		assertThat(created).isEmpty();
+	}
+
+	@Test
+	@DisplayName("a closed pool says it is closed, even when every connection has used up its restarts")
+	void aClosedPoolSaysSoBeforeAnythingElse() {
+		AcpHarnessClientPool pool = pool(settings(1, 32));
+		for (int i = 0; i < 20 && pool.isAlive(); i++) {
+			try {
+				pool.openSession("a" + i);
+				created.get(created.size() - 1).alive.set(false);
+			}
+			catch (AcpHarnessClientException ex) {
+				// Expected once the restart budget runs out.
+			}
+		}
+		assertThat(pool.isAlive()).isFalse();
+		pool.close();
+
+		assertThatThrownBy(() -> pool.openSession("b")).isInstanceOf(AcpHarnessClientException.class)
+			.hasMessageContaining("closed");
+		assertThatThrownBy(() -> pool.prompt().user("hi").call()).isInstanceOf(AcpHarnessClientException.class)
+			.hasMessageContaining("closed");
+		assertThatThrownBy(() -> pool.sessions().list()).isInstanceOf(AcpHarnessClientException.class)
+			.hasMessageContaining("closed");
+	}
+
+	private static void awaitQuietly(CountDownLatch latch) {
+		try {
+			latch.await(10, TimeUnit.SECONDS);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	@Test
