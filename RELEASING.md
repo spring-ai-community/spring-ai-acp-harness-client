@@ -101,12 +101,19 @@ alias `latest` and makes that the site's default.
 
 ### 6. Move `main` to the next minor version
 
+Like any change to `main`, this goes through a pull request. Branch from `main`, never from
+`0.6.x`, so the PR carries only the version change:
+
 ```bash
 git switch main && git pull --ff-only
+git switch -c next-development-version
 ./mvnw versions:set -DgenerateBackupPoms=false -DnewVersion=0.7.0-SNAPSHOT
 git commit -a -s -m "Next development version"
-git push origin main
+git push -u origin next-development-version
 ```
+
+Open a PR to `main` and merge it once CI passes. Until it merges, pushes to `main` keep
+publishing `0.6.0-SNAPSHOT`, which does no harm.
 
 ## Patch release (0.6.1)
 
