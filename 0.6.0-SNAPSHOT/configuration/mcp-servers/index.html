@@ -254,7 +254,7 @@
   
     
   
-  HarnessClient API
+  Harness Client
 
       </a>
     </li>
@@ -275,7 +275,7 @@
   
     
   
-  Runtimes
+  Harness Runtimes
 
         </a>
       </li>
@@ -293,13 +293,13 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="../models/" class="md-tabs__link">
+        <a href="../../properties/" class="md-tabs__link">
           
   
   
     
   
-  Configuring the Agent
+  Configuration
 
         </a>
       </li>
@@ -326,25 +326,6 @@
         </a>
       </li>
     
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../../properties/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Properties
-
-      </a>
-    </li>
   
 
       
@@ -689,7 +670,7 @@
   <span class="md-ellipsis">
     
   
-    HarnessClient API
+    Harness Client
   
 
     
@@ -749,7 +730,7 @@
   <span class="md-ellipsis">
     
   
-    Runtimes
+    Harness Runtimes
   
 
     
@@ -771,7 +752,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Runtimes
+    Harness Runtimes
   
 
           </label>
@@ -947,6 +928,8 @@
       
         
       
+        
+      
     
     
     
@@ -973,7 +956,7 @@
   <span class="md-ellipsis">
     
   
-    Configuring the Agent
+    Configuration
   
 
     
@@ -989,11 +972,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Configuring the Agent
+    Configuration
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../properties/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1477,33 +1488,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../properties/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Properties
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../changes/" class="md-nav__link">
         
   
@@ -1791,7 +1775,7 @@
 </span></code></pre></div>
 <p>The upstream is read once, when the session opens, and must be HTTPS (plain HTTP only for loopback and <code>*.apps.internal</code>). A server with no URL of its own that the provider does not route for a session, because the user has not granted access yet, is left out of that session rather than refusing it; the next session asks again. <code>McpCredentials.upstream()</code> also overrides a configured <code>url</code>.</p>
 <h2 id="per-user-oauth">Per-user OAuth<a class="headerlink" href="#per-user-oauth" title="Permanent link">&para;</a></h2>
-<p>For MCP servers that implement the MCP authorization spec, add <code>spring-ai-acp-harness-client-mcp-oauth</code> and mark the server <code>auth: oauth</code>. Authorization-server discovery, dynamic client registration, PKCE and the <code>resource</code> parameter are handled for you; each user signs in once per server, and tokens are refreshed as needed.</p>
+<p>For MCP servers that implement the MCP authorization spec, add <code>spring-ai-acp-harness-client-mcp-oauth</code> and mark the server <code>auth: oauth</code>. Authorization-server discovery, dynamic client registration, PKCE and the <code>resource</code> parameter are handled for you; each user signs in once per server, and tokens are refreshed as needed. Such a server must have a <code>url</code>: it names the resource whose authorization server the client registers with, and an <code>auth: oauth</code> server declared without one is refused at startup.</p>
 <div class="highlight"><span class="filename">pom.xml</span><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">&lt;dependency&gt;</span>
 </span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nt">&lt;groupId&gt;</span>org.springaicommunity<span class="nt">&lt;/groupId&gt;</span>
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="nt">&lt;artifactId&gt;</span>spring-ai-acp-harness-client-mcp-oauth<span class="nt">&lt;/artifactId&gt;</span>

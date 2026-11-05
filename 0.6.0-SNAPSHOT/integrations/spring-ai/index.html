@@ -254,7 +254,7 @@
   
     
   
-  HarnessClient API
+  Harness Client
 
       </a>
     </li>
@@ -275,7 +275,7 @@
   
     
   
-  Runtimes
+  Harness Runtimes
 
         </a>
       </li>
@@ -291,13 +291,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../configuration/models/" class="md-tabs__link">
+        <a href="../../properties/" class="md-tabs__link">
           
   
   
     
   
-  Configuring the Agent
+  Configuration
 
         </a>
       </li>
@@ -326,25 +326,6 @@
         </a>
       </li>
     
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../../properties/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Properties
-
-      </a>
-    </li>
   
 
       
@@ -689,7 +670,7 @@
   <span class="md-ellipsis">
     
   
-    HarnessClient API
+    Harness Client
   
 
     
@@ -749,7 +730,7 @@
   <span class="md-ellipsis">
     
   
-    Runtimes
+    Harness Runtimes
   
 
     
@@ -771,7 +752,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Runtimes
+    Harness Runtimes
   
 
           </label>
@@ -945,6 +926,8 @@
       
         
       
+        
+      
     
     
     
@@ -968,7 +951,7 @@
   <span class="md-ellipsis">
     
   
-    Configuring the Agent
+    Configuration
   
 
     
@@ -984,11 +967,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Configuring the Agent
+    Configuration
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../properties/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1340,33 +1351,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../properties/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Properties
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../changes/" class="md-nav__link">
         
   
@@ -1432,7 +1416,7 @@
 
 
 <h1 id="spring-ai-chatmodel">Spring AI ChatModel<a class="headerlink" href="#spring-ai-chatmodel" title="Permanent link">&para;</a></h1>
-<p>Add <code>spring-ai-acp-harness-client-ai</code> and an <code>AcpChatModel</code> bean appears wherever a Spring AI application looks for a <code>ChatModel</code>:</p>
+<p>Add <code>spring-ai-acp-harness-client-chatmodel</code> and an <code>AcpChatModel</code> bean appears wherever a Spring AI application looks for a <code>ChatModel</code>:</p>
 <div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">ChatClient</span><span class="w"> </span><span class="n">chat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ChatClient</span><span class="p">.</span><span class="na">create</span><span class="p">(</span><span class="n">chatModel</span><span class="p">);</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">String</span><span class="w"> </span><span class="n">answer</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chat</span><span class="p">.</span><span class="na">prompt</span><span class="p">()</span>

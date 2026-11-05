@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://spring-ai-community.github.io/spring-ai-acp-harness-client/0.6.0-SNAPSHOT/changes/">
       
       
-        <link rel="prev" href="../properties/">
+        <link rel="prev" href="../integrations/observability/">
       
       
       
@@ -252,7 +252,7 @@
   
     
   
-  HarnessClient API
+  Harness Client
 
       </a>
     </li>
@@ -273,7 +273,7 @@
   
     
   
-  Runtimes
+  Harness Runtimes
 
         </a>
       </li>
@@ -289,13 +289,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="../configuration/models/" class="md-tabs__link">
+        <a href="../properties/" class="md-tabs__link">
           
   
   
     
   
-  Configuring the Agent
+  Configuration
 
         </a>
       </li>
@@ -322,25 +322,6 @@
         </a>
       </li>
     
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../properties/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Properties
-
-      </a>
-    </li>
   
 
       
@@ -687,7 +668,7 @@
   <span class="md-ellipsis">
     
   
-    HarnessClient API
+    Harness Client
   
 
     
@@ -747,7 +728,7 @@
   <span class="md-ellipsis">
     
   
-    Runtimes
+    Harness Runtimes
   
 
     
@@ -769,7 +750,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Runtimes
+    Harness Runtimes
   
 
           </label>
@@ -943,6 +924,8 @@
       
         
       
+        
+      
     
     
     
@@ -966,7 +949,7 @@
   <span class="md-ellipsis">
     
   
-    Configuring the Agent
+    Configuration
   
 
     
@@ -982,11 +965,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Configuring the Agent
+    Configuration
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../properties/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1312,33 +1323,6 @@
           </ul>
         </nav>
       
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../properties/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Properties
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -2023,6 +2007,13 @@
   naming it; and an <code>auth: oauth</code> server declared without a <code>url</code> is refused when the credentials
   provider is built rather than when the first user's session opens. For a contributor, <code>.mvn/jvm.config</code> now opens the javac internals Error Prone needs, and
   <code>spring-boot-configuration-processor</code> is named on the compiler's processor path.</li>
+<li><strong>Breaking:</strong> the core library is now the artifact <code>spring-ai-acp-harness-client</code>, dropping the
+  <code>-core</code> suffix, the Spring AI <code>ChatModel</code> adapter is <code>spring-ai-acp-harness-client-chatmodel</code>
+  instead of <code>-ai</code>, and the parent POM is published as <code>spring-ai-acp-harness-client-parent</code>, so each
+  name says what it is. Applications use a starter and rarely name the core artifact; one that names
+  either changes the artifact id. Java packages are unchanged. The modules are also grouped into <code>runtimes/</code>,
+  <code>auto-configurations/</code>, <code>starters/</code> and <code>integrations/</code> folders in the repository, which
+  changes no artifact id.</li>
 <li>Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.</li>
 <li>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs

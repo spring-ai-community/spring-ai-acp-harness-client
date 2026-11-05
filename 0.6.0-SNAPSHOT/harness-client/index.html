@@ -27,7 +27,7 @@
     
     
       
-        <title>HarnessClient API - Spring AI ACP Harness Client</title>
+        <title>Harness Client - Spring AI ACP Harness Client</title>
       
     
     
@@ -119,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              HarnessClient API
+              Harness Client
             
           </span>
         </div>
@@ -256,7 +256,7 @@
   
     
   
-  HarnessClient API
+  Harness Client
 
       </a>
     </li>
@@ -277,7 +277,7 @@
   
     
   
-  Runtimes
+  Harness Runtimes
 
         </a>
       </li>
@@ -293,13 +293,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="../configuration/models/" class="md-tabs__link">
+        <a href="../properties/" class="md-tabs__link">
           
   
   
     
   
-  Configuring the Agent
+  Configuration
 
         </a>
       </li>
@@ -326,25 +326,6 @@
         </a>
       </li>
     
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../properties/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Properties
-
-      </a>
-    </li>
   
 
       
@@ -698,7 +679,7 @@
   <span class="md-ellipsis">
     
   
-    HarnessClient API
+    Harness Client
   
 
     
@@ -716,7 +697,7 @@
   <span class="md-ellipsis">
     
   
-    HarnessClient API
+    Harness Client
   
 
     
@@ -851,7 +832,7 @@
   <span class="md-ellipsis">
     
   
-    Runtimes
+    Harness Runtimes
   
 
     
@@ -873,7 +854,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Runtimes
+    Harness Runtimes
   
 
           </label>
@@ -1047,6 +1028,8 @@
       
         
       
+        
+      
     
     
     
@@ -1070,7 +1053,7 @@
   <span class="md-ellipsis">
     
   
-    Configuring the Agent
+    Configuration
   
 
     
@@ -1086,11 +1069,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Configuring the Agent
+    Configuration
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../properties/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1427,33 +1438,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../properties/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Properties
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../changes/" class="md-nav__link">
         
   
@@ -1583,6 +1567,7 @@
 
 <h1 id="acpharnessclient-api">AcpHarnessClient API<a class="headerlink" href="#acpharnessclient-api" title="Permanent link">&para;</a></h1>
 <p>Every call starts with <code>prompt()</code> and describes one <em>turn</em>. Nothing is sent until <code>call()</code> or <code>stream()</code>.</p>
+<p>The API is <code>@NullMarked</code> (<a href="https://jspecify.dev">JSpecify</a>): a reference is non-null unless it is annotated <code>@Nullable</code>, and the build checks that, so where a method says <code>@Nullable</code> the null is real and where it does not you need no check. An IDE that reads JSpecify annotations shows the same.</p>
 <h2 id="blocking-and-streaming">Blocking and streaming<a class="headerlink" href="#blocking-and-streaming" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Blocking: wait for the finished answer.</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">AcpHarnessClient</span><span class="p">.</span><span class="na">AcpAgentResponse</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">acpHarnessClient</span><span class="p">.</span><span class="na">prompt</span><span class="p">()</span>

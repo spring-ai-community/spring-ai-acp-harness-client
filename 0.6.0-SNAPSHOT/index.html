@@ -254,7 +254,7 @@
   
     
   
-  HarnessClient API
+  Harness Client
 
       </a>
     </li>
@@ -275,7 +275,7 @@
   
     
   
-  Runtimes
+  Harness Runtimes
 
         </a>
       </li>
@@ -291,13 +291,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="configuration/models/" class="md-tabs__link">
+        <a href="properties/" class="md-tabs__link">
           
   
   
     
   
-  Configuring the Agent
+  Configuration
 
         </a>
       </li>
@@ -324,25 +324,6 @@
         </a>
       </li>
     
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="properties/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Properties
-
-      </a>
-    </li>
   
 
       
@@ -695,7 +676,7 @@
   <span class="md-ellipsis">
     
   
-    HarnessClient API
+    Harness Client
   
 
     
@@ -755,7 +736,7 @@
   <span class="md-ellipsis">
     
   
-    Runtimes
+    Harness Runtimes
   
 
     
@@ -777,7 +758,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Runtimes
+    Harness Runtimes
   
 
           </label>
@@ -951,6 +932,8 @@
       
         
       
+        
+      
     
     
     
@@ -974,7 +957,7 @@
   <span class="md-ellipsis">
     
   
-    Configuring the Agent
+    Configuration
   
 
     
@@ -990,11 +973,39 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Configuring the Agent
+    Configuration
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="properties/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Properties
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1331,33 +1342,6 @@
   
   
     <li class="md-nav__item">
-      <a href="properties/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Properties
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="changes/" class="md-nav__link">
         
   
@@ -1535,7 +1519,7 @@ config:
 ---
 flowchart TD
     app["&lt;b&gt;Your application&lt;/b&gt;&lt;br/&gt;AcpHarnessClient · AcpAgentSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
-    core["&lt;b&gt;spring-ai-acp-harness-client-core&lt;/b&gt;&lt;br/&gt;connection pool · session registry · config negotiation · permission policy&lt;br/&gt;MCP credential proxy · skill installer · workspace jail · observations"]
+    core["&lt;b&gt;spring-ai-acp-harness-client&lt;/b&gt;&lt;br/&gt;connection pool · session registry · config negotiation · permission policy&lt;br/&gt;MCP credential proxy · skill installer · workspace jail · observations"]
     subgraph adapters["Runtime adapters"]
         direction LR
         goose["&lt;b&gt;goose&lt;/b&gt;&lt;br/&gt;stdio or WebSocket"]
@@ -1607,7 +1591,11 @@ flowchart TD
 <td>Core and auto-configuration with <em>no</em> agent (for bringing your own <code>AcpAgentRuntime</code>)</td>
 </tr>
 <tr>
-<td><code>spring-ai-acp-harness-client-ai</code></td>
+<td><code>spring-ai-acp-harness-client</code></td>
+<td>The library itself, without Spring Boot: <code>AcpHarnessClient</code>, sessions, configuration, MCP proxy, workspace</td>
+</tr>
+<tr>
+<td><code>spring-ai-acp-harness-client-chatmodel</code></td>
 <td><code>AcpChatModel</code>: the agent as a Spring AI <code>ChatModel</code></td>
 </tr>
 <tr>
@@ -1624,7 +1612,7 @@ flowchart TD
 </tr>
 </tbody>
 </table>
-<p>The starters bring in <code>spring-ai-acp-harness-client-core</code>, <code>spring-ai-acp-harness-client-boot-autoconfigure</code> and the matching <code>spring-ai-acp-harness-client-runtime-*</code> adapter, so applications rarely name those directly.</p>
+<p>The starters bring in <code>spring-ai-acp-harness-client</code>, <code>spring-ai-acp-harness-client-boot-autoconfigure</code> and the matching <code>spring-ai-acp-harness-client-runtime-*</code> adapter, so applications rarely name those directly.</p>
 
 
 
