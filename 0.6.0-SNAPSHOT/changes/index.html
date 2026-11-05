@@ -1432,6 +1432,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1461,7 +1472,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1500,7 +1511,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1550,7 +1561,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1705,6 +1716,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1734,7 +1756,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1773,7 +1795,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1823,7 +1845,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1975,6 +1997,26 @@
 <li>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
   site, published to GitHub Pages from <code>docs/</code>.</li>
 </ul>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A new session that failed while being configured, such as an unsupported model with
+  <code>on-unsupported: fail</code>, stayed open on the agent until <code>session-ttl</code>, with its MCP route still
+  live. In a pool these sessions used up capacity, so later turns were refused with a "holding its
+  maximum" error instead of reporting the real failure. A session that was already open is kept, so
+  a bad per-turn override does not end a conversation. The same applied to a session attached with
+  <code>sessions().load</code> or <code>resume</code>, which stayed loaded on the agent; it is now closed there too.</li>
+<li>A <code>session/new</code> the agent answered after the caller stopped waiting, as when a cancelled turn
+  interrupts its thread, named a session nothing could close; it is now closed when the answer
+  arrives. A <code>session/new</code> not answered within <code>timeout</code> now fails with an
+  <code>AcpHarnessClientException</code> instead of an <code>IllegalStateException</code>; an answer after that is
+  dropped by the ACP SDK, so a session created that late still stays on the agent.</li>
+<li>Subscribing twice to one throwaway <code>AcpAgentStream</code> now runs two sessions. They used to share one,
+  so the first to finish could close it under the other.</li>
+<li>A closed <code>AcpHarnessClientPool</code> would start new agents on request, and a connection still being
+  built when the pool closed was never closed. A closed pool now refuses work with an
+  <code>AcpHarnessClientException</code>, and a connection that finishes building after the close is closed at
+  once. Closing does not interrupt or wait for a connect in progress.</li>
+</ul>
 <h2 id="050-2026-10-20">[0.5.0] - 2026-10-20<a class="headerlink" href="#050-2026-10-20" title="Permanent link">&para;</a></h2>
 <h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2017,7 +2059,7 @@
   Boot now loads the file as ordinary configuration, so its keys miss <code>spring.acp</code> and are
   silently ignored: add <code>acp:</code> to the import.</li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>spring-ai-acp-harness-client-mcp-oauth</code>: a sign-in that had lapsed — its refresh token no
   longer honoured — was never cleared, so the user was never asked to sign in again and every
@@ -2040,7 +2082,7 @@
   itself. Jackson's annotations (<code>com.fasterxml.jackson.annotation</code>) are unchanged.</li>
 <li>Spring Boot 4.1.1, which brings Jackson 3.1.5, the version the SDK is built against.</li>
 </ul>
-<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>With <code>goose serve</code>, an answer to the agent (a permission decision, a file read, a terminal
   result) could be dropped when it was sent at the same moment as a new request, leaving that
@@ -2087,7 +2129,7 @@
   declared <code>new AcpProperties()</code> as a bean registers it with
   <code>@EnableConfigurationProperties(AcpProperties.class)</code> instead.</li>
 </ul>
-<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>OpenCode sessions no longer call MCP servers as another user, or through a closed session's
   route. OpenCode keeps one MCP client per server name for its whole process, replaced by each
