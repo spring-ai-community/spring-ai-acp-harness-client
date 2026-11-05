@@ -12,10 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.config.SessionConfiguration;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.StoredSession;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
@@ -43,15 +43,15 @@ class ConsoleChatTests {
 
 	private final AcpHarnessClient.PromptSpec prompt = mock(AcpHarnessClient.PromptSpec.class, RETURNS_SELF);
 
-	private final AcpHarnessClient.AcpAgentStream stream = mock(AcpHarnessClient.AcpAgentStream.class);
+	private final AcpHarnessClient.AcpHarnessStream stream = mock(AcpHarnessClient.AcpHarnessStream.class);
 
-	private final AcpAgentSessions sessions = mock(AcpAgentSessions.class);
+	private final AcpHarnessSessions sessions = mock(AcpHarnessSessions.class);
 
 	private final AtomicBoolean exited = new AtomicBoolean();
 
 	@BeforeEach
 	void stubTheAgent() {
-		AcpAgentSession session = mock(AcpAgentSession.class);
+		AcpHarnessSession session = mock(AcpHarnessSession.class);
 		when(session.configuration()).thenReturn(SessionConfiguration.empty());
 		when(agent.runtimeId()).thenReturn("scripted");
 		when(agent.openSession(anyString())).thenReturn(session);
@@ -59,15 +59,15 @@ class ConsoleChatTests {
 		when(agent.notices()).thenReturn(List.of());
 		when(agent.prompt()).thenReturn(prompt);
 		when(prompt.stream()).thenReturn(stream);
-		when(stream.events()).thenReturn(Flux.just(new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN)));
+		when(stream.events()).thenReturn(Flux.just(new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN)));
 	}
 
 	@Test
 	void streamsATurnInTheConfiguredSessionAndLeavesOnExit() {
 		when(stream.events()).thenReturn(
-				Flux.just(new AcpAgentEvent.ToolCallStarted("1", "Read the cost report", AcpSchema.ToolKind.READ),
-						new AcpAgentEvent.Text("Spend is "), new AcpAgentEvent.Text("up 4%."),
-						new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN)));
+				Flux.just(new AcpHarnessEvent.ToolCallStarted("1", "Read the cost report", AcpSchema.ToolKind.READ),
+						new AcpHarnessEvent.Text("Spend is "), new AcpHarnessEvent.Text("up 4%."),
+						new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN)));
 		TestTerminals.Scripted terminal = TestTerminals.typing("what changed?\n/exit\n");
 
 		chat(terminal, "Meridian", "Ask about costs.").run();
@@ -100,9 +100,9 @@ class ConsoleChatTests {
 
 	@Test
 	void aFailedToolCallIsReportedByItsTitle() {
-		when(stream.events()).thenReturn(Flux.just(new AcpAgentEvent.ToolCallStarted("t1", "Query FinOps", null),
-				new AcpAgentEvent.ToolCallUpdated("t1", AcpSchema.ToolCallStatus.FAILED, List.of()),
-				new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN)));
+		when(stream.events()).thenReturn(Flux.just(new AcpHarnessEvent.ToolCallStarted("t1", "Query FinOps", null),
+				new AcpHarnessEvent.ToolCallUpdated("t1", AcpSchema.ToolCallStatus.FAILED, List.of()),
+				new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN)));
 		TestTerminals.Scripted terminal = TestTerminals.typing("go\n");
 
 		chat(terminal).run();
@@ -113,9 +113,9 @@ class ConsoleChatTests {
 	@Test
 	void aTurnThatFailsIsReportedAndTheConversationCarriesOn() {
 		when(stream.events())
-			.thenReturn(Flux.just(new AcpAgentEvent.Failed(new IllegalStateException("agent went away"))))
-			.thenReturn(Flux.just(new AcpAgentEvent.Text("back"),
-					new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN)));
+			.thenReturn(Flux.just(new AcpHarnessEvent.Failed(new IllegalStateException("agent went away"))))
+			.thenReturn(Flux.just(new AcpHarnessEvent.Text("back"),
+					new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN)));
 		TestTerminals.Scripted terminal = TestTerminals.typing("one\ntwo\n");
 
 		chat(terminal).run();
@@ -137,7 +137,7 @@ class ConsoleChatTests {
 	void cancellingDisposesTheTurnInFlight() throws Exception {
 		CountDownLatch subscribed = new CountDownLatch(1);
 		AtomicBoolean cancelled = new AtomicBoolean();
-		when(stream.events()).thenReturn(Flux.<AcpAgentEvent>never()
+		when(stream.events()).thenReturn(Flux.<AcpHarnessEvent>never()
 			.doOnSubscribe(s -> subscribed.countDown())
 			.doOnCancel(() -> cancelled.set(true)));
 		TestTerminals.Scripted terminal = TestTerminals.typing("take your time\n");
@@ -160,7 +160,7 @@ class ConsoleChatTests {
 		// narrowest window a Ctrl-C can land in, and one a slow machine widens.
 		AtomicReference<ConsoleChat> chat = new AtomicReference<>();
 		AtomicBoolean cancelled = new AtomicBoolean();
-		when(stream.events()).thenReturn(Flux.<AcpAgentEvent>never()
+		when(stream.events()).thenReturn(Flux.<AcpHarnessEvent>never()
 			.doOnSubscribe(s -> chat.get().cancel())
 			.doOnCancel(() -> cancelled.set(true)));
 		TestTerminals.Scripted terminal = TestTerminals.typing("take your time\n");
@@ -177,7 +177,7 @@ class ConsoleChatTests {
 
 	@Test
 	void newStartsAFreshNamedSessionAndClosesTheOldOneWhereTheAgentCan() {
-		when(sessions.supports(AcpAgentSessions.Operation.CLOSE)).thenReturn(true);
+		when(sessions.supports(AcpHarnessSessions.Operation.CLOSE)).thenReturn(true);
 		TestTerminals.Scripted terminal = TestTerminals.typing("/new\nhello again\n");
 
 		ConsoleChat chat = chat(terminal);
@@ -200,7 +200,7 @@ class ConsoleChatTests {
 
 	@Test
 	void sessionsListsWhatTheAgentStored() {
-		when(sessions.supports(AcpAgentSessions.Operation.LIST)).thenReturn(true);
+		when(sessions.supports(AcpHarnessSessions.Operation.LIST)).thenReturn(true);
 		when(sessions.list()).thenReturn(List.of(new StoredSession("sess-42", temp, "Q3 capacity review", null)));
 		when(agent.session("console")).thenReturn(null);
 		TestTerminals.Scripted terminal = TestTerminals.typing("/sessions\n");
@@ -212,7 +212,7 @@ class ConsoleChatTests {
 
 	@Test
 	void resumeLoadsWhenTheAgentCannotResume() {
-		when(sessions.supports(AcpAgentSessions.Operation.LOAD)).thenReturn(true);
+		when(sessions.supports(AcpHarnessSessions.Operation.LOAD)).thenReturn(true);
 		TestTerminals.Scripted terminal = TestTerminals.typing("/resume sess-42\nwhere were we?\n");
 
 		chat(terminal).run();
@@ -243,7 +243,7 @@ class ConsoleChatTests {
 
 	@Test
 	void eachNoticeFromTheAgentIsShownOnce() {
-		when(agent.notices()).thenReturn(List.of(AcpAgentNotice.error("finops-mcp", "could not connect")));
+		when(agent.notices()).thenReturn(List.of(AcpHarnessNotice.error("finops-mcp", "could not connect")));
 		TestTerminals.Scripted terminal = TestTerminals.typing("one\ntwo\n");
 
 		chat(terminal).run();
@@ -255,9 +255,9 @@ class ConsoleChatTests {
 
 	@Test
 	void usageIsSummarisedOnceWhenTheTurnEnds() {
-		when(stream.events()).thenReturn(Flux.just(new AcpAgentEvent.UsageUpdated(1000, 200_000, null, null),
-				new AcpAgentEvent.UsageUpdated(12_345, 200_000, 0.0123, "USD"), new AcpAgentEvent.Text("done"),
-				new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN)));
+		when(stream.events()).thenReturn(Flux.just(new AcpHarnessEvent.UsageUpdated(1000, 200_000, null, null),
+				new AcpHarnessEvent.UsageUpdated(12_345, 200_000, 0.0123, "USD"), new AcpHarnessEvent.Text("done"),
+				new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN)));
 		TestTerminals.Scripted terminal = TestTerminals.typing("go\n");
 
 		chat(terminal).run();

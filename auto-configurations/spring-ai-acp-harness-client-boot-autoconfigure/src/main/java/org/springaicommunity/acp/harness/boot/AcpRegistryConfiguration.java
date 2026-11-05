@@ -5,11 +5,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springaicommunity.acp.harness.registry.AcpAgentInstaller;
-import org.springaicommunity.acp.harness.registry.AcpAgentRegistry;
-import org.springaicommunity.acp.harness.registry.RegistryAcpAgentRuntimeProvider;
+import org.springaicommunity.acp.harness.registry.AcpHarnessInstaller;
+import org.springaicommunity.acp.harness.registry.AcpHarnessRegistry;
+import org.springaicommunity.acp.harness.registry.RegistryAcpHarnessRuntimeProvider;
 import org.springaicommunity.acp.harness.registry.RegistrySettings;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntimeProvider;
 
 /**
  * Registers the registry-driven runtime, when
@@ -24,12 +24,12 @@ import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
  * condition here has to hold when the class is genuinely missing.
  *
  * <p>
- * Nothing is fetched at refresh. {@link AcpAgentRegistry} reads its snapshot the first
- * time an id is looked up, and {@link AcpAgentInstaller} downloads the first time a
+ * Nothing is fetched at refresh. {@link AcpHarnessRegistry} reads its snapshot the first
+ * time an id is looked up, and {@link AcpHarnessInstaller} downloads the first time a
  * runtime is launched.
  */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnClass(AcpAgentRegistry.class)
+@ConditionalOnClass(AcpHarnessRegistry.class)
 @ConditionalOnProperty(prefix = "spring.ai.acp.harness.registry", name = "enabled", matchIfMissing = true)
 class AcpRegistryConfiguration {
 
@@ -43,20 +43,20 @@ class AcpRegistryConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	AcpAgentRegistry acpAgentRegistry(RegistrySettings settings) {
-		return new AcpAgentRegistry(settings);
+	AcpHarnessRegistry acpHarnessRegistry(RegistrySettings settings) {
+		return new AcpHarnessRegistry(settings);
 	}
 
 	@Bean
 	@ConditionalOnMissingBean
-	AcpAgentInstaller acpAgentInstaller(RegistrySettings settings) {
-		return new AcpAgentInstaller(settings);
+	AcpHarnessInstaller acpHarnessInstaller(RegistrySettings settings) {
+		return new AcpHarnessInstaller(settings);
 	}
 
 	@Bean
 	@ConditionalOnMissingBean(name = "registryAgentRuntimeProvider")
-	AcpAgentRuntimeProvider registryAgentRuntimeProvider(AcpAgentRegistry registry, AcpAgentInstaller installer) {
-		return new RegistryAcpAgentRuntimeProvider(registry, installer);
+	AcpHarnessRuntimeProvider registryAgentRuntimeProvider(AcpHarnessRegistry registry, AcpHarnessInstaller installer) {
+		return new RegistryAcpHarnessRuntimeProvider(registry, installer);
 	}
 
 }

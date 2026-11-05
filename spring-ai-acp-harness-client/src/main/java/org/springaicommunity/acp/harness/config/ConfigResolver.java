@@ -9,9 +9,9 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 
 import com.agentclientprotocol.sdk.client.AcpAsyncClient;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
@@ -67,7 +67,7 @@ public final class ConfigResolver {
 
 	private static final Logger logger = LoggerFactory.getLogger(ConfigResolver.class);
 
-	private final AcpAgentRuntime runtime;
+	private final AcpHarnessRuntime runtime;
 
 	private final OnUnsupported onUnsupported;
 
@@ -76,11 +76,11 @@ public final class ConfigResolver {
 	/** One warning per option per runtime, not one per session. */
 	private final Set<String> warned = ConcurrentHashMap.newKeySet();
 
-	public ConfigResolver(AcpAgentRuntime runtime, OnUnsupported onUnsupported) {
+	public ConfigResolver(AcpHarnessRuntime runtime, OnUnsupported onUnsupported) {
 		this(runtime, onUnsupported, ModelCatalog.endpoint());
 	}
 
-	public ConfigResolver(AcpAgentRuntime runtime, @Nullable OnUnsupported onUnsupported,
+	public ConfigResolver(AcpHarnessRuntime runtime, @Nullable OnUnsupported onUnsupported,
 			@Nullable ModelCatalog catalog) {
 		this.runtime = runtime;
 		this.onUnsupported = onUnsupported == null ? OnUnsupported.WARN : onUnsupported;
@@ -94,7 +94,8 @@ public final class ConfigResolver {
 	 * Provider first: on an agent that scopes its model list by provider, asking for a
 	 * model before the provider is set would be matched against the wrong list.
 	 */
-	public Mono<SessionConfiguration> apply(AcpAsyncClient client, AcpAgentSession session, AcpAgentSettings settings) {
+	public Mono<SessionConfiguration> apply(AcpAsyncClient client, AcpHarnessSession session,
+			AcpHarnessSettings settings) {
 		List<OptionResolution> resolutions = new ArrayList<>();
 		return resolve(client, session, settings, PortableOption.PROVIDER, settings.provider().id())
 			.doOnNext(resolutions::add)
@@ -109,8 +110,8 @@ public final class ConfigResolver {
 			}));
 	}
 
-	private Mono<OptionResolution> resolve(AcpAsyncClient client, AcpAgentSession session, AcpAgentSettings settings,
-			PortableOption option, @Nullable String value) {
+	private Mono<OptionResolution> resolve(AcpAsyncClient client, AcpHarnessSession session,
+			AcpHarnessSettings settings, PortableOption option, @Nullable String value) {
 		if (value == null || value.isBlank()) {
 			return Mono.just(OptionResolution.notRequested(option));
 		}
@@ -128,7 +129,7 @@ public final class ConfigResolver {
 			// providers/set over an SDK field-name mismatch, while its config.toml has
 			// been
 			// carrying that same provider since launch.
-			.onErrorResume(error -> error instanceof UnsupportedAcpAgentOptionException ? Mono.error(error)
+			.onErrorResume(error -> error instanceof UnsupportedAcpHarnessOptionException ? Mono.error(error)
 					: viaRuntime(settings, option, value).switchIfEmpty(Mono.defer(
 							() -> unsupported(option, value, "the agent rejected it: " + rootMessage(error), error))));
 	}
@@ -143,8 +144,8 @@ public final class ConfigResolver {
 	 * here rather than falling through to a weaker mechanism, and the message names what
 	 * it does offer.
 	 */
-	private Mono<OptionResolution> viaConfigOption(AcpAsyncClient client, AcpAgentSession session,
-			AcpAgentSettings settings, PortableOption option, String value) {
+	private Mono<OptionResolution> viaConfigOption(AcpAsyncClient client, AcpHarnessSession session,
+			AcpHarnessSettings settings, PortableOption option, String value) {
 		AdvertisedSessionConfig advertised = session.advertised();
 		String qualifier = option == PortableOption.MODEL ? settings.provider().id() : null;
 
@@ -184,7 +185,7 @@ public final class ConfigResolver {
 	 * are the agent's own vocabulary, which it does know the whole of; inventing values
 	 * for those would be guessing rather than deferring to something better informed.
 	 */
-	private static boolean sendsUnadvertised(AcpAgentSettings settings, PortableOption option) {
+	private static boolean sendsUnadvertised(AcpHarnessSettings settings, PortableOption option) {
 		return option == PortableOption.MODEL && settings.provider().isByo();
 	}
 
@@ -199,7 +200,7 @@ public final class ConfigResolver {
 	 * refuses nothing.
 	 * @return the refusal, or null when the endpoint does serve the model or did not say
 	 */
-	private @Nullable String endpointRefusal(AcpAgentSettings settings, PortableOption option, String value) {
+	private @Nullable String endpointRefusal(AcpHarnessSettings settings, PortableOption option, String value) {
 		if (option != PortableOption.MODEL || !settings.provider().isByo()) {
 			return null;
 		}
@@ -210,7 +211,7 @@ public final class ConfigResolver {
 		return "the endpoint at " + settings.provider().findApiBase() + " serves " + String.join(", ", models);
 	}
 
-	private Mono<OptionResolution> set(AcpAsyncClient client, AcpAgentSession session, PortableOption option,
+	private Mono<OptionResolution> set(AcpAsyncClient client, AcpHarnessSession session, PortableOption option,
 			String requested, String configId, String value, Mechanism mechanism) {
 		return client
 			.setSessionConfigOption(
@@ -231,8 +232,8 @@ public final class ConfigResolver {
 	 * returns both shapes; an agent written before {@code configOptions} existed returns
 	 * only this one.
 	 */
-	private Mono<OptionResolution> viaLegacyState(AcpAsyncClient client, AcpAgentSession session, PortableOption option,
-			String value) {
+	private Mono<OptionResolution> viaLegacyState(AcpAsyncClient client, AcpHarnessSession session,
+			PortableOption option, String value) {
 		AdvertisedSessionConfig advertised = session.advertised();
 		return switch (option) {
 			case MODE -> {
@@ -274,8 +275,8 @@ public final class ConfigResolver {
 	 * the SDK's record expects {@code id}, so every entry parses with a null name.
 	 * Setting and reading the error is both simpler and, here, the only thing that works.
 	 */
-	private Mono<OptionResolution> viaProviders(AcpAsyncClient client, AcpAgentSettings settings, PortableOption option,
-			String value) {
+	private Mono<OptionResolution> viaProviders(AcpAsyncClient client, AcpHarnessSettings settings,
+			PortableOption option, String value) {
 		if (option != PortableOption.PROVIDER || !supportsProviders(client)) {
 			return Mono.empty();
 		}
@@ -297,7 +298,7 @@ public final class ConfigResolver {
 		}
 	}
 
-	private Mono<OptionResolution> viaRuntime(AcpAgentSettings settings, PortableOption option, String value) {
+	private Mono<OptionResolution> viaRuntime(AcpHarnessSettings settings, PortableOption option, String value) {
 		if (!runtime.appliedOutOfBand(option, settings)) {
 			return Mono.empty();
 		}
@@ -306,7 +307,7 @@ public final class ConfigResolver {
 				"applied by the " + runtime.id() + " adapter at launch"));
 	}
 
-	private static String noMechanism(AcpAgentSession session) {
+	private static String noMechanism(AcpHarnessSession session) {
 		return session.advertised().isEmpty() ? "the agent advertised no configurable options"
 				: "the agent has no option for it";
 	}
@@ -314,8 +315,8 @@ public final class ConfigResolver {
 	private Mono<OptionResolution> unsupported(PortableOption option, String value, String detail,
 			@Nullable Throwable cause) {
 		return switch (onUnsupported) {
-			case FAIL -> Mono.error(
-					new UnsupportedAcpAgentOptionException(option.propertyName(), value, runtime.id(), detail, cause));
+			case FAIL -> Mono.error(new UnsupportedAcpHarnessOptionException(option.propertyName(), value, runtime.id(),
+					detail, cause));
 			case WARN -> Mono.fromCallable(() -> {
 				warnOnce(option, value, detail);
 				return OptionResolution.unsupported(option, value, detail);

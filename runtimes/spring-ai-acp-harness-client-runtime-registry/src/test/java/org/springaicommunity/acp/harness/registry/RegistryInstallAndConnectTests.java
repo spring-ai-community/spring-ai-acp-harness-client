@@ -12,8 +12,8 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * checked, the archive unpacks, the launch spec is right. None of them proves the chain
  * holds, and the chain is what "any ACP agent" means. So this builds an archive,
  * publishes it through a {@code file:} registry, and then goes through the ordinary
- * {@link AcpHarnessClientFactory#create(AcpAgentRuntime, AcpAgentSettings)} path:
+ * {@link AcpHarnessClientFactory#create(AcpHarnessRuntime, AcpHarnessSettings)} path:
  * resolve, verify, unpack, chmod, spawn, handshake, prompt.
  *
  * <p>
@@ -77,17 +77,17 @@ class RegistryInstallAndConnectTests {
 	@Test
 	@DisplayName("an agent nobody wrote an adapter for: catalogue entry to finished turn")
 	void installsAnAgentFromTheRegistryAndTalksToIt() throws Exception {
-		Path archive = AcpAgentInstallerTests.tarGz(temp.resolve("house-agent.tar.gz"),
+		Path archive = AcpHarnessInstallerTests.tarGz(temp.resolve("house-agent.tar.gz"),
 				Map.of("house-agent", SHELL_AGENT));
-		AcpAgentRegistry registry = registryPublishing(archive, AcpAgentInstallerTests.sha256(archive));
+		AcpHarnessRegistry registry = registryPublishing(archive, AcpHarnessInstallerTests.sha256(archive));
 
-		AcpAgentRuntime runtime = java.util.Objects
-			.requireNonNull(new RegistryAcpAgentRuntimeProvider(registry, new AcpAgentInstaller(registry.settings()))
-				.forId("house-agent"));
+		AcpHarnessRuntime runtime = java.util.Objects.requireNonNull(
+				new RegistryAcpHarnessRuntimeProvider(registry, new AcpHarnessInstaller(registry.settings()))
+					.forId("house-agent"));
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
 		try (AcpHarnessClient client = AcpHarnessClientFactory.create(runtime,
-				AcpAgentSettings.builder("house-agent", workspace).timeout(Duration.ofSeconds(30)).build())) {
+				AcpHarnessSettings.builder("house-agent", workspace).timeout(Duration.ofSeconds(30)).build())) {
 
 			assertThat(client.agentInfo()).isNotNull().extracting(info -> info.name()).isEqualTo("house-agent");
 			assertThat(client.protocolVersion()).isEqualTo(1);
@@ -101,25 +101,25 @@ class RegistryInstallAndConnectTests {
 		// The scenario this whole class exists to make safe: the catalogue is trusted,
 		// the release
 		// host is not, and the difference is one comparison made before exec.
-		Path archive = AcpAgentInstallerTests.tarGz(temp.resolve("house-agent.tar.gz"),
+		Path archive = AcpHarnessInstallerTests.tarGz(temp.resolve("house-agent.tar.gz"),
 				Map.of("house-agent", SHELL_AGENT.replace("house-agent", "not-what-was-published")));
-		AcpAgentRegistry registry = registryPublishing(archive,
+		AcpHarnessRegistry registry = registryPublishing(archive,
 				"0000000000000000000000000000000000000000000000000000000000000000");
 
-		AcpAgentRuntime runtime = java.util.Objects
-			.requireNonNull(new RegistryAcpAgentRuntimeProvider(registry, new AcpAgentInstaller(registry.settings()))
-				.forId("house-agent"));
+		AcpHarnessRuntime runtime = java.util.Objects.requireNonNull(
+				new RegistryAcpHarnessRuntimeProvider(registry, new AcpHarnessInstaller(registry.settings()))
+					.forId("house-agent"));
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
 		org.assertj.core.api.Assertions
 			.assertThatThrownBy(() -> AcpHarnessClientFactory.create(runtime,
-					AcpAgentSettings.builder("house-agent", workspace).build()))
-			.isInstanceOf(AcpAgentInstaller.AcpAgentInstallException.class)
+					AcpHarnessSettings.builder("house-agent", workspace).build()))
+			.isInstanceOf(AcpHarnessInstaller.AcpHarnessInstallException.class)
 			.hasMessageContaining("refusing to run it");
 	}
 
 	/** A one-agent catalogue on disk, pinned with a {@code file:} URL. */
-	private AcpAgentRegistry registryPublishing(Path archive, String sha256) throws Exception {
+	private AcpHarnessRegistry registryPublishing(Path archive, String sha256) throws Exception {
 		Path catalogue = temp.resolve("registry.json");
 		Files.writeString(catalogue, """
 				{"agents": [{
@@ -128,7 +128,7 @@ class RegistryInstallAndConnectTests {
 				     "archive": "%s", "cmd": "./house-agent", "args": ["acp"], "sha256": "%s"}}}
 				}]}
 				""".formatted(Platform.current().id(), archive.toUri(), sha256));
-		return new AcpAgentRegistry(
+		return new AcpHarnessRegistry(
 				new RegistrySettings(catalogue.toUri(), temp.resolve("cache"), Duration.ZERO, false, true, null));
 	}
 

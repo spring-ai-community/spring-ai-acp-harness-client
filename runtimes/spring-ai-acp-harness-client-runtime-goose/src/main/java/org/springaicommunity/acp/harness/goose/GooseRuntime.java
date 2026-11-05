@@ -16,15 +16,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.ProviderEnvironment;
 import org.springaicommunity.acp.harness.config.ProviderSpec;
 import org.springaicommunity.acp.harness.config.RuntimeOptions;
 import org.springaicommunity.acp.harness.mcp.McpRequestFilter;
-import org.springaicommunity.acp.harness.runtime.AcpAgentEnvironment;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessEnvironment;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.runtime.Executables;
 import org.springaicommunity.acp.harness.runtime.ToolNames;
 
@@ -67,7 +67,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  *   port: 0                    # 0 asks the OS for a free one
  * }</pre>
  */
-public class GooseRuntime implements AcpAgentRuntime {
+public class GooseRuntime implements AcpHarnessRuntime {
 
 	/**
 	 * The buildpack sets this; a developer machine usually just has {@code goose} on the
@@ -152,14 +152,14 @@ public class GooseRuntime implements AcpAgentRuntime {
 	}
 
 	@Override
-	public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+	public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 		return isServed(settings) ? serve(settings) : stdio(settings);
 	}
 
-	private AcpAgentLaunchSpec stdio(AcpAgentSettings settings) {
+	private AcpHarnessLaunchSpec stdio(AcpHarnessSettings settings) {
 		List<String> args = new ArrayList<>(List.of("acp"));
 		builtins(settings, args);
-		return new AcpAgentLaunchSpec.Stdio(executable, args, environment(settings));
+		return new AcpHarnessLaunchSpec.Stdio(executable, args, environment(settings));
 	}
 
 	/**
@@ -181,7 +181,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * take it; the alternative is a fixed port that fails outright when it is busy, which
 	 * is worse for a sidecar nobody chose the port of.
 	 */
-	private AcpAgentLaunchSpec serve(AcpAgentSettings settings) {
+	private AcpHarnessLaunchSpec serve(AcpHarnessSettings settings) {
 		RuntimeOptions options = settings.runtimeOptions();
 		String configuredHost = options.text("serve.host");
 		String host = configuredHost == null ? DEFAULT_SERVE_HOST : configuredHost;
@@ -194,10 +194,10 @@ public class GooseRuntime implements AcpAgentRuntime {
 		Map<String, String> env = new LinkedHashMap<>(environment(settings));
 		env.put(SECRET_KEY_ENV, secret);
 
-		AcpAgentLaunchSpec.ManagedProcess process = new AcpAgentLaunchSpec.ManagedProcess(executable, args, env,
+		AcpHarnessLaunchSpec.ManagedProcess process = new AcpHarnessLaunchSpec.ManagedProcess(executable, args, env,
 				URI.create("http://" + host + ":" + port + "/health"), startupTimeout(options));
 
-		return new AcpAgentLaunchSpec.WebSocket(URI.create("ws://" + host + ":" + port + "/acp"),
+		return new AcpHarnessLaunchSpec.WebSocket(URI.create("ws://" + host + ":" + port + "/acp"),
 				Map.of(SECRET_KEY_HEADER, secret), process);
 	}
 
@@ -209,17 +209,17 @@ public class GooseRuntime implements AcpAgentRuntime {
 
 	private static Duration startupTimeout(RuntimeOptions options) {
 		String configured = options.text("serve.startup-timeout");
-		return configured == null ? AcpAgentLaunchSpec.ManagedProcess.DEFAULT_STARTUP_TIMEOUT
+		return configured == null ? AcpHarnessLaunchSpec.ManagedProcess.DEFAULT_STARTUP_TIMEOUT
 				: Duration.parse(configured);
 	}
 
 	/** Whether tier 3 asked for the served transport. */
-	private static boolean isServed(AcpAgentSettings settings) {
+	private static boolean isServed(AcpHarnessSettings settings) {
 		return SERVE_WEBSOCKET.equalsIgnoreCase(settings.runtimeOptions().text("serve.transport"));
 	}
 
 	/** Goose's builtin extensions are a runtime-specific concern: tier 3, not tier 1. */
-	private static void builtins(AcpAgentSettings settings, List<String> args) {
+	private static void builtins(AcpHarnessSettings settings, List<String> args) {
 		settings.runtimeOptions().textList("builtins").forEach(name -> {
 			args.add("--with-builtin");
 			args.add(name);
@@ -272,7 +272,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 *
 	 * <p>
 	 * This deliberately <em>reads</em> the location rather than choosing one. Pointing
-	 * {@code XDG_STATE_HOME} at {@link AcpAgentSettings#runtimeHome()} would make the
+	 * {@code XDG_STATE_HOME} at {@link AcpHarnessSettings#runtimeHome()} would make the
 	 * path certain and would also move goose's session storage, which lives under the
 	 * same root — an ephemeral per-client directory would quietly break
 	 * {@code session/load} and {@code session/resume} across restarts. Trading one silent
@@ -282,7 +282,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * @see #noticeOf(String)
 	 */
 	@Override
-	public Path logDirectory(AcpAgentSettings settings) {
+	public Path logDirectory(AcpHarnessSettings settings) {
 		String configured = settings.runtimeOptions().text("log-dir");
 		if (configured != null) {
 			return Paths.get(configured).toAbsolutePath();
@@ -325,7 +325,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * exists to surface.
 	 */
 	@Override
-	public @Nullable AcpAgentNotice noticeOf(@Nullable String logLine) {
+	public @Nullable AcpHarnessNotice noticeOf(@Nullable String logLine) {
 		if (logLine == null) {
 			return null;
 		}
@@ -344,9 +344,9 @@ public class GooseRuntime implements AcpAgentRuntime {
 		return notice(unescape(extension.group(1)), error.group(1));
 	}
 
-	private static AcpAgentNotice notice(String name, String rest) {
+	private static AcpHarnessNotice notice(String name, String rest) {
 		String detail = unescape(untilEndOfMessage(rest));
-		return AcpAgentNotice.warning(name, "could not load MCP server '" + name + "': " + detail);
+		return AcpHarnessNotice.warning(name, "could not load MCP server '" + name + "': " + detail);
 	}
 
 	/**
@@ -380,7 +380,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * failure it hides and why it is not on by default.
 	 */
 	@Override
-	public List<McpRequestFilter> mcpRequestFilters(AcpAgentSettings settings) {
+	public List<McpRequestFilter> mcpRequestFilters(AcpHarnessSettings settings) {
 		boolean answer = Boolean.parseBoolean(settings.runtimeOptions().text("mcp.answer-discover"));
 		return answer ? List.of(new DiscoverProbeFilter()) : List.of();
 	}
@@ -402,20 +402,20 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 */
 	@Override
 	public List<String> configCategoriesFor(PortableOption option) {
-		return option == PortableOption.PROVIDER ? List.of() : AcpAgentRuntime.super.configCategoriesFor(option);
+		return option == PortableOption.PROVIDER ? List.of() : AcpHarnessRuntime.super.configCategoriesFor(option);
 	}
 
 	/**
 	 * The environment Goose starts with: the hardening defaults, then the provider's
-	 * credentials, then tier 3. See {@link AcpAgentEnvironment}.
+	 * credentials, then tier 3. See {@link AcpHarnessEnvironment}.
 	 */
-	private Map<String, String> environment(AcpAgentSettings settings) {
+	private Map<String, String> environment(AcpHarnessSettings settings) {
 		// TAS containers have no durable desktop keyring, and telemetry from a
 		// server-side agent is not the operator's to send.
 		Map<String, String> hardening = new LinkedHashMap<>();
 		hardening.put("GOOSE_DISABLE_KEYRING", "1");
 		hardening.put("GOOSE_TELEMETRY_ENABLED", "false");
-		return AcpAgentEnvironment.layered(hardening, providerEnvironment(settings), settings);
+		return AcpHarnessEnvironment.layered(hardening, providerEnvironment(settings), settings);
 	}
 
 	/**
@@ -433,7 +433,7 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * told a model it serves does not exist. Naming it at launch is what makes the first
 	 * turn behave like the tenth.
 	 */
-	private Map<String, String> providerEnvironment(AcpAgentSettings settings) {
+	private Map<String, String> providerEnvironment(AcpHarnessSettings settings) {
 		ProviderSpec provider = settings.provider();
 		Map<String, String> env = new LinkedHashMap<>(ProviderEnvironment.of(provider));
 
@@ -486,10 +486,10 @@ public class GooseRuntime implements AcpAgentRuntime {
 	 * <p>
 	 * Kept in step with that method rather than restating its conditions: a runtime that
 	 * claims more here than it sets there turns {@code on-unsupported: fail} into a lie,
-	 * which is what {@code AcpAgentRuntimeContract} checks.
+	 * which is what {@code AcpHarnessRuntimeContract} checks.
 	 */
 	@Override
-	public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
+	public boolean appliedOutOfBand(PortableOption option, AcpHarnessSettings settings) {
 		ProviderSpec provider = settings.provider();
 		return switch (option) {
 			case MODEL -> provider.isByo() && settings.findModel() != null;

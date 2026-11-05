@@ -1,15 +1,15 @@
 package org.springaicommunity.acp.harness.config;
 
 import org.jspecify.annotations.Nullable;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
 
 /**
  * What became of one requested option: what was asked for, what the agent actually took,
  * and which of the negotiated tier's several mechanisms got it there.
  *
  * <p>
- * Exposed through {@code AcpAgentSession.configuration()} so an application can tell the
- * difference between "the model I asked for" and "the model this agent is really
+ * Exposed through {@code AcpHarnessSession.configuration()} so an application can tell
+ * the difference between "the model I asked for" and "the model this agent is really
  * running", which {@code on-unsupported: warn} otherwise hides in a log line.
  *
  * @param requested what was asked for, or null when nothing was

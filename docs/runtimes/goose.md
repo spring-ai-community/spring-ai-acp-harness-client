@@ -72,7 +72,7 @@ spring:
 
 ## The todo list as the agent's plan
 
-Goose sends no ACP `plan` updates. Its task list is the `todo` extension, and each change to it is an ordinary tool call, `todo__todo_write`, carrying the whole list as markdown. The adapter reads that call as the plan: it arrives as `AcpAgentEvent.PlanUpdated`, and neither the call nor its update is reported as a tool call. A UI that renders the plan for Codex or OpenCode renders goose's task list the same way.
+Goose sends no ACP `plan` updates. Its task list is the `todo` extension, and each change to it is an ordinary tool call, `todo__todo_write`, carrying the whole list as markdown. The adapter reads that call as the plan: it arrives as `AcpHarnessEvent.PlanUpdated`, and neither the call nor its update is reported as a tool call. A UI that renders the plan for Codex or OpenCode renders goose's task list the same way.
 
 - `- [x]` is completed, `- [ ]` is pending, and `- [-]`, `- [~]`, `- [/]` or `- [>]` is in progress. Goose's own template uses only the first two, so a list usually shows items done and not yet done, rarely one in progress.
 - A status word is read wherever a model tends to put it: trailing ("Draft report — in progress", "… (done)", "… \[DONE\]") or leading ("\[DONE\] Draft report"). It is dropped from the entry's text. A ✅, ✔ or ☑ in front of an item, or strikethrough, means completed. Anything else is pending. Models do not always follow goose's template.

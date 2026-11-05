@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jspecify.annotations.Nullable;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
 
 /**
  * The negotiated tier's outcome for one session: one {@link OptionResolution} per

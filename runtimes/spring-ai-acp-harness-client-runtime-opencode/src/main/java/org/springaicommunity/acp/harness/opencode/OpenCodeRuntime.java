@@ -14,13 +14,13 @@ import java.util.Map;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.ProviderEnvironment;
 import org.springaicommunity.acp.harness.config.ProviderSpec;
 import org.springaicommunity.acp.harness.config.RuntimeOptions;
-import org.springaicommunity.acp.harness.runtime.AcpAgentEnvironment;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessEnvironment;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.runtime.Executables;
 import org.springaicommunity.acp.harness.runtime.ToolNames;
 
@@ -56,7 +56,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * env: { OPENCODE_DISABLE_AUTOUPDATE: "1" }
  * }</pre>
  */
-public class OpenCodeRuntime implements AcpAgentRuntime {
+public class OpenCodeRuntime implements AcpHarnessRuntime {
 
 	public static final String ID = "opencode";
 
@@ -104,12 +104,12 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	}
 
 	@Override
-	public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+	public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 		RuntimeOptions options = settings.runtimeOptions();
 		List<String> args = new ArrayList<>(List.of("acp"));
 		args.addAll(options.textList("args"));
 		String command = options.text("command");
-		return new AcpAgentLaunchSpec.Stdio(command == null ? executable : command, args, environment(settings));
+		return new AcpHarnessLaunchSpec.Stdio(command == null ? executable : command, args, environment(settings));
 	}
 
 	/**
@@ -122,7 +122,7 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	 * a file this library owns does not cost the ambient installation its login.
 	 */
 	@Override
-	public void provision(AcpAgentSettings settings) {
+	public void provision(AcpHarnessSettings settings) {
 		Map<String, Object> config = configFor(settings);
 		if (config.isEmpty()) {
 			return;
@@ -163,13 +163,13 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	 * match the vendor's entry by its {@code <provider>/<model>} spelling, and the
 	 * endpoint's key would go to the vendor.
 	 */
-	private static Map<String, Object> configFor(AcpAgentSettings settings) {
+	private static Map<String, Object> configFor(AcpHarnessSettings settings) {
 		Map<String, Object> config = new LinkedHashMap<>(endpointConfig(settings));
 		config.putAll(settings.runtimeOptions().section("config"));
 		return config;
 	}
 
-	private static Map<String, Object> endpointConfig(AcpAgentSettings settings) {
+	private static Map<String, Object> endpointConfig(AcpHarnessSettings settings) {
 		ProviderSpec provider = settings.provider();
 		// A BYO endpoint is one with a base-url; findApiBase is that url, canonicalised.
 		URI base = provider.findApiBase();
@@ -240,7 +240,7 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 	 * {@code on-unsupported: fail} on a configuration that is working exactly as asked.
 	 */
 	@Override
-	public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
+	public boolean appliedOutOfBand(PortableOption option, AcpHarnessSettings settings) {
 		return switch (option) {
 			case PROVIDER -> settings.findModel() != null || settings.provider().hasCredentials();
 			case MODEL -> !endpointConfig(settings).isEmpty() && settings.findModel() != null;
@@ -265,13 +265,13 @@ public class OpenCodeRuntime implements AcpAgentRuntime {
 		return ToolNames.fromRawInput(toolCall);
 	}
 
-	private Map<String, String> environment(AcpAgentSettings settings) {
+	private Map<String, String> environment(AcpHarnessSettings settings) {
 		Map<String, String> defaults = configFor(settings).isEmpty() ? Map.of()
 				: Map.of(CONFIG_ENV, configFile(settings).toString());
-		return AcpAgentEnvironment.layered(defaults, ProviderEnvironment.of(settings.provider()), settings);
+		return AcpHarnessEnvironment.layered(defaults, ProviderEnvironment.of(settings.provider()), settings);
 	}
 
-	private Path configFile(AcpAgentSettings settings) {
+	private Path configFile(AcpHarnessSettings settings) {
 		String configured = settings.runtimeOptions().text("config-file");
 		return configured == null ? settings.runtimeHome().resolve(CONFIG_FILE) : Path.of(configured).toAbsolutePath();
 	}

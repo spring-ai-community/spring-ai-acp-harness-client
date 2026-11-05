@@ -11,9 +11,9 @@ import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.test.AcpAgentProbe;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.test.AcpHarnessProbe;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,14 +34,14 @@ class GooseServeTests {
 	private static final Duration LIMIT = Duration.ofMinutes(3);
 
 	static boolean usable() {
-		return AcpAgentProbe.isUsable(new GooseRuntime());
+		return AcpHarnessProbe.isUsable(new GooseRuntime());
 	}
 
 	@TempDir
 	Path workspace;
 
-	private AcpAgentSettings served() {
-		return AcpAgentSettings.builder("goose", workspace)
+	private AcpHarnessSettings served() {
+		return AcpHarnessSettings.builder("goose", workspace)
 			.timeout(LIMIT)
 			.runtimeOptions(Map.of("serve", Map.of("transport", "websocket")))
 			.build();
@@ -53,15 +53,15 @@ class GooseServeTests {
 		try (AcpHarnessClient client = AcpHarnessClientFactory.create(new GooseRuntime(), served())) {
 			assertThat(client.agentInfo()).isNotNull().extracting(info -> info.name()).isEqualTo("goose");
 
-			List<AcpAgentEvent> events = client.prompt("Reply with exactly the word READY. Do not use tools.")
+			List<AcpHarnessEvent> events = client.prompt("Reply with exactly the word READY. Do not use tools.")
 				.stream()
 				.events()
 				.collectList()
 				.block(LIMIT);
 
 			assertThat(events).isNotNull();
-			assertThat(events.stream().filter(AcpAgentEvent::terminal)).hasSize(1);
-			assertThat(events.get(events.size() - 1)).isInstanceOf(AcpAgentEvent.Completed.class);
+			assertThat(events.stream().filter(AcpHarnessEvent::terminal)).hasSize(1);
+			assertThat(events.get(events.size() - 1)).isInstanceOf(AcpHarnessEvent.Completed.class);
 		}
 	}
 

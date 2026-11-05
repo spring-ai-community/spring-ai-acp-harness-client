@@ -30,14 +30,14 @@ public final class SessionRegistry {
 
 	private static final Logger logger = LoggerFactory.getLogger(SessionRegistry.class);
 
-	private final Map<String, AcpAgentSession> sessions = new ConcurrentHashMap<>();
+	private final Map<String, AcpHarnessSession> sessions = new ConcurrentHashMap<>();
 
 	/**
 	 * Returns the session for {@code name}, creating it through {@code factory} only if
 	 * this registry has never seen the name.
 	 * @param factory called at most once per name, under the map's per-key lock
 	 */
-	public AcpAgentSession resolve(String name, Function<String, String> factory) {
+	public AcpHarnessSession resolve(String name, Function<String, String> factory) {
 		return resolve(name, null, n -> new Opened(factory.apply(n), null));
 	}
 
@@ -56,13 +56,13 @@ public final class SessionRegistry {
 	 * release whatever it acquired if it throws
 	 * @throws SessionOwnershipException if the name is open for someone else
 	 */
-	public AcpAgentSession resolve(String name, @Nullable SessionPrincipal principal,
+	public AcpHarnessSession resolve(String name, @Nullable SessionPrincipal principal,
 			Function<String, Opened> factory) {
 		Validation.requireName(name, "session name");
-		AcpAgentSession session = sessions.computeIfAbsent(name, n -> {
+		AcpHarnessSession session = sessions.computeIfAbsent(name, n -> {
 			Opened opened = factory.apply(n);
 			logger.debug("Created session '{}' as {}", n, opened.sessionId());
-			return new AcpAgentSession(n, opened.sessionId(), principal, opened.release());
+			return new AcpHarnessSession(n, opened.sessionId(), principal, opened.release());
 		});
 		if (!session.belongsTo(principal)) {
 			throw new SessionOwnershipException(name);
@@ -88,7 +88,7 @@ public final class SessionRegistry {
 	 * and doing it silently would strand whichever session lost.
 	 * @throws IllegalStateException if the name is already registered
 	 */
-	public AcpAgentSession adopt(String name, String sessionId) {
+	public AcpHarnessSession adopt(String name, String sessionId) {
 		return adopt(name, sessionId, null, null);
 	}
 
@@ -98,11 +98,11 @@ public final class SessionRegistry {
 	 * @param release run once when the registry forgets the session — including when the
 	 * name turns out to be taken, so the caller never has to clean up after a refusal
 	 */
-	public AcpAgentSession adopt(String name, String sessionId, @Nullable SessionPrincipal principal,
+	public AcpHarnessSession adopt(String name, String sessionId, @Nullable SessionPrincipal principal,
 			@Nullable Runnable release) {
 		Validation.requireName(name, "session name");
-		AcpAgentSession adopted = new AcpAgentSession(name, sessionId, principal, release);
-		AcpAgentSession existing = sessions.putIfAbsent(name, adopted);
+		AcpHarnessSession adopted = new AcpHarnessSession(name, sessionId, principal, release);
+		AcpHarnessSession existing = sessions.putIfAbsent(name, adopted);
 		if (existing != null) {
 			adopted.release();
 			throw new IllegalStateException("Session '" + name + "' is already open as " + existing.sessionId()
@@ -113,7 +113,7 @@ public final class SessionRegistry {
 	}
 
 	/** The session open under {@code name}, or null. */
-	public @Nullable AcpAgentSession find(String name) {
+	public @Nullable AcpHarnessSession find(String name) {
 		return sessions.get(name);
 	}
 
@@ -126,8 +126,8 @@ public final class SessionRegistry {
 	 * the caller owns that.
 	 * @return the session forgotten, or null if the name was not open
 	 */
-	public @Nullable AcpAgentSession remove(String name) {
-		AcpAgentSession removed = sessions.remove(name);
+	public @Nullable AcpHarnessSession remove(String name) {
+		AcpHarnessSession removed = sessions.remove(name);
 		if (removed != null) {
 			removed.release();
 		}
@@ -138,9 +138,9 @@ public final class SessionRegistry {
 	 * Removes sessions idle longer than {@code ttl} that are not mid-turn.
 	 * @return the sessions evicted, so the caller can close them on the agent
 	 */
-	public List<AcpAgentSession> evictIdle(Duration ttl) {
+	public List<AcpHarnessSession> evictIdle(Duration ttl) {
 		Instant cutoff = Instant.now().minus(ttl);
-		List<AcpAgentSession> evicted = sessions.values().stream().filter(s -> s.idleSince(cutoff)).toList();
+		List<AcpHarnessSession> evicted = sessions.values().stream().filter(s -> s.idleSince(cutoff)).toList();
 		evicted.forEach(s -> {
 			if (sessions.remove(s.name(), s)) {
 				s.release();
@@ -152,14 +152,14 @@ public final class SessionRegistry {
 		return evicted;
 	}
 
-	public List<AcpAgentSession> all() {
+	public List<AcpHarnessSession> all() {
 		return List.copyOf(sessions.values());
 	}
 
 	public void clear() {
-		List<AcpAgentSession> all = List.copyOf(sessions.values());
+		List<AcpHarnessSession> all = List.copyOf(sessions.values());
 		sessions.clear();
-		all.forEach(AcpAgentSession::release);
+		all.forEach(AcpHarnessSession::release);
 	}
 
 	public int size() {

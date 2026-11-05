@@ -15,13 +15,13 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.ProviderEnvironment;
 import org.springaicommunity.acp.harness.config.ProviderSpec;
 import org.springaicommunity.acp.harness.config.RuntimeOptions;
-import org.springaicommunity.acp.harness.runtime.AcpAgentEnvironment;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessEnvironment;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.runtime.Executables;
 import org.springaicommunity.acp.harness.runtime.ToolNames;
 
@@ -62,7 +62,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * env: { RUST_LOG: warn }
  * }</pre>
  */
-public class CodexRuntime implements AcpAgentRuntime {
+public class CodexRuntime implements AcpHarnessRuntime {
 
 	public static final String ID = "codex";
 
@@ -119,7 +119,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	}
 
 	@Override
-	public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+	public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 		RuntimeOptions options = settings.runtimeOptions();
 		// An application that names a package asked for npx; only the default gives way
 		// to a local adapter.
@@ -138,7 +138,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 		}
 		args.addAll(options.textList("args"));
 
-		return new AcpAgentLaunchSpec.Stdio(command == null ? "npx" : command, args, environment(settings));
+		return new AcpHarnessLaunchSpec.Stdio(command == null ? "npx" : command, args, environment(settings));
 	}
 
 	/**
@@ -168,7 +168,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * same reason.
 	 */
 	@Override
-	public void provision(AcpAgentSettings settings) {
+	public void provision(AcpHarnessSettings settings) {
 		Map<String, Object> config = configFor(settings);
 		if (config.isEmpty()) {
 			return;
@@ -224,7 +224,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * Tier 3 is applied last and therefore wins, as everywhere else — including
 	 * wholesale, if an application would rather describe its providers itself.
 	 */
-	private static Map<String, Object> configFor(AcpAgentSettings settings) {
+	private static Map<String, Object> configFor(AcpHarnessSettings settings) {
 		Map<String, Object> config = new LinkedHashMap<>(credentialConfig(settings));
 		config.putAll(endpointConfig(settings));
 		config.putAll(settings.runtimeOptions().section("config-toml"));
@@ -242,7 +242,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * 1.12 and 1.13, the key is then held in memory for the life of the process and no
 	 * {@code auth.json} appears at all.
 	 */
-	private static Map<String, Object> credentialConfig(AcpAgentSettings settings) {
+	private static Map<String, Object> credentialConfig(AcpHarnessSettings settings) {
 		return signsInWithKey(settings) ? Map.of("cli_auth_credentials_store", "ephemeral") : Map.of();
 	}
 
@@ -255,12 +255,12 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * needs no sign-in at all — codex-acp reports it as a "Custom model gateway" and
 	 * opens sessions straight away.
 	 */
-	private static boolean signsInWithKey(AcpAgentSettings settings) {
+	private static boolean signsInWithKey(AcpHarnessSettings settings) {
 		ProviderSpec provider = settings.provider();
 		return !provider.isByo() && isOpenAiCompatible(provider.findApiType()) && provider.findApiKey() != null;
 	}
 
-	private static Map<String, Object> endpointConfig(AcpAgentSettings settings) {
+	private static Map<String, Object> endpointConfig(AcpHarnessSettings settings) {
 		ProviderSpec provider = settings.provider();
 		// A BYO endpoint is one with a base-url; findApiBase is that url, canonicalised.
 		URI base = provider.findApiBase();
@@ -352,7 +352,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * it.
 	 */
 	@Override
-	public @Nullable String authMethod(AcpAgentSettings settings) {
+	public @Nullable String authMethod(AcpHarnessSettings settings) {
 		return signsInWithKey(settings) ? API_KEY_METHOD : null;
 	}
 
@@ -374,7 +374,7 @@ public class CodexRuntime implements AcpAgentRuntime {
 	 * model in {@code config.toml} as well.
 	 */
 	@Override
-	public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
+	public boolean appliedOutOfBand(PortableOption option, AcpHarnessSettings settings) {
 		return switch (option) {
 			case PROVIDER -> settings.provider().hasCredentials();
 			case MODEL -> !endpointConfig(settings).isEmpty() && settings.findModel() != null;
@@ -388,21 +388,21 @@ public class CodexRuntime implements AcpAgentRuntime {
 		return ToolNames.fromRawInput(toolCall);
 	}
 
-	private Map<String, String> environment(AcpAgentSettings settings) {
+	private Map<String, String> environment(AcpHarnessSettings settings) {
 		Path home = homeFor(settings);
 		Map<String, String> homeEnv = home == null ? Map.of() : Map.of(HOME_ENV, home.toString());
-		return AcpAgentEnvironment.layered(homeEnv, ProviderEnvironment.of(settings.provider()), settings);
+		return AcpHarnessEnvironment.layered(homeEnv, ProviderEnvironment.of(settings.provider()), settings);
 	}
 
 	/**
 	 * The home to point Codex at, or null to inherit whatever the process already has.
 	 */
-	private @Nullable Path homeFor(AcpAgentSettings settings) {
+	private @Nullable Path homeFor(AcpHarnessSettings settings) {
 		boolean relocated = settings.runtimeOptions().text("home") != null || !configFor(settings).isEmpty();
 		return relocated ? managedHome(settings) : null;
 	}
 
-	private Path managedHome(AcpAgentSettings settings) {
+	private Path managedHome(AcpHarnessSettings settings) {
 		String configured = settings.runtimeOptions().text("home");
 		return configured == null ? settings.runtimeHome() : Path.of(configured).toAbsolutePath();
 	}

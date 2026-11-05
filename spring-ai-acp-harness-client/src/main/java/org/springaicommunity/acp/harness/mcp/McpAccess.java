@@ -16,7 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.config.Validation;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.McpScope;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.McpScope;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 
 /**
@@ -86,7 +86,7 @@ public final class McpAccess implements AutoCloseable {
 
 	/**
 	 * @param scope where the agent keeps a session's MCP servers; see
-	 * {@link org.springaicommunity.acp.harness.runtime.AcpAgentRuntime#mcpScope()}
+	 * {@link org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime#mcpScope()}
 	 */
 	public McpAccess(@Nullable McpCredentialsProvider provider, Duration requestTimeout,
 			@Nullable List<McpRequestFilter> filters, @Nullable McpScope scope) {

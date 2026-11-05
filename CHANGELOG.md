@@ -12,12 +12,30 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   imports, and any `logging.level.org.springaicommunity.acp` setting, which otherwise stops matching
   without an error. The JDBC schema for MCP OAuth moves with them, to
   `org/springaicommunity/acp/harness/mcp/oauth/acp-mcp-oauth-schema.sql`.
-- **Breaking:** `AcpAgentClient` becomes `AcpHarnessClient`, along with `DefaultAcpHarnessClient`,
-  `AcpHarnessClientPool`, `AcpHarnessClientFactory` and `AcpHarnessClientException`, and the bean
-  `acpAgentClient` becomes `acpHarnessClient`. ACP's two roles are client and agent, so a client type
-  named for both was ambiguous, and it matched neither the project's artifacts nor its properties.
-  Replace `AcpAgentClient` with `AcpHarnessClient` to migrate. Types that describe the agent keep
-  their `AcpAgent` names, as do `AcpHarnessClient.AcpAgentResponse` and `AcpAgentStream`.
+- **Breaking:** every `AcpAgent…` type becomes `AcpHarness…`, starting with `AcpAgentClient`,
+  which becomes `AcpHarnessClient` (with `DefaultAcpHarnessClient`, `AcpHarnessClientPool`,
+  `AcpHarnessClientFactory` and `AcpHarnessClientException`, and the bean `acpAgentClient`
+  becomes `acpHarnessClient`). This library creates no agent: it configures an existing agent
+  harness such as Goose, Codex or OpenCode, launches or attaches to it, and talks to it over ACP,
+  so the types describe the harness and now say so, as the project, its artifacts, its packages
+  and its `spring.ai.acp.harness.*` properties already did. ACP itself calls the far end of the
+  connection the agent, and the documentation keeps that word for the running program. Hence
+  `AcpHarnessRuntime`, `AcpHarnessRuntimeProvider`, `AcpHarnessLaunchSpec`, `AcpHarnessEnvironment`,
+  `AcpHarnessNotice`, `AcpHarnessSession`, `AcpHarnessSessions`, `AcpHarnessTurn`,
+  `AcpHarnessEvent`, `AcpHarnessEventMapper`, `AcpHarnessInfo`, `AcpHarnessSettings`,
+  `AcpHarnessOptions`, `AcpHarnessObservations`, `AcpHarnessTurnObservationContext`,
+  `AcpHarnessExecutor`, `AcpHarnessLogWatcher`, `AcpHarnessProcessSupervisor`,
+  `UnsupportedAcpHarnessOperationException`, `UnsupportedAcpHarnessOptionException`, the nested
+  `AcpHarnessClient.AcpHarnessResponse` and `AcpHarnessStream`, the registry runtime's
+  `AcpHarnessRegistry`, `AcpHarnessInstaller` and `AcpHarnessInstallException`, the Boot
+  `AcpHarnessConfigDataLoader`, `AcpHarnessConfigDataLocationResolver` and
+  `AcpHarnessConfigDataResource`, and the test kit's `AcpHarnessRuntimeContract` and
+  `AcpHarnessProbe`. The beans `acpAgentSettings`, `acpAgentRegistry`, `acpAgentInstaller`,
+  `acpAgentObservations` and `acpAgentExecutor` follow as `acpHarness…`. The rule is mechanical,
+  so replacing each `AcpAgent` type-name prefix with `AcpHarness` migrates an application; the
+  compiler finds every site. Unchanged: packages, properties, metric names, and the test doubles
+  that play the ACP agent role on the wire, `ScriptedAcpAgent` and `LiveAcpAgents`, since those
+  are agents in the protocol's sense.
 - **Breaking:** configuration properties move from `spring.acp.*` to `spring.ai.acp.harness.*`,
   and environment variables from `SPRING_ACP_*` to `SPRING_AI_ACP_HARNESS_*`. The old root is shared
   with `acp-autoconfig` (`spring.acp.client.*`, `spring.acp.agent.*`), and the new one follows the
@@ -27,16 +45,16 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 - **Breaking:** the API no longer returns or accepts `java.util.Optional`. A value that may be
   absent is now a plain reference annotated with JSpecify's `@Nullable`, as Spring Framework 7 and
   Spring AI do, so `client.session(name)`, `client.agentInfo()`, `sessions().find(name)`,
-  `SessionConfiguration.applied(option)`, `AcpAgentSession.principal()`, `RuntimeOptions.text(path)`
-  and the `find*` accessors of `ProviderSpec` and `AcpAgentSettings` return null for "none". The
-  SPI follows: `AcpAgentRuntime.authMethod`, `toolNameOf`, `planOf`, `logDirectory` and `noticeOf`,
-  `AcpAgentRuntimeProvider.forId`, `McpCredentialsProvider.credentialsFor`,
+  `SessionConfiguration.applied(option)`, `AcpHarnessSession.principal()`, `RuntimeOptions.text(path)`
+  and the `find*` accessors of `ProviderSpec` and `AcpHarnessSettings` return null for "none". The
+  SPI follows: `AcpHarnessRuntime.authMethod`, `toolNameOf`, `planOf`, `logDirectory` and `noticeOf`,
+  `AcpHarnessRuntimeProvider.forId`, `McpCredentialsProvider.credentialsFor`,
   `McpCredentials.upstream`, `ModelCatalog.modelsOf`, `SessionPrincipalResolver.current`,
   `PermissionPrompt.ask` and both `PermissionPolicy.decide` methods return null instead of empty,
-  and `decide` and `PermissionQuestion` take a nullable tool name. `AcpAgentOptions` drops its
+  and `decide` and `PermissionQuestion` take a nullable tool name. `AcpHarnessOptions` drops its
   `find*` methods, since its record accessors already say the same thing; `StoredSession` likewise
   drops `findCwd`, `findTitle` and `findUpdatedAt`, and `ProviderSpec` drops `findBaseUrl`.
-  `AcpAgentEvent.UsageUpdated.contextFraction()` returns a `Double` or null instead of an
+  `AcpHarnessEvent.UsageUpdated.contextFraction()` returns a `Double` or null instead of an
   `OptionalDouble`. Replace `.isPresent()` with a null check and `.orElse(x)` with a conditional
   to migrate; the compiler finds every call site, since the types changed.
 - Every package of a published module is `@NullMarked`, so a reference is non-null unless it says
@@ -44,8 +62,8 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   possibly-null value where a non-null one is declared no longer compiles. Nothing changes for a
   caller, except that a `@Nullable` on this API is now something the compiler checked rather than
   a comment. A few signatures gained a `@Nullable` the behaviour already implied, such as
-  `AcpAgentExecutor.getVersion()`, `SkillFetcher.Fetched.revision()`, `McpServerSpec.Http.url()`,
-  `AcpAgentLaunchSpec.WebSocket.process()` and the optional components of `SkillSpec.Git` and
+  `AcpHarnessExecutor.getVersion()`, `SkillFetcher.Fetched.revision()`, `McpServerSpec.Http.url()`,
+  `AcpHarnessLaunchSpec.WebSocket.process()` and the optional components of `SkillSpec.Git` and
   `AcpController`'s request and response records; `SecretRedactor.redact` no longer accepts null.
   A few behaviours changed where a null used to flow on: `SessionConfiguration.of(option)` returns
   a `NOT_REQUESTED` resolution instead of null for an option the configuration never mentioned; a
@@ -80,7 +98,7 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   arrives. A `session/new` not answered within `timeout` now fails with an
   `AcpHarnessClientException` instead of an `IllegalStateException`; an answer after that is
   dropped by the ACP SDK, so a session created that late still stays on the agent.
-- Subscribing twice to one throwaway `AcpAgentStream` now runs two sessions. They used to share one,
+- Subscribing twice to one throwaway `AcpHarnessStream` now runs two sessions. They used to share one,
   so the first to finish could close it under the other.
 - A closed `AcpHarnessClientPool` would start new agents on request, and a connection still being
   built when the pool closed was never closed. A closed pool now refuses work with an

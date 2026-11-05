@@ -12,15 +12,15 @@ import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.event.SessionUpdateDecoder;
 import org.springaicommunity.acp.harness.permission.PermissionPolicy;
-import org.springaicommunity.acp.harness.observation.AcpAgentObservations;
-import org.springaicommunity.acp.harness.process.AcpAgentLogWatcher;
-import org.springaicommunity.acp.harness.process.AcpAgentProcessSupervisor;
+import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
+import org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher;
+import org.springaicommunity.acp.harness.process.AcpHarnessProcessSupervisor;
 import org.springaicommunity.acp.harness.protocol.AcpProtocol;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
 import org.springaicommunity.acp.harness.skill.SkillInstaller;
 import org.springaicommunity.acp.harness.transport.SupervisedWebSocketTransport;
@@ -51,7 +51,7 @@ import reactor.core.scheduler.Schedulers;
  *
  * <p>
  * Nothing here names a runtime. Everything vendor-specific is behind
- * {@link AcpAgentRuntime}: what to launch, what to write before launching, and what the
+ * {@link AcpHarnessRuntime}: what to launch, what to write before launching, and what the
  * agent calls the options a client may set. Skills need no adapter: every runtime reads
  * them from the workspace, so they are installed here.
  */
@@ -67,25 +67,25 @@ public final class AcpHarnessClientFactory {
 	}
 
 	/** Provisions, launches and connects the runtime named by {@code settings}. */
-	public static AcpHarnessClient create(AcpAgentRuntime runtime, AcpAgentSettings settings) {
-		return create(runtime, settings, AcpAgentObservations.NONE);
+	public static AcpHarnessClient create(AcpHarnessRuntime runtime, AcpHarnessSettings settings) {
+		return create(runtime, settings, AcpHarnessObservations.NONE);
 	}
 
 	/** Same, with every turn this client runs reported to {@code observations}. */
-	public static AcpHarnessClient create(AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpAgentObservations observations) {
+	public static AcpHarnessClient create(AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpHarnessObservations observations) {
 		// Before the agent starts, because agents read their skills at startup, and here
 		// rather than in
 		// an adapter, because every runtime reads them from the same place.
 		SkillInstaller.installOnce(settings);
 		runtime.provision(settings);
 
-		AcpAgentDiagnostics diagnostics = new AcpAgentDiagnostics();
+		AcpHarnessDiagnostics diagnostics = new AcpHarnessDiagnostics();
 		return switch (runtime.launch(settings)) {
-			case AcpAgentLaunchSpec.Stdio stdio -> connect(runtime, settings,
+			case AcpHarnessLaunchSpec.Stdio stdio -> connect(runtime, settings,
 					new Launched(stdioTransport(stdio, diagnostics), diagnostics, Liveness.unknowable(), () -> {
 					}, logWatcher(runtime, settings)), observations);
-			case AcpAgentLaunchSpec.WebSocket served ->
+			case AcpHarnessLaunchSpec.WebSocket served ->
 				connectServed(runtime, settings, served, diagnostics, observations);
 		};
 	}
@@ -102,12 +102,12 @@ public final class AcpHarnessClientFactory {
 	 * server the agent could not load is reported nowhere on the wire, and on goose
 	 * 1.51.0 nowhere on stdout or stderr either.
 	 */
-	private static @Nullable AcpAgentLogWatcher logWatcher(AcpAgentRuntime runtime, AcpAgentSettings settings) {
+	private static @Nullable AcpHarnessLogWatcher logWatcher(AcpHarnessRuntime runtime, AcpHarnessSettings settings) {
 		Path directory = runtime.logDirectory(settings);
 		if (directory == null) {
 			return null;
 		}
-		AcpAgentLogWatcher watcher = new AcpAgentLogWatcher(directory, runtime::noticeOf);
+		AcpHarnessLogWatcher watcher = new AcpHarnessLogWatcher(directory, runtime::noticeOf);
 		watcher.start();
 		logger.debug("Watching {} for {}'s own diagnostics", directory, runtime.id());
 		return watcher;
@@ -120,13 +120,14 @@ public final class AcpHarnessClientFactory {
 	 * The order is the point. A served agent that rejects its configuration exits about a
 	 * second after it is spawned, so connecting first would produce "connection refused"
 	 * for a problem the process already explained on its own output;
-	 * {@link AcpAgentProcessSupervisor} waits for readiness and reports what the agent
+	 * {@link AcpHarnessProcessSupervisor} waits for readiness and reports what the agent
 	 * said instead.
 	 */
-	private static AcpHarnessClient connectServed(AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpAgentLaunchSpec.WebSocket served, AcpAgentDiagnostics diagnostics, AcpAgentObservations observations) {
-		AcpAgentProcessSupervisor supervisor = served.process() == null ? null
-				: new AcpAgentProcessSupervisor(runtime.id(), served.process(), settings.pool().maxRestarts());
+	private static AcpHarnessClient connectServed(AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpHarnessLaunchSpec.WebSocket served, AcpHarnessDiagnostics diagnostics,
+			AcpHarnessObservations observations) {
+		AcpHarnessProcessSupervisor supervisor = served.process() == null ? null
+				: new AcpHarnessProcessSupervisor(runtime.id(), served.process(), settings.pool().maxRestarts());
 		if (supervisor != null) {
 			supervisor.start();
 		}
@@ -149,7 +150,7 @@ public final class AcpHarnessClientFactory {
 		// Only a server this library started has an environment it knows, and therefore a
 		// log it can
 		// find; an attached one is somebody else's process.
-		AcpAgentLogWatcher watcher = supervisor == null ? null : logWatcher(runtime, settings);
+		AcpHarnessLogWatcher watcher = supervisor == null ? null : logWatcher(runtime, settings);
 		Launched launched = new Launched(transport, diagnostics, liveness, onClose, watcher);
 		try {
 			return connect(runtime, settings, launched, observations);
@@ -168,12 +169,12 @@ public final class AcpHarnessClientFactory {
 	 * server
 	 * @param watcher the agent's own log, or null when there is none to watch
 	 */
-	private record Launched(AcpClientTransport transport, AcpAgentDiagnostics diagnostics, Liveness liveness,
-			Runnable onClose, @Nullable AcpAgentLogWatcher watcher) {
+	private record Launched(AcpClientTransport transport, AcpHarnessDiagnostics diagnostics, Liveness liveness,
+			Runnable onClose, @Nullable AcpHarnessLogWatcher watcher) {
 
 		/** An agent somebody else started, which this client cannot see the health of. */
-		static Launched attached(AcpClientTransport transport, @Nullable AcpAgentLogWatcher watcher) {
-			return new Launched(transport, new AcpAgentDiagnostics(), Liveness.unknowable(), () -> {
+		static Launched attached(AcpClientTransport transport, @Nullable AcpHarnessLogWatcher watcher) {
+			return new Launched(transport, new AcpHarnessDiagnostics(), Liveness.unknowable(), () -> {
 			}, watcher);
 		}
 
@@ -211,14 +212,14 @@ public final class AcpHarnessClientFactory {
 	 * an in-memory transport through here, and it is where a runtime that attaches to
 	 * something it did not spawn — an agent on a WebSocket, a sidecar — will come in.
 	 */
-	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public static AcpHarnessClient connect(AcpHarnessRuntime runtime, AcpHarnessSettings settings,
 			AcpClientTransport launched) {
-		return connect(runtime, settings, launched, AcpAgentObservations.NONE);
+		return connect(runtime, settings, launched, AcpHarnessObservations.NONE);
 	}
 
 	/** Same, reporting turns to {@code observations}. */
-	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpClientTransport launched, AcpAgentObservations observations) {
+	public static AcpHarnessClient connect(AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpClientTransport launched, AcpHarnessObservations observations) {
 		return connect(runtime, settings, launched, observations, null);
 	}
 
@@ -233,13 +234,13 @@ public final class AcpHarnessClientFactory {
 	 * that knows both can do. The watcher is closed with the client.
 	 * @param watcher the agent's own log, or null when there is none to watch
 	 */
-	public static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpClientTransport launched, AcpAgentObservations observations, @Nullable AcpAgentLogWatcher watcher) {
+	public static AcpHarnessClient connect(AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpClientTransport launched, AcpHarnessObservations observations, @Nullable AcpHarnessLogWatcher watcher) {
 		return connect(runtime, settings, Launched.attached(launched, watcher), observations);
 	}
 
-	private static AcpHarnessClient connect(AcpAgentRuntime runtime, AcpAgentSettings settings, Launched launched,
-			AcpAgentObservations observations) {
+	private static AcpHarnessClient connect(AcpHarnessRuntime runtime, AcpHarnessSettings settings, Launched launched,
+			AcpHarnessObservations observations) {
 		SessionConfigRecorder recorder = new SessionConfigRecorder();
 		AcpClientTransport transport = recorder.wrap(launched.transport());
 		SessionUpdateRouter router = new SessionUpdateRouter();
@@ -310,8 +311,8 @@ public final class AcpHarnessClientFactory {
 	 * Initializes, agrees a protocol version and signs in: everything that happens once
 	 * per connection before the first session.
 	 */
-	private static Handshake handshake(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpAgentDiagnostics diagnostics) {
+	private static Handshake handshake(AcpAsyncClient acp, AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpHarnessDiagnostics diagnostics) {
 		AcpSchema.InitializeResponse initialized;
 		int offered = settings.protocol().maxVersion();
 		try {
@@ -359,8 +360,8 @@ public final class AcpHarnessClientFactory {
 	 * then refused is a startup failure — the credentials are wrong, and every session
 	 * would fail the same way.
 	 */
-	private static void authenticate(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
-			AcpSchema.InitializeResponse initialized, AcpAgentDiagnostics diagnostics) {
+	private static void authenticate(AcpAsyncClient acp, AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpSchema.InitializeResponse initialized, AcpHarnessDiagnostics diagnostics) {
 		String method = runtime.authMethod(settings);
 		if (method == null) {
 			return;
@@ -382,7 +383,8 @@ public final class AcpHarnessClientFactory {
 		}
 	}
 
-	private static AcpClientTransport stdioTransport(AcpAgentLaunchSpec.Stdio stdio, AcpAgentDiagnostics diagnostics) {
+	private static AcpClientTransport stdioTransport(AcpHarnessLaunchSpec.Stdio stdio,
+			AcpHarnessDiagnostics diagnostics) {
 		StdioAcpClientTransport transport = new StdioAcpClientTransport(stdio.toAgentParameters());
 		// An undrained stderr pipe eventually blocks the child process.
 		transport.setStdErrorHandler(line -> {
@@ -405,7 +407,7 @@ public final class AcpHarnessClientFactory {
 	 * because an agent that fails noisily should not put its whole log in an exception
 	 * message.
 	 */
-	private static final class AcpAgentDiagnostics {
+	private static final class AcpHarnessDiagnostics {
 
 		private static final int KEPT_LINES = 10;
 
@@ -458,7 +460,7 @@ public final class AcpHarnessClientFactory {
 	 * forever, so this must produce an outcome for every request, including one the
 	 * policy declines to choose for.
 	 */
-	private static Mono<AcpSchema.RequestPermissionResponse> handlePermission(AcpAgentRuntime runtime,
+	private static Mono<AcpSchema.RequestPermissionResponse> handlePermission(AcpHarnessRuntime runtime,
 			PermissionPolicy policy, AcpSchema.RequestPermissionRequest request) {
 		return Mono.fromSupplier(() -> {
 			String toolName = request.toolCall() == null ? null : runtime.toolNameOf(request.toolCall());
@@ -486,7 +488,7 @@ public final class AcpHarnessClientFactory {
 	 * is what the agent reads; they are two halves of one statement and disagreeing would
 	 * mean advertising something no handler answers.
 	 */
-	private static AcpSchema.ClientCapabilities capabilities(AcpAgentSettings settings) {
+	private static AcpSchema.ClientCapabilities capabilities(AcpHarnessSettings settings) {
 		return new AcpSchema.ClientCapabilities(
 				new AcpSchema.FileSystemCapability(settings.filesystem().read(), settings.filesystem().write()),
 				settings.terminal().enabled(), null, null);
@@ -497,7 +499,7 @@ public final class AcpHarnessClientFactory {
 		return implementation == null ? "0.1.0-SNAPSHOT" : implementation;
 	}
 
-	private static void closeQuietly(@Nullable AcpAgentLogWatcher watcher) {
+	private static void closeQuietly(@Nullable AcpHarnessLogWatcher watcher) {
 		if (watcher != null) {
 			watcher.close();
 		}

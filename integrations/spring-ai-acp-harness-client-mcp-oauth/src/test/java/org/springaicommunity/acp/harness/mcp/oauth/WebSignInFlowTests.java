@@ -36,11 +36,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.mcp.McpAccess;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 
@@ -90,7 +90,7 @@ class WebSignInFlowTests {
 	OAuth2AuthorizedClientService authorizedClients;
 
 	@Autowired
-	AcpAgentSettings settings;
+	AcpHarnessSettings settings;
 
 	private static Map<String, String> query(String url) {
 		Map<String, String> params = new LinkedHashMap<>();
@@ -192,15 +192,15 @@ class WebSignInFlowTests {
 
 		/** No agent is started: the flow under test ends at the proxy. */
 		@Bean
-		AcpAgentRuntime testRuntime() {
-			return new AcpAgentRuntime() {
+		AcpHarnessRuntime testRuntime() {
+			return new AcpHarnessRuntime() {
 				@Override
 				public String id() {
 					return "test";
 				}
 
 				@Override
-				public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+				public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 					throw new UnsupportedOperationException("no agent in this test");
 				}
 			};

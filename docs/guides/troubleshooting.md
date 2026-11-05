@@ -3,7 +3,7 @@
 | Symptom | Cause and fix |
 | --- | --- |
 | Startup fails: *spring.ai.acp.harness.runtime is not set and more than one runtime adapter is on the classpath* | Set `spring.ai.acp.harness.runtime` to one of the listed ids. |
-| Startup fails: *No AcpAgentRuntime registered for spring.ai.acp.harness.runtime='…'* | Add that runtime's starter, or `spring-ai-acp-harness-client-boot-starter-registry` for a registry id. |
+| Startup fails: *No AcpHarnessRuntime registered for spring.ai.acp.harness.runtime='…'* | Add that runtime's starter, or `spring-ai-acp-harness-client-boot-starter-registry` for a registry id. |
 | Startup fails: *spring.ai.acp.harness.runtimes has options for unregistered runtime(s)* | A tier-3 block names a runtime nothing supplies; usually a typo. |
 | *workspace '…' is not an existing directory* | Create it first; Spring AI ACP Harness Client will not. A relative path is resolved against the JVM's working directory. |
 | The first prompt fails with *Could not install skill …* | A skill failed to fetch or check. Pin a `ref` that exists, check `path`, make sure `git` is installed, and remove any symlinks from the skill. |

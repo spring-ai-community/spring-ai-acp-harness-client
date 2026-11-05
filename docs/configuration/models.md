@@ -17,7 +17,7 @@ When nothing matches, `on-unsupported` decides:
 
 | Value | Behaviour |
 | --- | --- |
-| `fail` | Throws `UnsupportedAcpAgentOptionException` when the session opens. Use in production when a wrong model is worse than a failed request. |
+| `fail` | Throws `UnsupportedAcpHarnessOptionException` when the session opens. Use in production when a wrong model is worse than a failed request. |
 | `warn` | Logs once per option per runtime, naming what the agent *does* offer, and continues on the agent's default. |
 | `ignore` | Continues silently. |
 

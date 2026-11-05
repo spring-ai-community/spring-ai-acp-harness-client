@@ -27,7 +27,7 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * Fixed when the agent process starts, never per request. An HTTP endpoint and a
  * credential that could change per call would mean a pool of processes with different
- * credentials and no way to tell them apart; see {@link AcpAgentOptions} for what a
+ * credentials and no way to tell them apart; see {@link AcpHarnessOptions} for what a
  * caller genuinely may vary.
  */
 public record ProviderSpec(@Nullable String id, @Nullable String apiType, @Nullable URI baseUrl,

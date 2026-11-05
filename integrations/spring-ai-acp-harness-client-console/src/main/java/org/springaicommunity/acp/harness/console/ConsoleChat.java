@@ -27,9 +27,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.StoredSession;
 
 import reactor.core.Disposable;
@@ -82,7 +82,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	private final AtomicReference<@Nullable Disposable> turn = new AtomicReference<>();
 
 	/** Notices already shown, so each is reported once rather than after every turn. */
-	private final Set<AcpAgentNotice> seenNotices = new HashSet<>();
+	private final Set<AcpHarnessNotice> seenNotices = new HashSet<>();
 
 	/** The named session turns currently run in. */
 	private String session;
@@ -198,7 +198,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	}
 
 	private void open(String name) {
-		AcpAgentSession opened = agent.openSession(name);
+		AcpHarnessSession opened = agent.openSession(name);
 		opened.configuration()
 			.resolutions()
 			.values()
@@ -294,7 +294,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 		String next = nextName();
 		open(next);
 		session = next;
-		if (agent.sessions().supports(AcpAgentSessions.Operation.CLOSE)) {
+		if (agent.sessions().supports(AcpHarnessSessions.Operation.CLOSE)) {
 			try {
 				agent.sessions().close(previous);
 			}
@@ -306,10 +306,10 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	}
 
 	private void listSessions() {
-		AcpAgentSessions sessions = agent.sessions();
-		if (!sessions.supports(AcpAgentSessions.Operation.LIST)) {
+		AcpHarnessSessions sessions = agent.sessions();
+		if (!sessions.supports(AcpHarnessSessions.Operation.LIST)) {
 			out.info("  " + agent.runtimeId() + " cannot list its conversations (no "
-					+ AcpAgentSessions.Operation.LIST.method() + ")");
+					+ AcpHarnessSessions.Operation.LIST.method() + ")");
 			return;
 		}
 		List<StoredSession> stored = sessions.list();
@@ -317,7 +317,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 			out.info("  no stored conversations");
 			return;
 		}
-		AcpAgentSession open = agent.session(session);
+		AcpHarnessSession open = agent.session(session);
 		String current = open == null ? null : open.sessionId();
 		for (StoredSession each : stored) {
 			String marker = each.sessionId().equals(current) ? "* " : "  ";
@@ -332,17 +332,17 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 			out.error("usage: /resume <id> — /sessions lists them");
 			return;
 		}
-		AcpAgentSessions sessions = agent.sessions();
+		AcpHarnessSessions sessions = agent.sessions();
 		String next = nextName();
-		if (sessions.supports(AcpAgentSessions.Operation.RESUME)) {
+		if (sessions.supports(AcpHarnessSessions.Operation.RESUME)) {
 			sessions.resume(next, sessionId);
 		}
-		else if (sessions.supports(AcpAgentSessions.Operation.LOAD)) {
+		else if (sessions.supports(AcpHarnessSessions.Operation.LOAD)) {
 			sessions.load(next, sessionId);
 		}
 		else {
 			out.info("  " + agent.runtimeId() + " can neither resume nor load a conversation (no "
-					+ AcpAgentSessions.Operation.RESUME.method() + " or " + AcpAgentSessions.Operation.LOAD.method()
+					+ AcpHarnessSessions.Operation.RESUME.method() + " or " + AcpHarnessSessions.Operation.LOAD.method()
 					+ ")");
 			return;
 		}
@@ -351,7 +351,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	}
 
 	private void notices() {
-		List<AcpAgentNotice> notices = agent.notices();
+		List<AcpHarnessNotice> notices = agent.notices();
 		if (notices.isEmpty()) {
 			out.info("  no notices from the agent");
 			return;

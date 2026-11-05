@@ -2,7 +2,7 @@
 
 Spring AI ACP Harness Client drives any [Agent Client Protocol](https://agentclientprotocol.com) coding agent (Goose, Codex, OpenCode, or any of the agents in the ACP registry) from a Spring Boot application, behind one API and one configuration model.
 
-A *harness* is the coding agent runtime you drive, such as Goose, Codex or OpenCode. `AcpHarnessClient` is your application's client for it. ACP calls the two ends of the connection the client and the agent, so types that describe the far end are named `AcpAgent…`.
+A *harness* is the coding agent runtime you drive, such as Goose, Codex or OpenCode. This library creates no agent of its own: it configures a harness, launches or attaches to it, and talks to it over ACP. So its types say harness: `AcpHarnessClient` is your application's client, `AcpHarnessSession` a session the harness holds, `AcpHarnessEvent` what it streamed back. ACP calls the two ends of the connection the client and the agent, and this documentation keeps that word for the running program.
 
 Spring AI ACP Harness Client relates to coding agents the way Spring Data relates to databases:
 
@@ -47,7 +47,7 @@ config:
     wrappingWidth: 640
 ---
 flowchart TD
-    app["<b>Your application</b><br/>AcpHarnessClient · AcpAgentSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
+    app["<b>Your application</b><br/>AcpHarnessClient · AcpHarnessSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
     core["<b>spring-ai-acp-harness-client</b><br/>connection pool · session registry · config negotiation · permission policy<br/>MCP credential proxy · skill installer · workspace jail · observations"]
     subgraph adapters["Runtime adapters"]
         direction LR
@@ -59,7 +59,7 @@ flowchart TD
     end
     agent["<b>Agent process</b><br/>reads AGENTS.md and .agents/skills/ from the workspace, calls MCP servers, calls the model"]
     app --> core
-    core -- "AcpAgentRuntime SPI" --> adapters
+    core -- "AcpHarnessRuntime SPI" --> adapters
     adapters -- "ACP v1 (com.agentclientprotocol:acp-core)" --> agent
 ```
 
@@ -83,11 +83,11 @@ ACP standardizes the *conversation*, not the *provisioning*. So each property be
 | `spring-ai-acp-harness-client-boot-starter-codex` | Starter plus the Codex adapter (`@agentclientprotocol/codex-acp`) |
 | `spring-ai-acp-harness-client-boot-starter-opencode` | Starter plus the OpenCode adapter |
 | `spring-ai-acp-harness-client-boot-starter-registry` | Starter plus the registry runtime: any agent the ACP registry publishes |
-| `spring-ai-acp-harness-client-boot-starter` | Core and auto-configuration with *no* agent (for bringing your own `AcpAgentRuntime`) |
+| `spring-ai-acp-harness-client-boot-starter` | Core and auto-configuration with *no* agent (for bringing your own `AcpHarnessRuntime`) |
 | `spring-ai-acp-harness-client` | The library itself, without Spring Boot: `AcpHarnessClient`, sessions, configuration, MCP proxy, workspace |
 | `spring-ai-acp-harness-client-chatmodel` | `AcpChatModel`: the agent as a Spring AI `ChatModel` |
 | `spring-ai-acp-harness-client-mcp-oauth` | Per-user OAuth sign-in to MCP servers (Spring Security) |
 | `spring-ai-acp-harness-client-console` | A terminal chat over the agent, for prototyping it (JLine); answers `policy: ask` |
-| `spring-ai-acp-harness-client-test` | `ScriptedAcpAgent`, `AcpAgentProbe`, and the `AcpAgentRuntimeContract` conformance suite |
+| `spring-ai-acp-harness-client-test` | `ScriptedAcpAgent`, `AcpHarnessProbe`, and the `AcpHarnessRuntimeContract` conformance suite |
 
 The starters bring in `spring-ai-acp-harness-client`, `spring-ai-acp-harness-client-boot-autoconfigure` and the matching `spring-ai-acp-harness-client-runtime-*` adapter, so applications rarely name those directly.

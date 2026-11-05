@@ -18,24 +18,24 @@ import org.springframework.context.annotation.Import;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientPool;
 import org.springaicommunity.acp.harness.codex.CodexRuntime;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
-import org.springaicommunity.acp.harness.executor.AcpAgentExecutor;
-import org.springaicommunity.acp.harness.executor.DefaultAcpAgentExecutor;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
+import org.springaicommunity.acp.harness.executor.AcpHarnessExecutor;
+import org.springaicommunity.acp.harness.executor.DefaultAcpHarnessExecutor;
 import org.springaicommunity.acp.harness.goose.GooseRuntime;
 import org.springaicommunity.acp.harness.mcp.McpCredentialsProvider;
 import org.springaicommunity.acp.harness.opencode.OpenCodeRuntime;
-import org.springaicommunity.acp.harness.observation.AcpAgentObservations;
+import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
 import org.springaicommunity.acp.harness.permission.PermissionPrompt;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntimeProvider;
 import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 
 /**
  * Wires an {@link AcpHarnessClient} from {@code spring.ai.acp.harness.*}.
  *
  * <p>
- * Registering a runtime means contributing an {@link AcpAgentRuntime} bean; the one whose
- * {@code id()} matches {@code spring.ai.acp.harness.runtime} is selected. Each
+ * Registering a runtime means contributing an {@link AcpHarnessRuntime} bean; the one
+ * whose {@code id()} matches {@code spring.ai.acp.harness.runtime} is selected. Each
  * first-party adapter registers itself when it is on the classpath, so an application
  * chooses its agents by dependency and then picks one of them by property — and an
  * application that wants its own adapter for an agent this library ships just declares
@@ -71,7 +71,7 @@ public class AcpAutoConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean(name = "gooseAgentRuntime")
-		AcpAgentRuntime gooseAgentRuntime() {
+		AcpHarnessRuntime gooseAgentRuntime() {
 			return new GooseRuntime();
 		}
 
@@ -83,7 +83,7 @@ public class AcpAutoConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean(name = "codexAgentRuntime")
-		AcpAgentRuntime codexAgentRuntime() {
+		AcpHarnessRuntime codexAgentRuntime() {
 			return new CodexRuntime();
 		}
 
@@ -95,7 +95,7 @@ public class AcpAutoConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean(name = "openCodeAgentRuntime")
-		AcpAgentRuntime openCodeAgentRuntime() {
+		AcpHarnessRuntime openCodeAgentRuntime() {
 			return new OpenCodeRuntime();
 		}
 
@@ -103,7 +103,7 @@ public class AcpAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	SelectedRuntime acpSelectedRuntime(List<AcpAgentRuntime> runtimes, List<AcpAgentRuntimeProvider> providers,
+	SelectedRuntime acpSelectedRuntime(List<AcpHarnessRuntime> runtimes, List<AcpHarnessRuntimeProvider> providers,
 			AcpProperties properties) {
 		return SelectedRuntime.from(runtimes, providers, properties);
 	}
@@ -121,7 +121,7 @@ public class AcpAutoConfiguration {
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	AcpAgentSettings acpAgentSettings(AcpProperties properties, SelectedRuntime selected,
+	AcpHarnessSettings acpHarnessSettings(AcpProperties properties, SelectedRuntime selected,
 			ObjectProvider<McpCredentialsProvider> credentials, ObjectProvider<SessionPrincipalResolver> principals,
 			ObjectProvider<PermissionPrompt> prompts) {
 		Path workspace = properties.workspace() == null ? Paths.get("").toAbsolutePath()
@@ -129,7 +129,7 @@ public class AcpAutoConfiguration {
 		warnAboutUncredentialedServers(properties, credentials);
 		String runtime = selected.runtime().id();
 
-		return AcpAgentSettings.builder(runtime, workspace)
+		return AcpHarnessSettings.builder(runtime, workspace)
 			.runtimeHome(properties.runtimeHome())
 			.timeout(properties.timeout())
 			.model(properties.model())
@@ -199,15 +199,15 @@ public class AcpAutoConfiguration {
 	 */
 	@Bean(destroyMethod = "close")
 	@ConditionalOnMissingBean
-	AcpHarnessClient acpHarnessClient(SelectedRuntime selected, AcpAgentSettings settings,
-			ObjectProvider<AcpAgentObservations> observations) {
+	AcpHarnessClient acpHarnessClient(SelectedRuntime selected, AcpHarnessSettings settings,
+			ObjectProvider<AcpHarnessObservations> observations) {
 		logger.info("ACP runtime '{}' selected, workspace {}, up to {} process(es)", selected.runtime().id(),
 				settings.workspace(), settings.pool().maxProcesses());
 		// ObjectProvider rather than an optional parameter: the observations bean only
 		// exists when
 		// Micrometer does, and this bean must be constructible either way.
 		return new AcpHarnessClientPool(selected.runtime(), settings,
-				observations.getIfAvailable(() -> AcpAgentObservations.NONE));
+				observations.getIfAvailable(() -> AcpHarnessObservations.NONE));
 	}
 
 	/**
@@ -217,8 +217,8 @@ public class AcpAutoConfiguration {
 	 */
 	@Bean
 	@ConditionalOnMissingBean
-	AcpAgentExecutor acpAgentExecutor(AcpHarnessClient client) {
-		return new DefaultAcpAgentExecutor(client);
+	AcpHarnessExecutor acpHarnessExecutor(AcpHarnessClient client) {
+		return new DefaultAcpHarnessExecutor(client);
 	}
 
 }

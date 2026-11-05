@@ -1,9 +1,9 @@
 package org.springaicommunity.acp.harness.opencode;
 
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.test.AcpAgentProbe;
-import org.springaicommunity.acp.harness.test.AcpAgentRuntimeContract;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.test.AcpHarnessProbe;
+import org.springaicommunity.acp.harness.test.AcpHarnessRuntimeContract;
 
 /**
  * The portable contract, against a real {@code opencode acp} subprocess.
@@ -16,14 +16,14 @@ import org.springaicommunity.acp.harness.test.AcpAgentRuntimeContract;
  * making.
  */
 @EnabledIf("usable")
-class OpenCodeContractTests extends AcpAgentRuntimeContract {
+class OpenCodeContractTests extends AcpHarnessRuntimeContract {
 
 	static boolean usable() {
-		return AcpAgentProbe.isUsable(new OpenCodeRuntime());
+		return AcpHarnessProbe.isUsable(new OpenCodeRuntime());
 	}
 
 	@Override
-	protected AcpAgentRuntime runtime() {
+	protected AcpHarnessRuntime runtime() {
 		return new OpenCodeRuntime();
 	}
 

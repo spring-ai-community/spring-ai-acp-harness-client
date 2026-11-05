@@ -8,7 +8,7 @@ The API is `@NullMarked` ([JSpecify](https://jspecify.dev)): a reference is non-
 
 ```java
 // Blocking: wait for the finished answer.
-AcpHarnessClient.AcpAgentResponse response = acpHarnessClient.prompt()
+AcpHarnessClient.AcpHarnessResponse response = acpHarnessClient.prompt()
         .session("review-123")                          // a named, reusable conversation
         .user("Inspect the pending change")
         .options(o -> o.timeout(Duration.ofMinutes(10)))
@@ -18,7 +18,7 @@ String text = response.content();                        // assistant text only
 AcpSchema.StopReason why = response.completion().reason();
 
 // Streaming: every event as it happens.
-Flux<AcpAgentEvent> events = acpHarnessClient.prompt()
+Flux<AcpHarnessEvent> events = acpHarnessClient.prompt()
         .session("review-123")
         .user("Now focus on security")
         .stream()
@@ -32,7 +32,7 @@ Flux<String> text = acpHarnessClient.prompt("Explain the build").stream().conten
 | --- | --- |
 | `session(name)` | Runs in a named conversation; repeat calls with the same name keep context. Without it the turn runs in a throwaway session closed when the turn ends. Names match `[A-Za-z0-9][A-Za-z0-9._-]{0,127}`. |
 | `user(text)` | Appends user text; call more than once to build up a prompt. `prompt(text)` is shorthand. |
-| `options(…)` | Per-turn overrides of `timeout`, `model`, `mode` and `provider`, as an `AcpAgentOptions` or a builder lambda. |
+| `options(…)` | Per-turn overrides of `timeout`, `model`, `mode` and `provider`, as an `AcpHarnessOptions` or a builder lambda. |
 | `principal(p)` | Runs on behalf of a user: their MCP credentials, their session (see [per-user OAuth](configuration/mcp-servers.md#per-user-oauth)). |
 | `call()` | Blocks and returns the finished turn. |
 | `stream()` | A `Flux` ending in exactly one terminal event. Cancelling the subscription cancels the turn on the agent. |
@@ -43,22 +43,22 @@ Flux<String> text = acpHarnessClient.prompt("Explain the build").stream().conten
 
 ## Events
 
-`AcpAgentEvent` is a sealed interface of records, so a `switch` over it can be exhaustive:
+`AcpHarnessEvent` is a sealed interface of records, so a `switch` over it can be exhaustive:
 
 ```java
 acpHarnessClient.prompt().session("review-123").user("Review the diff").stream().events()
         .doOnNext(event -> {
             switch (event) {
-                case AcpAgentEvent.Text t            -> ui.append(t.text());
-                case AcpAgentEvent.Thought t         -> log.debug("thinking: {}", t.text());
-                case AcpAgentEvent.ToolCallStarted s -> ui.toolStarted(s.id(), s.title(), s.kind());
-                case AcpAgentEvent.ToolCallUpdated u -> ui.toolProgress(u.id(), u.status());
-                case AcpAgentEvent.PlanUpdated p     -> ui.replacePlan(p.entries());
-                case AcpAgentEvent.ConfigChanged c   -> log.info("agent reconfigured: {}", c.options());
-                case AcpAgentEvent.ModeChanged m     -> log.info("mode is now {}", m.modeId());
-                case AcpAgentEvent.UsageUpdated u    -> meter.context(u.contextUsed(), u.contextSize());
-                case AcpAgentEvent.Completed c       -> ui.done(c.reason());
-                case AcpAgentEvent.Failed f          -> ui.error(f.cause());
+                case AcpHarnessEvent.Text t            -> ui.append(t.text());
+                case AcpHarnessEvent.Thought t         -> log.debug("thinking: {}", t.text());
+                case AcpHarnessEvent.ToolCallStarted s -> ui.toolStarted(s.id(), s.title(), s.kind());
+                case AcpHarnessEvent.ToolCallUpdated u -> ui.toolProgress(u.id(), u.status());
+                case AcpHarnessEvent.PlanUpdated p     -> ui.replacePlan(p.entries());
+                case AcpHarnessEvent.ConfigChanged c   -> log.info("agent reconfigured: {}", c.options());
+                case AcpHarnessEvent.ModeChanged m     -> log.info("mode is now {}", m.modeId());
+                case AcpHarnessEvent.UsageUpdated u    -> meter.context(u.contextUsed(), u.contextSize());
+                case AcpHarnessEvent.Completed c       -> ui.done(c.reason());
+                case AcpHarnessEvent.Failed f          -> ui.error(f.cause());
             }
         })
         .blockLast();
@@ -90,7 +90,7 @@ Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (6
 `openSession(name)` opens a session without spending a turn. It is how to learn what the negotiated tier actually achieved before the first prompt:
 
 ```java
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
 
 SessionConfiguration config = acpHarnessClient.openSession("review-123").configuration();
 config.applied(PortableOption.MODEL);          // the model this session is really using, or null
@@ -104,11 +104,11 @@ config.resolutions().values().forEach(r ->     // requested, applied, and by whi
 `acpHarnessClient.sessions()` manages the conversations the agent keeps. Every operation is optional in ACP, and the runtimes implement different subsets, so ask first:
 
 ```java
-AcpAgentSessions sessions = acpHarnessClient.sessions();
-if (sessions.supports(AcpAgentSessions.Operation.LIST)) {
+AcpHarnessSessions sessions = acpHarnessClient.sessions();
+if (sessions.supports(AcpHarnessSessions.Operation.LIST)) {
     List<StoredSession> stored = sessions.list();
 }
-if (sessions.supports(AcpAgentSessions.Operation.LOAD)) {
+if (sessions.supports(AcpHarnessSessions.Operation.LOAD)) {
     sessions.load("review-123", storedId);      // reattach and replay history under this name
 }
 sessions.close("review-123");                   // always succeeds, told or not
@@ -120,7 +120,7 @@ sessions.close("review-123");                   // always succeeds, told or not
 | codex-acp 2.5.0 | yes | yes | yes | yes | yes |
 | opencode 2.2.4 | yes | yes | yes | yes | yes |
 
-An operation the agent does not advertise throws `UnsupportedAcpAgentOperationException` naming the ACP method, rather than failing on the wire.
+An operation the agent does not advertise throws `UnsupportedAcpHarnessOperationException` naming the ACP method, rather than failing on the wire.
 
 ## Other methods
 
@@ -134,4 +134,4 @@ An operation the agent does not advertise throws `UnsupportedAcpAgentOperationEx
 
 !!! tip
 
-    Migrating from the `goose-buildpack` `java-wrapper`? An `AcpAgentExecutor` bean offers the old `GooseExecutor` method signatures and newline-delimited JSON events, with `AcpAgentOptions` in place of `GooseOptions`.
+    Migrating from the `goose-buildpack` `java-wrapper`? An `AcpHarnessExecutor` bean offers the old `GooseExecutor` method signatures and newline-delimited JSON events, with `AcpHarnessOptions` in place of `GooseOptions`.

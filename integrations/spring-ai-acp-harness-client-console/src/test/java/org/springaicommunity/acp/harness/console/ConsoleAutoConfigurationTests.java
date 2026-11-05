@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springaicommunity.acp.harness.boot.AcpAutoConfiguration;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.permission.PermissionPrompt;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
@@ -94,7 +94,7 @@ class ConsoleAutoConfigurationTests {
 					"spring.ai.acp.harness.permissions.policy=ask")
 			.run(context -> {
 				assertThat(context).doesNotHaveBean(TerminalPermissionPrompt.class);
-				assertThat(context.getBean(AcpAgentSettings.class).permissions().decide("t", List.of(allow)))
+				assertThat(context.getBean(AcpHarnessSettings.class).permissions().decide("t", List.of(allow)))
 					.isEqualTo(allow);
 			});
 	}

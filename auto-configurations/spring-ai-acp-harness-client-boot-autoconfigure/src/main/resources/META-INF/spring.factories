@@ -1,8 +1,8 @@
 org.springframework.boot.context.config.ConfigDataLocationResolver=\
-org.springaicommunity.acp.harness.boot.AcpAgentsConfigDataLocationResolver
+org.springaicommunity.acp.harness.boot.AcpHarnessConfigDataLocationResolver
 
 org.springframework.boot.context.config.ConfigDataLoader=\
-org.springaicommunity.acp.harness.boot.AcpAgentsConfigDataLoader
+org.springaicommunity.acp.harness.boot.AcpHarnessConfigDataLoader
 
 org.springframework.boot.EnvironmentPostProcessor=\
 org.springaicommunity.acp.harness.boot.TanzuAiEnvironmentPostProcessor

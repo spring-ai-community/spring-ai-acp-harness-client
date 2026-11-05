@@ -12,9 +12,9 @@ import org.jspecify.annotations.Nullable;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.permission.PermissionQuestion;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -59,7 +59,7 @@ public class ConsoleRenderer {
 	 * The latest accounting of the turn, shown once when it ends rather than every time
 	 * it moves.
 	 */
-	private AcpAgentEvent.@Nullable UsageUpdated usage;
+	private AcpHarnessEvent.@Nullable UsageUpdated usage;
 
 	public ConsoleRenderer(Terminal terminal, boolean showThoughts) {
 		this.terminal = terminal;
@@ -97,35 +97,35 @@ public class ConsoleRenderer {
 	}
 
 	/** One event of a turn, as it arrives. */
-	public synchronized void render(AcpAgentEvent event) {
+	public synchronized void render(AcpHarnessEvent event) {
 		switch (event) {
-			case AcpAgentEvent.Text text -> text(text.text());
-			case AcpAgentEvent.Thought thought -> {
+			case AcpHarnessEvent.Text text -> text(text.text());
+			case AcpHarnessEvent.Thought thought -> {
 				if (showThoughts) {
 					line(styled("  · " + firstLine(thought.text()), DIM));
 				}
 			}
-			case AcpAgentEvent.ToolCallStarted call -> {
+			case AcpHarnessEvent.ToolCallStarted call -> {
 				String title = call.title() == null || call.title().isBlank() ? "tool call" : call.title().strip();
 				toolTitles.put(call.id(), title);
 				line(styled("  → " + title, DIM));
 			}
-			case AcpAgentEvent.ToolCallUpdated update -> {
+			case AcpHarnessEvent.ToolCallUpdated update -> {
 				if (update.status() == AcpSchema.ToolCallStatus.FAILED) {
 					line(styled("  ✗ " + toolTitles.getOrDefault(update.id(), "tool call") + " failed", WARNING));
 				}
 			}
-			case AcpAgentEvent.PlanUpdated plan -> plan(plan.entries());
-			case AcpAgentEvent.UsageUpdated update -> usage = update;
-			case AcpAgentEvent.Completed completed -> {
+			case AcpHarnessEvent.PlanUpdated plan -> plan(plan.entries());
+			case AcpHarnessEvent.UsageUpdated update -> usage = update;
+			case AcpHarnessEvent.Completed completed -> {
 				if (completed.reason() != null && completed.reason() != AcpSchema.StopReason.END_TURN) {
 					line(styled("  [turn ended: " + completed.reason() + "]", DIM));
 				}
 			}
-			case AcpAgentEvent.Failed failed -> error(messageOf(failed.cause()));
-			case AcpAgentEvent.ConfigChanged changed -> {
+			case AcpHarnessEvent.Failed failed -> error(messageOf(failed.cause()));
+			case AcpHarnessEvent.ConfigChanged changed -> {
 			}
-			case AcpAgentEvent.ModeChanged mode -> line(styled("  ⋯ mode: " + mode.modeId(), DIM));
+			case AcpHarnessEvent.ModeChanged mode -> line(styled("  ⋯ mode: " + mode.modeId(), DIM));
 		}
 	}
 
@@ -143,8 +143,8 @@ public class ConsoleRenderer {
 		line(styled("  [cancelled]", DIM));
 	}
 
-	public synchronized void notice(AcpAgentNotice notice) {
-		AttributedStyle style = notice.severity() == AcpAgentNotice.Severity.ERROR ? ERROR : WARNING;
+	public synchronized void notice(AcpHarnessNotice notice) {
+		AttributedStyle style = notice.severity() == AcpHarnessNotice.Severity.ERROR ? ERROR : WARNING;
 		line(styled("  ! agent: " + notice, style));
 	}
 
@@ -240,7 +240,7 @@ public class ConsoleRenderer {
 		};
 	}
 
-	static String describe(AcpAgentEvent.UsageUpdated usage) {
+	static String describe(AcpHarnessEvent.UsageUpdated usage) {
 		StringBuilder text = new StringBuilder("context ").append(tokens(usage.contextUsed()));
 		if (usage.contextSize() > 0) {
 			text.append(" / ")

@@ -14,9 +14,9 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -174,8 +174,8 @@ class AcpChatModelTests {
 
 	@Test
 	void streamsTextChunksAndEndsWithTheFinishReason() {
-		client.streams(new AcpAgentEvent.Text("one "), new AcpAgentEvent.Text("two"),
-				new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+		client.streams(new AcpHarnessEvent.Text("one "), new AcpHarnessEvent.Text("two"),
+				new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 
 		StepVerifier.create(model.stream(new Prompt("go")).map(r -> r.getResult().getOutput().getText()))
 			.expectNext("one ", "two", "")
@@ -185,9 +185,9 @@ class AcpChatModelTests {
 	@Test
 	@DisplayName("thoughts, tool calls and plans are agent activity, not assistant output")
 	void doesNotStreamTheAgentsInternalActivityAsText() {
-		client.streams(new AcpAgentEvent.Thought("hmm"),
-				new AcpAgentEvent.ToolCallStarted("t1", "Read the build file", AcpSchema.ToolKind.READ),
-				new AcpAgentEvent.Text("done"), new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+		client.streams(new AcpHarnessEvent.Thought("hmm"),
+				new AcpHarnessEvent.ToolCallStarted("t1", "Read the build file", AcpSchema.ToolKind.READ),
+				new AcpHarnessEvent.Text("done"), new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 
 		StepVerifier.create(model.stream(new Prompt("go")).map(r -> r.getResult().getOutput().getText()))
 			.expectNext("done", "")
@@ -196,7 +196,7 @@ class AcpChatModelTests {
 
 	@Test
 	void surfacesAFailedTurnAsAnError() {
-		client.streams(new AcpAgentEvent.Failed(new IllegalStateException("the agent died")));
+		client.streams(new AcpHarnessEvent.Failed(new IllegalStateException("the agent died")));
 
 		StepVerifier.create(model.stream(new Prompt("go"))).verifyErrorMessage("the agent died");
 	}
@@ -220,8 +220,9 @@ class AcpChatModelTests {
 		// the whole session. Putting one in the other's field would put "the conversation
 		// so far"
 		// where every dashboard reads "this call".
-		client.streams(new AcpAgentEvent.Text("hi"), new AcpAgentEvent.UsageUpdated(4441, 1_050_000, 0.008932, "USD"),
-				new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+		client.streams(new AcpHarnessEvent.Text("hi"),
+				new AcpHarnessEvent.UsageUpdated(4441, 1_050_000, 0.008932, "USD"),
+				new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 
 		ChatResponse last = model.stream(new Prompt("go")).blockLast();
 
@@ -231,7 +232,7 @@ class AcpChatModelTests {
 	}
 
 	private String finishReasonFor(AcpSchema.StopReason reason) {
-		client.streams(new AcpAgentEvent.Completed(reason));
+		client.streams(new AcpHarnessEvent.Completed(reason));
 		return model.stream(new Prompt("go")).blockLast().getResult().getMetadata().getFinishReason();
 	}
 
@@ -244,17 +245,17 @@ class AcpChatModelTests {
 
 		private String sessionName;
 
-		private AcpAgentOptions options = AcpAgentOptions.none();
+		private AcpHarnessOptions options = AcpHarnessOptions.none();
 
-		private final AtomicReference<List<AcpAgentEvent>> events = new AtomicReference<>(List.of());
+		private final AtomicReference<List<AcpHarnessEvent>> events = new AtomicReference<>(List.of());
 
 		private final java.util.Set<String> openSessions = new java.util.HashSet<>();
 
 		void reply(String text) {
-			streams(new AcpAgentEvent.Text(text), new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+			streams(new AcpHarnessEvent.Text(text), new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 		}
 
-		void streams(AcpAgentEvent... events) {
+		void streams(AcpHarnessEvent... events) {
 			this.events.set(List.of(events));
 		}
 
@@ -279,32 +280,32 @@ class AcpChatModelTests {
 				}
 
 				@Override
-				public PromptSpec options(AcpAgentOptions o) {
+				public PromptSpec options(AcpHarnessOptions o) {
 					options = o;
 					return this;
 				}
 
 				@Override
-				public PromptSpec options(java.util.function.Consumer<AcpAgentOptions.Builder> customizer) {
-					AcpAgentOptions.Builder builder = AcpAgentOptions.builder();
+				public PromptSpec options(java.util.function.Consumer<AcpHarnessOptions.Builder> customizer) {
+					AcpHarnessOptions.Builder builder = AcpHarnessOptions.builder();
 					customizer.accept(builder);
 					return options(builder.build());
 				}
 
 				@Override
-				public AcpAgentResponse call() {
-					List<AcpAgentEvent> replayed = events.get();
+				public AcpHarnessResponse call() {
+					List<AcpHarnessEvent> replayed = events.get();
 					String content = replayed.stream()
-						.filter(AcpAgentEvent.Text.class::isInstance)
-						.map(AcpAgentEvent.Text.class::cast)
-						.map(AcpAgentEvent.Text::text)
+						.filter(AcpHarnessEvent.Text.class::isInstance)
+						.map(AcpHarnessEvent.Text.class::cast)
+						.map(AcpHarnessEvent.Text::text)
 						.reduce("", String::concat);
-					AcpAgentEvent.Completed completed = replayed.stream()
-						.filter(AcpAgentEvent.Completed.class::isInstance)
-						.map(AcpAgentEvent.Completed.class::cast)
+					AcpHarnessEvent.Completed completed = replayed.stream()
+						.filter(AcpHarnessEvent.Completed.class::isInstance)
+						.map(AcpHarnessEvent.Completed.class::cast)
 						.findFirst()
-						.orElse(new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
-					return new AcpAgentResponse() {
+						.orElse(new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
+					return new AcpHarnessResponse() {
 
 						@Override
 						public String content() {
@@ -312,14 +313,14 @@ class AcpChatModelTests {
 						}
 
 						@Override
-						public AcpAgentEvent.Completed completion() {
+						public AcpHarnessEvent.Completed completion() {
 							return completed;
 						}
 					};
 				}
 
 				@Override
-				public AcpAgentStream stream() {
+				public AcpHarnessStream stream() {
 					return () -> Flux.fromIterable(events.get());
 				}
 			};
@@ -331,23 +332,23 @@ class AcpChatModelTests {
 		}
 
 		@Override
-		public org.springaicommunity.acp.harness.client.@Nullable AcpAgentInfo agentInfo() {
+		public org.springaicommunity.acp.harness.client.@Nullable AcpHarnessInfo agentInfo() {
 			return null;
 		}
 
 		@Override
-		public org.springaicommunity.acp.harness.session.AcpAgentSessions sessions() {
+		public org.springaicommunity.acp.harness.session.AcpHarnessSessions sessions() {
 			throw new UnsupportedOperationException();
 		}
 
 		@Override
-		public @Nullable AcpAgentSession session(String name) {
+		public @Nullable AcpHarnessSession session(String name) {
 			return openSessions.contains(name)
 					? new org.springaicommunity.acp.harness.session.SessionRegistry().resolve(name, n -> "sid") : null;
 		}
 
 		@Override
-		public AcpAgentSession openSession(String name) {
+		public AcpHarnessSession openSession(String name) {
 			throw new UnsupportedOperationException();
 		}
 

@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntimeProvider;
 
 /**
  * The runtime {@code spring.ai.acp.harness.runtime} chose, resolved and validated before
@@ -23,11 +23,11 @@ import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
  * the alternatives, not a process that fails to spawn.
  *
  * <p>
- * Registered adapters are searched first and {@link AcpAgentRuntimeProvider}s only after,
- * so an application with both a compiled adapter and the registry on its classpath gets
- * the adapter for the agent it wrote one for — with its option ids, its {@code _meta}
- * tool names and, for Goose, its served transport — rather than a generic download of the
- * same binary.
+ * Registered adapters are searched first and {@link AcpHarnessRuntimeProvider}s only
+ * after, so an application with both a compiled adapter and the registry on its classpath
+ * gets the adapter for the agent it wrote one for — with its option ids, its
+ * {@code _meta} tool names and, for Goose, its served transport — rather than a generic
+ * download of the same binary.
  *
  * <p>
  * Left unset, {@code spring.ai.acp.harness.runtime} means the one adapter on the
@@ -35,27 +35,27 @@ import org.springaicommunity.acp.harness.runtime.AcpAgentRuntimeProvider;
  * {@code spring-ai-acp-harness-client-boot-starter-codex} has said which agent it wants,
  * and one with several adapters, or only the registry, has to say which.
  */
-public record SelectedRuntime(AcpAgentRuntime runtime) {
+public record SelectedRuntime(AcpHarnessRuntime runtime) {
 
 	private static final Logger logger = LoggerFactory.getLogger(SelectedRuntime.class);
 
-	static SelectedRuntime from(List<AcpAgentRuntime> available, AcpProperties properties) {
+	static SelectedRuntime from(List<AcpHarnessRuntime> available, AcpProperties properties) {
 		return from(available, List.of(), properties);
 	}
 
-	static SelectedRuntime from(List<AcpAgentRuntime> available, List<AcpAgentRuntimeProvider> providers,
+	static SelectedRuntime from(List<AcpHarnessRuntime> available, List<AcpHarnessRuntimeProvider> providers,
 			AcpProperties properties) {
 		requireDistinctIds(available);
-		List<String> adapterIds = available.stream().map(AcpAgentRuntime::id).sorted().toList();
+		List<String> adapterIds = available.stream().map(AcpHarnessRuntime::id).sorted().toList();
 		String id = properties.runtime();
 		if (id == null || id.isBlank()) {
-			AcpAgentRuntime only = onlyAdapter(available, providers, adapterIds);
+			AcpHarnessRuntime only = onlyAdapter(available, providers, adapterIds);
 			requireKnownTierThreeRuntimes(properties, adapterIds, providers, only);
 			return new SelectedRuntime(only);
 		}
 
-		AcpAgentRuntime adapter = available.stream().filter(r -> r.id().equals(id)).findFirst().orElse(null);
-		AcpAgentRuntime selected = adapter != null ? adapter : fromProviders(providers, id, adapterIds);
+		AcpHarnessRuntime adapter = available.stream().filter(r -> r.id().equals(id)).findFirst().orElse(null);
+		AcpHarnessRuntime selected = adapter != null ? adapter : fromProviders(providers, id, adapterIds);
 		if (adapter == null) {
 			logger.info("No adapter claims runtime '{}'; it was resolved from a runtime provider", id);
 		}
@@ -71,10 +71,10 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 	 * Providers never count: the registry can supply dozens of agents, so its presence
 	 * alone says nothing about which one to run.
 	 */
-	private static AcpAgentRuntime onlyAdapter(List<AcpAgentRuntime> available, List<AcpAgentRuntimeProvider> providers,
-			List<String> adapterIds) {
+	private static AcpHarnessRuntime onlyAdapter(List<AcpHarnessRuntime> available,
+			List<AcpHarnessRuntimeProvider> providers, List<String> adapterIds) {
 		if (available.size() == 1) {
-			AcpAgentRuntime only = available.getFirst();
+			AcpHarnessRuntime only = available.getFirst();
 			logger.info(
 					"spring.ai.acp.harness.runtime is not set; using '{}', the only runtime adapter on the classpath",
 					only.id());
@@ -91,15 +91,15 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 						+ " classpath; set it to one of " + adapterIds);
 	}
 
-	private static AcpAgentRuntime fromProviders(List<AcpAgentRuntimeProvider> providers, String id,
+	private static AcpHarnessRuntime fromProviders(List<AcpHarnessRuntimeProvider> providers, String id,
 			List<String> adapterIds) {
-		for (AcpAgentRuntimeProvider provider : providers) {
-			AcpAgentRuntime resolved = provider.forId(id);
+		for (AcpHarnessRuntimeProvider provider : providers) {
+			AcpHarnessRuntime resolved = provider.forId(id);
 			if (resolved != null) {
 				return resolved;
 			}
 		}
-		throw new IllegalStateException("No AcpAgentRuntime registered for spring.ai.acp.harness.runtime='" + id
+		throw new IllegalStateException("No AcpHarnessRuntime registered for spring.ai.acp.harness.runtime='" + id
 				+ "'; registered runtimes are " + adapterIds + suggestion(providers));
 	}
 
@@ -112,7 +112,7 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 	 * the part an operator needs — their own typo, and the adapters they actually have —
 	 * off the top of the terminal.
 	 */
-	private static String suggestion(List<AcpAgentRuntimeProvider> providers) {
+	private static String suggestion(List<AcpHarnessRuntimeProvider> providers) {
 		List<String> known = providers.stream().flatMap(provider -> provider.knownIds().stream()).sorted().toList();
 		if (known.isEmpty()) {
 			return "";
@@ -135,7 +135,7 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 	 * adapter or an id a provider will vouch for now.
 	 */
 	private static void requireKnownTierThreeRuntimes(AcpProperties properties, List<String> adapterIds,
-			List<AcpAgentRuntimeProvider> providers, AcpAgentRuntime selected) {
+			List<AcpHarnessRuntimeProvider> providers, AcpHarnessRuntime selected) {
 		Set<String> known = new LinkedHashSet<>(adapterIds);
 		known.add(selected.id());
 		List<String> unknown = new ArrayList<>();
@@ -166,9 +166,9 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 	 * ordering, which is exactly the kind of surprise this library exists to remove — so
 	 * the message says how to replace the bundled one instead.
 	 */
-	private static void requireDistinctIds(List<AcpAgentRuntime> available) {
-		Map<String, List<AcpAgentRuntime>> byId = available.stream()
-			.collect(Collectors.groupingBy(AcpAgentRuntime::id));
+	private static void requireDistinctIds(List<AcpHarnessRuntime> available) {
+		Map<String, List<AcpHarnessRuntime>> byId = available.stream()
+			.collect(Collectors.groupingBy(AcpHarnessRuntime::id));
 		List<String> duplicated = byId.entrySet()
 			.stream()
 			.filter(e -> e.getValue().size() > 1)
@@ -176,7 +176,7 @@ public record SelectedRuntime(AcpAgentRuntime runtime) {
 			.sorted(Comparator.naturalOrder())
 			.toList();
 		if (!duplicated.isEmpty()) {
-			throw new IllegalStateException("More than one AcpAgentRuntime is registered for " + duplicated
+			throw new IllegalStateException("More than one AcpHarnessRuntime is registered for " + duplicated
 					+ "; to replace a bundled adapter, declare your bean with the same name as the one it replaces"
 					+ " (for example @Bean(\"gooseAgentRuntime\"))");
 		}

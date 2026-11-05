@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.session.StoredSession;
-import org.springaicommunity.acp.harness.session.UnsupportedAcpAgentOperationException;
+import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -72,7 +72,7 @@ public class AcpController {
 		validate(request);
 		String requestId = UUID.randomUUID().toString();
 		try {
-			AcpHarnessClient.AcpAgentResponse response = spec(request).call();
+			AcpHarnessClient.AcpHarnessResponse response = spec(request).call();
 			AcpSchema.StopReason reason = response.completion().reason();
 			return ResponseEntity
 				.ok(new PromptResponse(response.content(), reason == null ? null : reason.toString(), null, requestId));
@@ -102,9 +102,9 @@ public class AcpController {
 		validate(request);
 		return spec(request).stream()
 			.events()
-			.filter(AcpAgentEvent.Text.class::isInstance)
-			.map(AcpAgentEvent.Text.class::cast)
-			.map(AcpAgentEvent.Text::text);
+			.filter(AcpHarnessEvent.Text.class::isInstance)
+			.map(AcpHarnessEvent.Text.class::cast)
+			.map(AcpHarnessEvent.Text::text);
 	}
 
 	/**
@@ -116,7 +116,7 @@ public class AcpController {
 		try {
 			return ResponseEntity.ok(agent.sessions().list());
 		}
-		catch (UnsupportedAcpAgentOperationException ex) {
+		catch (UnsupportedAcpHarnessOperationException ex) {
 			throw new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, ex.getMessage());
 		}
 	}
@@ -149,8 +149,8 @@ public class AcpController {
 		return spec.options(options(request));
 	}
 
-	private AcpAgentOptions options(PromptRequest request) {
-		AcpAgentOptions.Builder builder = AcpAgentOptions.builder();
+	private AcpHarnessOptions options(PromptRequest request) {
+		AcpHarnessOptions.Builder builder = AcpHarnessOptions.builder();
 		if (request.timeout() != null) {
 			builder.timeout(request.timeout());
 		}

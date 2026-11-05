@@ -94,7 +94,7 @@ Ctrl-C at that prompt cancels the request, which the agent hears as a cancellati
 
 ## Customizing
 
-- **How turns look**: register a subclass of `ConsoleRenderer` as a bean. Every method is an override point, and `render(AcpAgentEvent)` is the one each event goes through.
+- **How turns look**: register a subclass of `ConsoleRenderer` as a bean. Every method is an override point, and `render(AcpHarnessEvent)` is the one each event goes through.
 - **Who answers `ask`**: register your own `PermissionPrompt` bean, and the console's backs off. `PermissionQuestion` carries the tool name, the agent's title for the call, its kind and the options.
 - **The terminal**: a JLine `Terminal` bean replaces the system one.
 

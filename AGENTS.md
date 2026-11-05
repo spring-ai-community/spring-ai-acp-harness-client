@@ -29,12 +29,12 @@ Java 21 is required. Use the Maven wrapper:
 ```
 
 - **Live-agent suites cost real tokens, so they are opt-in: `-Dspring-ai-acp-harness-client.test.live=true`**
-  (`LiveAcpAgents`, honoured by `AcpAgentProbe.isUsable`, which every live suite gates on). Without it
+  (`LiveAcpAgents`, honoured by `AcpHarnessProbe.isUsable`, which every live suite gates on). Without it
   nothing is probed and no agent is started. Run them when an adapter changes and before a
   release; `ScriptedAcpAgent`'s wire tests are the always-on gate against protocol regressions.
   They still skip per runtime when the agent is absent or has no credentials.
 - Live contract tests pick the model via `-Dspring-ai-acp-harness-client.test.<runtimeId>.model=...`
-  (otherwise `AcpAgentProbe` chooses).
+  (otherwise `AcpHarnessProbe` chooses).
 - Opt-in tests that download ~24 MB from the real registry:
   `-Dspring-ai-acp-harness-client.test.registry.live=true`.
 - spring-javaformat validates every module in the `validate` phase, so run
@@ -65,7 +65,12 @@ Java 21 is required. Use the Maven wrapper:
 
 ## Architecture
 
-Naming: types on the client side say `AcpHarnessClient`; types that describe the ACP agent say `AcpAgent`.
+Naming: this library creates no agent; it configures an existing agent *harness* (Goose, Codex,
+OpenCode, a registry agent), launches or attaches to it, and talks to it over ACP. So every type is
+`AcpHarness…` (`AcpHarnessClient`, `AcpHarnessRuntime`, `AcpHarnessSession`, `AcpHarnessEvent`),
+never `AcpAgent…`, which is the ACP SDK's own prefix. The exceptions are test doubles that play the
+ACP agent role on the wire (`ScriptedAcpAgent`, `LiveAcpAgents`). In prose, "the agent" is the
+running program, as ACP calls it.
 
 Folder layout: `runtimes/`, `auto-configurations/`, `starters/` and `integrations/` (ai, console,
 mcp-oauth) hold the modules described below; core, test support and `samples/` stay at the root.
@@ -77,13 +82,13 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
 
 - **spring-ai-acp-harness-client**: `client` (fluent `AcpHarnessClient`, pool), `session` (optional session
   ops, gated by capability), `turn` + `event` (demultiplexing session updates into
-  `AcpAgentEvent`; exactly one terminal event per turn), `config` (`ConfigResolver`),
+  `AcpHarnessEvent`; exactly one terminal event per turn), `config` (`ConfigResolver`),
   `permission`, `mcp` (credential-holding loopback proxy), `workspace` (jail for fs/terminal),
   `process`, `protocol` (version negotiation), `observation`, `executor` (legacy
   `GooseExecutor`-shaped facade), `skill` (installs configured skills into the workspace).
 - **Runtime adapters** (`spring-ai-acp-harness-client-runtime-goose|codex|opencode`) implement the
-  `AcpAgentRuntime` SPI (launch spec, provisioning, candidate option ids).
-  `spring-ai-acp-harness-client-runtime-registry` implements `AcpAgentRuntimeProvider`: launches any registry
+  `AcpHarnessRuntime` SPI (launch spec, provisioning, candidate option ids).
+  `spring-ai-acp-harness-client-runtime-registry` implements `AcpHarnessRuntimeProvider`: launches any registry
   agent from catalogue data with SHA-256-verified downloads. A compiled adapter always wins
   over the registry for the same id.
 - **spring-ai-acp-harness-client-boot-autoconfigure / starters**: `spring-ai-acp-harness-client-boot-starter` carries no
@@ -109,8 +114,8 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   directly: `TerminalBuilder` over streams opens a pty whose output is pumped asynchronously.
 - **spring-ai-acp-harness-client-chatmodel**: `AcpChatModel` adapter (a named session sends only unheard messages;
   unnamed sends full history).
-- **spring-ai-acp-harness-client-test**: `AcpAgentRuntimeContract` (the real definition of the abstraction,
-  extended once per adapter), `AcpAgentProbe` (gates suites on a real session, not `--version`),
+- **spring-ai-acp-harness-client-test**: `AcpHarnessRuntimeContract` (the real definition of the abstraction,
+  extended once per adapter), `AcpHarnessProbe` (gates suites on a real session, not `--version`),
   `ScriptedAcpAgent` (fake agent speaking raw JSON-RPC over the SDK's in-memory transport).
 
 ### Non-obvious design points
@@ -138,7 +143,7 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   `/chat/completions` 404s inside its first turn. The adapter is wired correctly; the dialect
   is the constraint.
 - **codex-acp ignores `OPENAI_API_KEY` until the client sends ACP `authenticate`**
-  (`AcpAgentRuntime.authMethod` → `api-key`). A developer's `~/.codex/auth.json` masks this, so
+  (`AcpHarnessRuntime.authMethod` → `api-key`). A developer's `~/.codex/auth.json` masks this, so
   test Codex with an empty `CODEX_HOME`. A configured key moves `CODEX_HOME` and sets
   `cli_auth_credentials_store = "ephemeral"` so the key is never written to disk.
 - **acp-core gaps are worked around, not suppressed** (e.g. `configOptions` dropped from
@@ -147,8 +152,8 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   commented where it lives; keep it that way, since there is no separate list.
 - **An MCP server the agent cannot load is reported nowhere on the wire.** `session/new`
   succeeds, no `session/update` arrives, and goose writes nothing to stdout or stderr — only to
-  its own log file. Hence `AcpAgentRuntime.logDirectory`/`noticeOf` (declarations;
-  `AcpAgentLogWatcher` does the reading), `AcpHarnessClient.notices()`, and
+  its own log file. Hence `AcpHarnessRuntime.logDirectory`/`noticeOf` (declarations;
+  `AcpHarnessLogWatcher` does the reading), `AcpHarnessClient.notices()`, and
   `spring.ai.acp.harness.mcp.on-server-failure`. Goose-only, and only for an agent this client started.
   `tools/mcp-silence-check.py` re-measures it after a goose upgrade. See "When a server fails to
   load" in `docs/configuration/mcp-servers.md`.
@@ -164,7 +169,7 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
 - **Some agents share MCP servers across their sessions.** OpenCode keeps one MCP client per
   server name for the process and each `session/new` replaces it, so every session would call
   through the newest session's route: another user's, or a closed one's.
-  `AcpAgentRuntime.mcpScope()` = `PROCESS` makes `AcpHarnessClientPool` keep a process to one principal
+  `AcpHarnessRuntime.mcpScope()` = `PROCESS` makes `AcpHarnessClientPool` keep a process to one principal
   (restarting an idle one before handing it to another) and `McpAccess` give that principal one
   reference-counted route. `max-processes` is then the concurrent-user cap.
 - **`permissions.policy: ask` blocks on a person.** `PermissionPolicy.decide(request, toolName)`
@@ -175,11 +180,11 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   mode that asks first (`mode: plan`). Workspace jail confines fs/terminal requests by real
   path (symlinks followed), not just `normalize()`.
 - **A plan kept in a tool is reported as the plan.** Goose sends no ACP `plan`; its `todo`
-  extension's `todo__todo_write` tool call carries the whole list as markdown. `AcpAgentRuntime.planOf`
-  recognises such a call (by `_meta`, never the title) and `AcpAgentTurn` emits `PlanUpdated` in its
+  extension's `todo__todo_write` tool call carries the whole list as markdown. `AcpHarnessRuntime.planOf`
+  recognises such a call (by `_meta`, never the title) and `AcpHarnessTurn` emits `PlanUpdated` in its
   place, dropping the call's updates. Goose's parser is `TodoPlan`, pinned by a captured 1.52.0
   `tool_call`.
-- Optional session operations throw `UnsupportedAcpAgentOperationException` naming the ACP method
+- Optional session operations throw `UnsupportedAcpHarnessOperationException` naming the ACP method
   rather than failing on the wire.
 - ACP v2 is gated behind a flag and refused; target v1.
 

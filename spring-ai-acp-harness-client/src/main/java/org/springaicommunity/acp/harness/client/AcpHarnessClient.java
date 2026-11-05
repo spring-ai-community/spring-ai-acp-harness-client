@@ -4,12 +4,12 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.jspecify.annotations.Nullable;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.protocol.AcpProtocol;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 
 import reactor.core.publisher.Flux;
@@ -24,7 +24,7 @@ import reactor.core.publisher.Flux;
  *         .call()
  *         .content();
  *
- * Flux<AcpAgentEvent> events = client.prompt()
+ * Flux<AcpHarnessEvent> events = client.prompt()
  *         .user("Now focus on security")
  *         .stream()
  *         .events();
@@ -52,7 +52,7 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * say.
 	 */
 	@Nullable
-	AcpAgentInfo agentInfo();
+	AcpHarnessInfo agentInfo();
 
 	/**
 	 * The ACP version this connection settled on.
@@ -88,9 +88,9 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * today, and empty for a client that attached to an agent it did not start. A
 	 * non-empty list is the agent's own words — the motivating case is an MCP server it
 	 * could not load, which ACP has no way to tell a client about at all. See
-	 * {@code AcpAgentLogWatcher}.
+	 * {@code AcpHarnessLogWatcher}.
 	 */
-	default List<AcpAgentNotice> notices() {
+	default List<AcpHarnessNotice> notices() {
 		return List.of();
 	}
 
@@ -115,20 +115,20 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * implement, so ask {@code sessions().supports(...)} before spending a round trip on
 	 * finding out.
 	 */
-	AcpAgentSessions sessions();
+	AcpHarnessSessions sessions();
 
 	/**
 	 * The named session, once a turn has opened it; null until then.
 	 *
 	 * <p>
 	 * The way to find out what the negotiated tier actually achieved:
-	 * {@code AcpAgentSession
+	 * {@code AcpHarnessSession
 	 * .configuration()} says, per option, whether the request was applied and by which
 	 * mechanism. With {@code on-unsupported: warn} that is the difference between the
 	 * model an application asked for and the model it is talking to.
 	 */
 	@Nullable
-	AcpAgentSession session(String name);
+	AcpHarnessSession session(String name);
 
 	/**
 	 * Opens the named session now, or returns the one already open, without prompting.
@@ -140,7 +140,7 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * to find out that a requested model is unsupported without paying for a turn to
 	 * discover it.
 	 */
-	AcpAgentSession openSession(String name);
+	AcpHarnessSession openSession(String name);
 
 	/**
 	 * Opens the named session on behalf of {@code principal}, or returns the one already
@@ -153,7 +153,7 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * {@code McpSettings.principals()} instead.
 	 * @param principal who the session is for, or null for nobody
 	 */
-	default AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
+	default AcpHarnessSession openSession(String name, @Nullable SessionPrincipal principal) {
 		if (principal == null) {
 			return openSession(name);
 		}
@@ -176,10 +176,10 @@ public interface AcpHarnessClient extends AutoCloseable {
 		PromptSpec user(String text);
 
 		/** Per-request overrides; null for none. */
-		PromptSpec options(@Nullable AcpAgentOptions options);
+		PromptSpec options(@Nullable AcpHarnessOptions options);
 
 		/** Per-request overrides, built inline. */
-		PromptSpec options(Consumer<AcpAgentOptions.Builder> customizer);
+		PromptSpec options(Consumer<AcpHarnessOptions.Builder> customizer);
 
 		/**
 		 * Runs on behalf of {@code principal}: their MCP credentials, their session.
@@ -204,35 +204,35 @@ public interface AcpHarnessClient extends AutoCloseable {
 		}
 
 		/** Runs the turn and blocks for the assistant text. */
-		AcpAgentResponse call();
+		AcpHarnessResponse call();
 
 		/** Runs the turn and streams it. Cancelling the subscription cancels the turn. */
-		AcpAgentStream stream();
+		AcpHarnessStream stream();
 
 	}
 
 	/** A finished turn. */
-	interface AcpAgentResponse {
+	interface AcpHarnessResponse {
 
 		/** The assistant text, with thoughts and tool activity excluded. */
 		String content();
 
 		/** Why the turn ended. */
-		AcpAgentEvent.Completed completion();
+		AcpHarnessEvent.Completed completion();
 
 	}
 
 	/** A turn in progress. */
-	interface AcpAgentStream {
+	interface AcpHarnessStream {
 
 		/** Every event, ending with exactly one terminal event. */
-		Flux<AcpAgentEvent> events();
+		Flux<AcpHarnessEvent> events();
 
 		/** Assistant text only. */
 		default Flux<String> content() {
-			return events().filter(AcpAgentEvent.Text.class::isInstance)
-				.map(AcpAgentEvent.Text.class::cast)
-				.map(AcpAgentEvent.Text::text);
+			return events().filter(AcpHarnessEvent.Text.class::isInstance)
+				.map(AcpHarnessEvent.Text.class::cast)
+				.map(AcpHarnessEvent.Text::text);
 		}
 
 	}

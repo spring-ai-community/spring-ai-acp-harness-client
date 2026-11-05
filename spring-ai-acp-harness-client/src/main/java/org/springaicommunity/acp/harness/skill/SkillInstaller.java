@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.SkillSpec;
 
 /**
@@ -29,8 +29,8 @@ import org.springaicommunity.acp.harness.config.SkillSpec;
  *
  * <p>
  * The one thing this library writes into the workspace, and deliberately so. Everything
- * an adapter provisions goes under {@link AcpAgentSettings#runtimeHome()}, because it is
- * the agent's own configuration; a skill is content the application asked the agent to
+ * an adapter provisions goes under {@link AcpHarnessSettings#runtimeHome()}, because it
+ * is the agent's own configuration; a skill is content the application asked the agent to
  * have, and the workspace is the only place every agent reads it from without being told.
  * Measured against goose 1.51.0, which has no setting that moves it.
  *
@@ -82,7 +82,7 @@ public final class SkillInstaller {
 	 * Installs {@code settings}' skills, once per workspace and list of skills in this
 	 * JVM.
 	 */
-	public static void installOnce(AcpAgentSettings settings) {
+	public static void installOnce(AcpHarnessSettings settings) {
 		List<Object> key = List.of(settings.workspace(), settings.skills());
 		synchronized (INSTALLED) {
 			if (INSTALLED.contains(key)) {

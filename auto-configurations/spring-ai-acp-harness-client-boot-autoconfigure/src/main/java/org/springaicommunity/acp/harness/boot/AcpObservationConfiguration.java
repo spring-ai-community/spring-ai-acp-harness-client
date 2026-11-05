@@ -6,9 +6,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springaicommunity.acp.harness.observation.AcpAgentObservations;
-import org.springaicommunity.acp.harness.observation.AcpAgentTurnObservationContext;
-import org.springaicommunity.acp.harness.observation.MicrometerAcpAgentObservations;
+import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
+import org.springaicommunity.acp.harness.observation.AcpHarnessTurnObservationContext;
+import org.springaicommunity.acp.harness.observation.MicrometerAcpHarnessObservations;
 import org.springaicommunity.acp.harness.observation.ToolCallObservationContext;
 
 import io.micrometer.observation.ObservationConvention;
@@ -36,14 +36,14 @@ class AcpObservationConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	AcpAgentObservations acpAgentObservations(ObjectProvider<ObservationRegistry> registry,
-			ObjectProvider<ObservationConvention<AcpAgentTurnObservationContext>> turnConvention,
+	AcpHarnessObservations acpHarnessObservations(ObjectProvider<ObservationRegistry> registry,
+			ObjectProvider<ObservationConvention<AcpHarnessTurnObservationContext>> turnConvention,
 			ObjectProvider<ObservationConvention<ToolCallObservationContext>> toolCallConvention) {
 		// NOOP rather than absent: a context with Micrometer on the classpath and no
 		// registry bean
 		// is a legitimate arrangement, and it should cost nothing rather than fail to
 		// start.
-		return new MicrometerAcpAgentObservations(registry.getIfAvailable(() -> ObservationRegistry.NOOP),
+		return new MicrometerAcpHarnessObservations(registry.getIfAvailable(() -> ObservationRegistry.NOOP),
 				turnConvention.getIfAvailable(), toolCallConvention.getIfAvailable());
 	}
 

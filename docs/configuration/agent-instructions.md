@@ -59,7 +59,7 @@ When the application runs from a jar with a workspace it does not own (a contain
 class InstructionsInstaller {
 
     /** Copies classpath:agent/AGENTS.md to the workspace root before the agent is launched. */
-    InstructionsInstaller(AcpAgentSettings settings,
+    InstructionsInstaller(AcpHarnessSettings settings,
             @Value("classpath:agent/AGENTS.md") Resource instructions) throws IOException {
         try (InputStream in = instructions.getInputStream()) {
             Files.copy(in, settings.workspace().resolve("AGENTS.md"), StandardCopyOption.REPLACE_EXISTING);
@@ -68,7 +68,7 @@ class InstructionsInstaller {
 }
 ```
 
-`AcpAgentSettings` is the auto-configured bean carrying the resolved, absolute workspace. The same component is the natural place to render the file from a template if it must vary per deployment.
+`AcpHarnessSettings` is the auto-configured bean carrying the resolved, absolute workspace. The same component is the natural place to render the file from a template if it must vary per deployment.
 
 ## AGENTS.md, skills or prompt?
 

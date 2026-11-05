@@ -21,16 +21,16 @@ import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.PoolSettings;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.observation.AcpAgentObservations;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
 import org.springaicommunity.acp.harness.protocol.AcpProtocol;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.McpScope;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.McpScope;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 import org.springaicommunity.acp.harness.session.StoredSession;
@@ -121,12 +121,13 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	/**
 	 * A pool over the given runtime, connecting through {@link AcpHarnessClientFactory}.
 	 */
-	public AcpHarnessClientPool(AcpAgentRuntime runtime, AcpAgentSettings settings) {
-		this(runtime, settings, AcpAgentObservations.NONE);
+	public AcpHarnessClientPool(AcpHarnessRuntime runtime, AcpHarnessSettings settings) {
+		this(runtime, settings, AcpHarnessObservations.NONE);
 	}
 
 	/** Same, with every turn on every connection reported to {@code observations}. */
-	public AcpHarnessClientPool(AcpAgentRuntime runtime, AcpAgentSettings settings, AcpAgentObservations observations) {
+	public AcpHarnessClientPool(AcpHarnessRuntime runtime, AcpHarnessSettings settings,
+			AcpHarnessObservations observations) {
 		this(runtime.id(), settings, () -> AcpHarnessClientFactory.create(runtime, settings, observations),
 				runtime.mcpScope());
 	}
@@ -135,16 +136,16 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * A pool over an arbitrary supplier of connections.
 	 * @param connect called once per connection, and again when one is replaced
 	 */
-	public AcpHarnessClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpHarnessClient> connect) {
+	public AcpHarnessClientPool(String runtimeId, AcpHarnessSettings settings, Supplier<AcpHarnessClient> connect) {
 		this(runtimeId, settings, connect, McpScope.SESSION);
 	}
 
 	/**
 	 * Same, for a runtime whose MCP scope is given.
 	 * @param mcpScope where the runtime keeps a session's MCP servers; see
-	 * {@link AcpAgentRuntime#mcpScope()}
+	 * {@link AcpHarnessRuntime#mcpScope()}
 	 */
-	public AcpHarnessClientPool(String runtimeId, AcpAgentSettings settings, Supplier<AcpHarnessClient> connect,
+	public AcpHarnessClientPool(String runtimeId, AcpHarnessSettings settings, Supplier<AcpHarnessClient> connect,
 			@Nullable McpScope mcpScope) {
 		this.runtimeId = runtimeId;
 		this.mcpScope = mcpScope == null ? McpScope.SESSION : mcpScope;
@@ -178,7 +179,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * health endpoint.
 	 */
 	@Override
-	public @Nullable AcpAgentInfo agentInfo() {
+	public @Nullable AcpHarnessInfo agentInfo() {
 		return connected().map(AcpHarnessClient::agentInfo).filter(Objects::nonNull).findFirst().orElse(null);
 	}
 
@@ -206,12 +207,12 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	}
 
 	@Override
-	public AcpAgentSession openSession(String name) {
+	public AcpHarnessSession openSession(String name) {
 		return openSession(name, currentPrincipal());
 	}
 
 	@Override
-	public AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
+	public AcpHarnessSession openSession(String name, @Nullable SessionPrincipal principal) {
 		return clientFor(name, principal).openSession(name, principal);
 	}
 
@@ -220,14 +221,14 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	}
 
 	@Override
-	public @Nullable AcpAgentSession session(String name) {
+	public @Nullable AcpHarnessSession session(String name) {
 		Slot slot = assignment.get(name);
 		AcpHarnessClient client = slot == null ? null : slot.connected();
 		return client == null ? null : client.session(name);
 	}
 
 	@Override
-	public AcpAgentSessions sessions() {
+	public AcpHarnessSessions sessions() {
 		return new PooledSessions();
 	}
 
@@ -604,7 +605,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 
 		private @Nullable String sessionName;
 
-		private AcpAgentOptions options = AcpAgentOptions.none();
+		private AcpHarnessOptions options = AcpHarnessOptions.none();
 
 		private @Nullable SessionPrincipal principal;
 
@@ -627,20 +628,20 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public PromptSpec options(@Nullable AcpAgentOptions options) {
-			this.options = options == null ? AcpAgentOptions.none() : options;
+		public PromptSpec options(@Nullable AcpHarnessOptions options) {
+			this.options = options == null ? AcpHarnessOptions.none() : options;
 			return this;
 		}
 
 		@Override
-		public PromptSpec options(Consumer<AcpAgentOptions.Builder> customizer) {
-			AcpAgentOptions.Builder builder = AcpAgentOptions.builder();
+		public PromptSpec options(Consumer<AcpHarnessOptions.Builder> customizer) {
+			AcpHarnessOptions.Builder builder = AcpHarnessOptions.builder();
 			customizer.accept(builder);
 			return options(builder.build());
 		}
 
 		@Override
-		public AcpAgentResponse call() {
+		public AcpHarnessResponse call() {
 			SessionPrincipal owner = owner();
 			Lease lease = lease(owner);
 			try {
@@ -652,7 +653,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public AcpAgentStream stream() {
+		public AcpHarnessStream stream() {
 			// Deferred so that choosing the connection, like everything else about the
 			// turn, happens
 			// on subscription rather than when the stream was described. The principal is
@@ -661,7 +662,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 			SessionPrincipal owner = owner();
 			return () -> Flux.defer(() -> {
 				Lease lease = lease(owner);
-				Flux<AcpAgentEvent> events;
+				Flux<AcpHarnessEvent> events;
 				try {
 					events = delegate(lease.client(), owner).stream().events();
 				}
@@ -698,7 +699,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	}
 
 	/** Session operations across every connection in the pool. */
-	private final class PooledSessions implements AcpAgentSessions {
+	private final class PooledSessions implements AcpHarnessSessions {
 
 		@Override
 		public List<StoredSession> list() {
@@ -711,22 +712,22 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public AcpAgentSession load(String name, String sessionId) {
+		public AcpHarnessSession load(String name, String sessionId) {
 			return load(name, sessionId, currentPrincipal());
 		}
 
 		@Override
-		public AcpAgentSession resume(String name, String sessionId) {
+		public AcpHarnessSession resume(String name, String sessionId) {
 			return resume(name, sessionId, currentPrincipal());
 		}
 
 		@Override
-		public AcpAgentSession load(String name, String sessionId, @Nullable SessionPrincipal principal) {
+		public AcpHarnessSession load(String name, String sessionId, @Nullable SessionPrincipal principal) {
 			return clientFor(name, principal).sessions().load(name, sessionId, principal);
 		}
 
 		@Override
-		public AcpAgentSession resume(String name, String sessionId, @Nullable SessionPrincipal principal) {
+		public AcpHarnessSession resume(String name, String sessionId, @Nullable SessionPrincipal principal) {
 			return clientFor(name, principal).sessions().resume(name, sessionId, principal);
 		}
 
@@ -745,12 +746,12 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		@Override
-		public List<AcpAgentSession> open() {
+		public List<AcpHarnessSession> open() {
 			return connected().flatMap(client -> client.sessions().open().stream()).toList();
 		}
 
 		@Override
-		public @Nullable AcpAgentSession find(String name) {
+		public @Nullable AcpHarnessSession find(String name) {
 			return session(name);
 		}
 

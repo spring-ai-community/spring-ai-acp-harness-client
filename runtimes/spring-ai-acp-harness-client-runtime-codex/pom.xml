@@ -14,7 +14,7 @@
 
     <artifactId>spring-ai-acp-harness-client-runtime-codex</artifactId>
     <name>Spring AI ACP Harness Client Codex Runtime</name>
-    <description>AcpAgentRuntime adapter for the Codex ACP adapter</description>
+    <description>AcpHarnessRuntime adapter for the Codex ACP adapter</description>
 
     <dependencies>
         <!-- Nullability annotations: @Nullable where a value may be absent. -->

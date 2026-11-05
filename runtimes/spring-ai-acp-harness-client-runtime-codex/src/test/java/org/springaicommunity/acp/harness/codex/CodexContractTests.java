@@ -1,9 +1,9 @@
 package org.springaicommunity.acp.harness.codex;
 
 import org.junit.jupiter.api.condition.EnabledIf;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.test.AcpAgentProbe;
-import org.springaicommunity.acp.harness.test.AcpAgentRuntimeContract;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.test.AcpHarnessProbe;
+import org.springaicommunity.acp.harness.test.AcpHarnessRuntimeContract;
 
 /**
  * The portable contract, against the real Codex ACP adapter.
@@ -13,14 +13,14 @@ import org.springaicommunity.acp.harness.test.AcpAgentRuntimeContract;
  * first run downloads the package, which is why the probe's timeout is generous.
  */
 @EnabledIf("usable")
-class CodexContractTests extends AcpAgentRuntimeContract {
+class CodexContractTests extends AcpHarnessRuntimeContract {
 
 	static boolean usable() {
-		return AcpAgentProbe.isUsable(new CodexRuntime());
+		return AcpHarnessProbe.isUsable(new CodexRuntime());
 	}
 
 	@Override
-	protected AcpAgentRuntime runtime() {
+	protected AcpHarnessRuntime runtime() {
 		return new CodexRuntime();
 	}
 

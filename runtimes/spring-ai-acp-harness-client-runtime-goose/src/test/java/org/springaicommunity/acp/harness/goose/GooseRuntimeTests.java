@@ -7,10 +7,10 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.ProviderSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -23,13 +23,13 @@ class GooseRuntimeTests {
 
 	private final GooseRuntime runtime = new GooseRuntime("goose");
 
-	private AcpAgentSettings.Builder settings() {
-		return AcpAgentSettings.builder(GooseRuntime.ID, workspace);
+	private AcpHarnessSettings.Builder settings() {
+		return AcpHarnessSettings.builder(GooseRuntime.ID, workspace);
 	}
 
 	@Test
 	void launchesInAcpModeWithServerSideDefaults() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings().build());
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings().build());
 
 		assertThat(spec.command()).isEqualTo("goose");
 		assertThat(spec.args()).containsExactly("acp");
@@ -39,7 +39,7 @@ class GooseRuntimeTests {
 
 	@Test
 	void buildinsBecomeRepeatedWithBuiltinArguments() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("builtins", "developer,todo")).build());
 
 		assertThat(spec.args()).containsExactly("acp", "--with-builtin", "developer", "--with-builtin", "todo");
@@ -47,7 +47,7 @@ class GooseRuntimeTests {
 
 	@Test
 	void buildinsCanAlsoBeWrittenAsAList() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("builtins", List.of("developer"))).build());
 
 		assertThat(spec.args()).containsExactly("acp", "--with-builtin", "developer");
@@ -60,7 +60,7 @@ class GooseRuntimeTests {
 		// appends the version segment itself.
 		ProviderSpec provider = new ProviderSpec("acme-ai", "openai", URI.create("https://ai.example.com/v1"), "sk-x",
 				Map.of());
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().provider(provider).build());
 
 		assertThat(spec.env()).containsEntry("OPENAI_HOST", "https://ai.example.com")
@@ -75,7 +75,7 @@ class GooseRuntimeTests {
 		// single-variable mapping wrong: the prefix has to survive into OPENAI_HOST.
 		ProviderSpec provider = new ProviderSpec("acme-ai", "openai",
 				URI.create("https://gateway.example.com/team-x/openai"), "sk-x", Map.of());
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().provider(provider).build());
 
 		assertThat(spec.env()).containsEntry("OPENAI_HOST", "https://gateway.example.com/team-x/openai");
@@ -91,7 +91,7 @@ class GooseRuntimeTests {
 		ProviderSpec provider = new ProviderSpec("acme-ai", "openai",
 				URI.create("https://gateway.example.com/team-x/openai"), "sk-x", Map.of());
 
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().provider(provider).build());
 
 		assertThat(spec.env()).doesNotContainKey("OPENAI_BASE_PATH");
@@ -101,7 +101,7 @@ class GooseRuntimeTests {
 	void anApplicationThatMustPinTheDialectStillCan() {
 		ProviderSpec provider = new ProviderSpec("acme-ai", "openai", URI.create("https://ai.example.com/v1"), "sk-x",
 				Map.of());
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings().provider(provider)
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings().provider(provider)
 			.runtimeOptions(Map.of("env.OPENAI_BASE_PATH", "v1/chat/completions"))
 			.build());
 
@@ -112,8 +112,8 @@ class GooseRuntimeTests {
 	void anEndpointOfTheApplicationsOwnNamesItsProviderAndModelAtLaunch() {
 		ProviderSpec provider = new ProviderSpec("acme-ai", "openai", URI.create("https://ai.example.com/v1"), "sk-x",
 				Map.of());
-		AcpAgentSettings settings = settings().provider(provider).model("acme/llm-1").build();
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings);
+		AcpHarnessSettings settings = settings().provider(provider).model("acme/llm-1").build();
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings);
 
 		assertThat(spec.env()).containsEntry("GOOSE_PROVIDER", "openai").containsEntry("GOOSE_MODEL", "acme/llm-1");
 		assertThat(runtime.appliedOutOfBand(PortableOption.MODEL, settings)).isTrue();
@@ -123,10 +123,10 @@ class GooseRuntimeTests {
 	void aVendorTheAgentAlreadyKnowsLeavesTheModelToTheWire() {
 		// Nothing carried out of band, because the protocol can do it and report what
 		// happened.
-		AcpAgentSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
+		AcpHarnessSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
 			.model("gpt-5.6")
 			.build();
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings);
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings);
 
 		assertThat(spec.env()).doesNotContainKey("GOOSE_MODEL").doesNotContainKey("GOOSE_PROVIDER");
 		assertThat(runtime.appliedOutOfBand(PortableOption.MODEL, settings)).isFalse();
@@ -134,7 +134,7 @@ class GooseRuntimeTests {
 
 	@Test
 	void theTierThreeEnvBlockWinsOverTheAdaptersOwnDefaults() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("env.GOOSE_DISABLE_KEYRING", "0")).build());
 
 		assertThat(spec.env()).containsEntry("GOOSE_DISABLE_KEYRING", "0");
@@ -166,22 +166,22 @@ class GooseRuntimeTests {
 	// --- the served transport
 	// ---------------------------------------------------------------
 
-	private AcpAgentLaunchSpec.WebSocket served(Map<String, Object> serve) {
-		AcpAgentSettings settings = AcpAgentSettings.builder("goose", workspace)
+	private AcpHarnessLaunchSpec.WebSocket served(Map<String, Object> serve) {
+		AcpHarnessSettings settings = AcpHarnessSettings.builder("goose", workspace)
 			.runtimeOptions(Map.of("serve", serve))
 			.build();
-		return (AcpAgentLaunchSpec.WebSocket) runtime.launch(settings);
+		return (AcpHarnessLaunchSpec.WebSocket) runtime.launch(settings);
 	}
 
 	@Test
 	void stdioIsTheDefaultTransport() {
-		assertThat(runtime.launch(AcpAgentSettings.builder("goose", workspace).build()))
-			.isInstanceOf(AcpAgentLaunchSpec.Stdio.class);
+		assertThat(runtime.launch(AcpHarnessSettings.builder("goose", workspace).build()))
+			.isInstanceOf(AcpHarnessLaunchSpec.Stdio.class);
 	}
 
 	@Test
 	void theServedTransportStartsGooseServeAndPointsAtItsAcpEndpoint() {
-		AcpAgentLaunchSpec.WebSocket spec = served(Map.of("transport", "websocket", "port", "45231"));
+		AcpHarnessLaunchSpec.WebSocket spec = served(Map.of("transport", "websocket", "port", "45231"));
 
 		assertThat(spec.uri()).isEqualTo(URI.create("ws://127.0.0.1:45231/acp"));
 		assertThat(spec.process().healthUri()).isEqualTo(URI.create("http://127.0.0.1:45231/health"));
@@ -190,7 +190,7 @@ class GooseRuntimeTests {
 
 	@Test
 	void portZeroAsksTheOperatingSystemForOne() {
-		AcpAgentLaunchSpec.WebSocket spec = served(Map.of("transport", "websocket", "port", "0"));
+		AcpHarnessLaunchSpec.WebSocket spec = served(Map.of("transport", "websocket", "port", "0"));
 
 		assertThat(spec.uri().getPort()).isGreaterThan(0);
 	}
@@ -202,7 +202,7 @@ class GooseRuntimeTests {
 	 */
 	@Test
 	void theGeneratedSecretReachesBothTheServerAndTheHeader() {
-		AcpAgentLaunchSpec.WebSocket spec = served(Map.of("transport", "websocket"));
+		AcpHarnessLaunchSpec.WebSocket spec = served(Map.of("transport", "websocket"));
 
 		String fromEnvironment = spec.process().env().get("GOOSE_SERVER__SECRET_KEY");
 		assertThat(fromEnvironment).isNotBlank().hasSize(64);
@@ -217,11 +217,11 @@ class GooseRuntimeTests {
 
 	@Test
 	void builtinsAndTheHardeningEnvironmentSurviveTheSwitchOfTransport() {
-		AcpAgentSettings settings = AcpAgentSettings.builder("goose", workspace)
+		AcpHarnessSettings settings = AcpHarnessSettings.builder("goose", workspace)
 			.runtimeOptions(Map.of("serve", Map.of("transport", "websocket"), "builtins", "developer"))
 			.build();
 
-		AcpAgentLaunchSpec.WebSocket spec = (AcpAgentLaunchSpec.WebSocket) runtime.launch(settings);
+		AcpHarnessLaunchSpec.WebSocket spec = (AcpHarnessLaunchSpec.WebSocket) runtime.launch(settings);
 
 		assertThat(spec.process().args()).contains("--with-builtin", "developer");
 		assertThat(spec.process().env()).containsEntry("GOOSE_DISABLE_KEYRING", "1");

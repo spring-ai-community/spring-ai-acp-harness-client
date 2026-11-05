@@ -16,7 +16,7 @@ import io.micrometer.observation.ObservationConvention;
  * The title is high-cardinality and stays that way. ACP guarantees only that it is prose
  * written for a human — "Read the build file" — so it is neither stable across agents nor
  * bounded in value count, and the stable identifier an allowlist uses lives behind
- * {@code AcpAgentRuntime.toolNameOf} rather than in the event a turn sees.
+ * {@code AcpHarnessRuntime.toolNameOf} rather than in the event a turn sees.
  */
 public class DefaultToolCallObservationConvention implements ObservationConvention<ToolCallObservationContext> {
 

@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
  * <p>
  * For interoperability bugs between one agent and some MCP servers that neither side has
  * fixed yet — the kind of thing that makes an agent drop a server without saying so. An
- * {@code AcpAgentRuntime} contributes these through {@code mcpRequestFilters}, which
+ * {@code AcpHarnessRuntime} contributes these through {@code mcpRequestFilters}, which
  * keeps vendor knowledge in the adapter that owns it; the proxy only runs them. Filters
  * run in order on every request, after the route is known and before credentials are
  * added, and the first to {@link Outcome.Answer answer} ends the chain: nothing reaches

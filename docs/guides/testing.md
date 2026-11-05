@@ -14,7 +14,7 @@ class ReviewControllerTests {
     @Test
     void summarizes() {
         AcpHarnessClient.PromptSpec spec = mock(AcpHarnessClient.PromptSpec.class, RETURNS_SELF);
-        AcpHarnessClient.AcpAgentResponse response = mock(AcpHarnessClient.AcpAgentResponse.class);
+        AcpHarnessClient.AcpHarnessResponse response = mock(AcpHarnessClient.AcpHarnessResponse.class);
         given(acpHarnessClient.prompt()).willReturn(spec);
         given(acpHarnessClient.prompt(anyString())).willReturn(spec);   // prompt(text) is a default method
         given(spec.call()).willReturn(response);
@@ -28,4 +28,4 @@ For a test against a real agent, gate it on the agent being usable so CI without
 
 ## Testing a runtime adapter
 
-`spring-ai-acp-harness-client-test` is for adapter authors. `AcpAgentRuntimeContract` is the conformance suite every compiled adapter extends; it asserts only what ACP standardizes. `ScriptedAcpAgent` is a fake agent speaking raw JSON-RPC over an in-memory transport, and `AcpAgentProbe` skips live suites when an agent is absent or has no credentials. Live suites cost real tokens, so they only run with `-Dspring-ai-acp-harness-client.test.live=true`.
+`spring-ai-acp-harness-client-test` is for adapter authors. `AcpHarnessRuntimeContract` is the conformance suite every compiled adapter extends; it asserts only what ACP standardizes. `ScriptedAcpAgent` is a fake agent speaking raw JSON-RPC over an in-memory transport, and `AcpHarnessProbe` skips live suites when an agent is absent or has no credentials. Live suites cost real tokens, so they only run with `-Dspring-ai-acp-harness-client.test.live=true`.

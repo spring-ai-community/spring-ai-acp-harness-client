@@ -15,13 +15,13 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.PoolSettings;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.McpScope;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.McpScope;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
 import org.springaicommunity.acp.harness.session.StoredSession;
@@ -51,13 +51,13 @@ class AcpHarnessClientPoolTests {
 
 	private final List<FakeClient> created = new ArrayList<>();
 
-	private AcpAgentSettings settings(int processes, int sessionsPerProcess) {
-		return AcpAgentSettings.builder("fake", workspace)
+	private AcpHarnessSettings settings(int processes, int sessionsPerProcess) {
+		return AcpHarnessSettings.builder("fake", workspace)
 			.pool(new PoolSettings(processes, sessionsPerProcess, PoolSettings.DEFAULT_MAX_RESTARTS))
 			.build();
 	}
 
-	private AcpHarnessClientPool pool(AcpAgentSettings settings) {
+	private AcpHarnessClientPool pool(AcpHarnessSettings settings) {
 		return new AcpHarnessClientPool("fake", settings, this::newClient);
 	}
 
@@ -68,7 +68,7 @@ class AcpHarnessClientPoolTests {
 	/**
 	 * A pool over a runtime whose MCP servers are shared by every session in a process.
 	 */
-	private AcpHarnessClientPool processScoped(AcpAgentSettings settings) {
+	private AcpHarnessClientPool processScoped(AcpHarnessSettings settings) {
 		return new AcpHarnessClientPool("fake", settings, this::newClient, McpScope.PROCESS);
 	}
 
@@ -150,7 +150,7 @@ class AcpHarnessClientPoolTests {
 	@Test
 	@DisplayName("a connection that keeps dying is left down rather than respawned forever")
 	void stopsReplacingAfterTheBudget() {
-		AcpAgentSettings settings = AcpAgentSettings.builder("fake", workspace)
+		AcpHarnessSettings settings = AcpHarnessSettings.builder("fake", workspace)
 			.pool(new PoolSettings(1, 32, 2))
 			.build();
 		try (AcpHarnessClientPool pool = new AcpHarnessClientPool("fake", settings, () -> {
@@ -220,7 +220,7 @@ class AcpHarnessClientPoolTests {
 		});
 		ExecutorService caller = Executors.newSingleThreadExecutor();
 		try {
-			Future<AcpAgentSession> opening = caller.submit(() -> pool.openSession("a"));
+			Future<AcpHarnessSession> opening = caller.submit(() -> pool.openSession("a"));
 			assertThat(connecting.await(5, TimeUnit.SECONDS)).isTrue();
 
 			pool.close();
@@ -300,10 +300,10 @@ class AcpHarnessClientPoolTests {
 	@DisplayName("a streamed turn picks its connection on subscription, not when it was described")
 	void streamsAreDeferred() {
 		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
-			AcpHarnessClient.AcpAgentStream stream = pool.prompt("hello").stream();
+			AcpHarnessClient.AcpHarnessStream stream = pool.prompt("hello").stream();
 			assertThat(pool.openConnections()).isZero();
 
-			List<AcpAgentEvent> events = stream.events().collectList().block();
+			List<AcpHarnessEvent> events = stream.events().collectList().block();
 
 			assertThat(events).hasSize(2);
 			assertThat(pool.openConnections()).isEqualTo(1);
@@ -380,7 +380,7 @@ class AcpHarnessClientPoolTests {
 	@Test
 	@DisplayName("process-scoped MCP: handing a process over does not spend the restart budget")
 	void processScopedHandoverIsNotARestart() {
-		AcpAgentSettings settings = AcpAgentSettings.builder("fake", workspace)
+		AcpHarnessSettings settings = AcpHarnessSettings.builder("fake", workspace)
 			.pool(new PoolSettings(1, 32, 1))
 			.build();
 		try (AcpHarnessClientPool pool = processScoped(settings)) {
@@ -399,7 +399,7 @@ class AcpHarnessClientPoolTests {
 	@DisplayName("process-scoped MCP: an unnamed turn holds its process until it ends")
 	void processScopedEphemeralTurnHoldsItsProcess() {
 		try (AcpHarnessClientPool pool = processScoped(settings(1, 32))) {
-			BaseSubscriber<AcpAgentEvent> firstEventOnly = new BaseSubscriber<>() {
+			BaseSubscriber<AcpHarnessEvent> firstEventOnly = new BaseSubscriber<>() {
 				@Override
 				protected void hookOnSubscribe(org.reactivestreams.Subscription subscription) {
 					request(1);
@@ -457,8 +457,8 @@ class AcpHarnessClientPoolTests {
 		}
 
 		@Override
-		public AcpAgentInfo agentInfo() {
-			return new AcpAgentInfo("fake", "1." + index);
+		public AcpHarnessInfo agentInfo() {
+			return new AcpHarnessInfo("fake", "1." + index);
 		}
 
 		@Override
@@ -467,22 +467,22 @@ class AcpHarnessClientPoolTests {
 		}
 
 		@Override
-		public AcpAgentSessions sessions() {
+		public AcpHarnessSessions sessions() {
 			return new FakeSessions();
 		}
 
 		@Override
-		public @Nullable AcpAgentSession session(String name) {
+		public @Nullable AcpHarnessSession session(String name) {
 			return registry.find(name);
 		}
 
 		@Override
-		public AcpAgentSession openSession(String name) {
+		public AcpHarnessSession openSession(String name) {
 			return registry.resolve(name, n -> "sid-" + index + "-" + n);
 		}
 
 		@Override
-		public AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
+		public AcpHarnessSession openSession(String name, @Nullable SessionPrincipal principal) {
 			return registry.resolve(name, principal, n -> new SessionRegistry.Opened("sid-" + index + "-" + n, () -> {
 			}));
 		}
@@ -513,19 +513,19 @@ class AcpHarnessClientPoolTests {
 			}
 
 			@Override
-			public PromptSpec options(@Nullable AcpAgentOptions options) {
+			public PromptSpec options(@Nullable AcpHarnessOptions options) {
 				return this;
 			}
 
 			@Override
-			public PromptSpec options(java.util.function.Consumer<AcpAgentOptions.Builder> customizer) {
+			public PromptSpec options(java.util.function.Consumer<AcpHarnessOptions.Builder> customizer) {
 				return this;
 			}
 
 			@Override
-			public AcpAgentResponse call() {
+			public AcpHarnessResponse call() {
 				run();
-				return new AcpAgentResponse() {
+				return new AcpHarnessResponse() {
 
 					@Override
 					public String content() {
@@ -533,18 +533,18 @@ class AcpHarnessClientPoolTests {
 					}
 
 					@Override
-					public AcpAgentEvent.Completed completion() {
-						return new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN);
+					public AcpHarnessEvent.Completed completion() {
+						return new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN);
 					}
 				};
 			}
 
 			@Override
-			public AcpAgentStream stream() {
+			public AcpHarnessStream stream() {
 				return () -> Flux.defer(() -> {
 					run();
-					return Flux.just(new AcpAgentEvent.Text("ok"),
-							new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+					return Flux.just(new AcpHarnessEvent.Text("ok"),
+							new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 				});
 			}
 
@@ -558,7 +558,7 @@ class AcpHarnessClientPoolTests {
 
 		}
 
-		private final class FakeSessions implements AcpAgentSessions {
+		private final class FakeSessions implements AcpHarnessSessions {
 
 			@Override
 			public List<StoredSession> list() {
@@ -571,12 +571,12 @@ class AcpHarnessClientPoolTests {
 			}
 
 			@Override
-			public AcpAgentSession load(String name, String sessionId) {
+			public AcpHarnessSession load(String name, String sessionId) {
 				return registry.adopt(name, sessionId);
 			}
 
 			@Override
-			public AcpAgentSession resume(String name, String sessionId) {
+			public AcpHarnessSession resume(String name, String sessionId) {
 				return registry.adopt(name, sessionId);
 			}
 
@@ -590,12 +590,12 @@ class AcpHarnessClientPoolTests {
 			}
 
 			@Override
-			public List<AcpAgentSession> open() {
+			public List<AcpHarnessSession> open() {
 				return registry.all();
 			}
 
 			@Override
-			public @Nullable AcpAgentSession find(String name) {
+			public @Nullable AcpHarnessSession find(String name) {
 				return registry.find(name);
 			}
 

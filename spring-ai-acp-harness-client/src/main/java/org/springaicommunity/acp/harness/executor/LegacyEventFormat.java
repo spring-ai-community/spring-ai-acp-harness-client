@@ -5,13 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 
 import com.agentclientprotocol.sdk.json.AcpJsonMapper;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 /**
- * Renders {@link AcpAgentEvent} as the newline-delimited JSON
+ * Renders {@link AcpHarnessEvent} as the newline-delimited JSON
  * {@code goose run --output-format
  * stream-json} emitted, which the buildpack's wrapper then reproduced and its consumers
  * parse.
@@ -45,19 +45,19 @@ final class LegacyEventFormat {
 	 * Zero or more lines for one event. Most events produce exactly one; some produce
 	 * none.
 	 */
-	List<String> render(AcpAgentEvent event) {
+	List<String> render(AcpHarnessEvent event) {
 		return switch (event) {
-			case AcpAgentEvent.Text text -> List.of(message("assistant", textContent(text.text())));
-			case AcpAgentEvent.Thought thought -> List.of(notification(thought.text()));
-			case AcpAgentEvent.ToolCallStarted started -> List.of(message("assistant", toolRequest(started)));
-			case AcpAgentEvent.ToolCallUpdated updated -> toolResponse(updated);
-			case AcpAgentEvent.Completed ignored -> List.of(complete());
-			case AcpAgentEvent.Failed failed -> List.of(notification(describe(failed.cause())), complete());
+			case AcpHarnessEvent.Text text -> List.of(message("assistant", textContent(text.text())));
+			case AcpHarnessEvent.Thought thought -> List.of(notification(thought.text()));
+			case AcpHarnessEvent.ToolCallStarted started -> List.of(message("assistant", toolRequest(started)));
+			case AcpHarnessEvent.ToolCallUpdated updated -> toolResponse(updated);
+			case AcpHarnessEvent.Completed ignored -> List.of(complete());
+			case AcpHarnessEvent.Failed failed -> List.of(notification(describe(failed.cause())), complete());
 			default -> List.of();
 		};
 	}
 
-	private List<String> toolResponse(AcpAgentEvent.ToolCallUpdated updated) {
+	private List<String> toolResponse(AcpHarnessEvent.ToolCallUpdated updated) {
 		boolean finished = updated.status() == AcpSchema.ToolCallStatus.COMPLETED
 				|| updated.status() == AcpSchema.ToolCallStatus.FAILED;
 		if (!finished) {
@@ -70,7 +70,7 @@ final class LegacyEventFormat {
 		return List.of(message("user", item));
 	}
 
-	private Map<String, Object> toolRequest(AcpAgentEvent.ToolCallStarted started) {
+	private Map<String, Object> toolRequest(AcpHarnessEvent.ToolCallStarted started) {
 		Map<String, Object> value = new LinkedHashMap<>();
 		value.put("name", started.title());
 		value.put("arguments", Map.of());

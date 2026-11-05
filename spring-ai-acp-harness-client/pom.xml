@@ -47,8 +47,8 @@
         </dependency>
 
         <!--
-          Optional, like the Spring Boot dependencies: AcpAgentObservations names no Micrometer type,
-          and MicrometerAcpAgentObservations is the only class that does. An application without
+          Optional, like the Spring Boot dependencies: AcpHarnessObservations names no Micrometer type,
+          and MicrometerAcpHarnessObservations is the only class that does. An application without
           Micrometer never loads it and never needs it on the classpath.
         -->
         <dependency>

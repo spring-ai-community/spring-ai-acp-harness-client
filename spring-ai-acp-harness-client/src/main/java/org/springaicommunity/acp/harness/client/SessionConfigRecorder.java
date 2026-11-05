@@ -42,7 +42,7 @@ import reactor.core.publisher.Mono;
  * {@code LoadSessionResponse} and {@code ResumeSessionResponse} have the same gap and one
  * extra difficulty: neither response carries the session id, so there is nothing to key
  * the options on. Those are stashed unattributed and claimed by the caller that just made
- * the call, which is only sound because {@code AcpAgentSessions} serializes load and
+ * the call, which is only sound because {@code AcpHarnessSessions} serializes load and
  * resume. Best effort by construction — an agent that returns no options there costs a
  * fallback to {@code modes}/{@code models}, not a failure.
  *

@@ -33,7 +33,7 @@ String out = acpHarnessClient.prompt()
         .user("Inspect this change")
         .call().content();
 
-Flux<AcpAgentEvent> events = acpHarnessClient.prompt()
+Flux<AcpHarnessEvent> events = acpHarnessClient.prompt()
         .user("Now focus on security")
         .stream().events();     // Text, Thought, ToolCallStarted, PlanUpdated, Completed…
 ```
@@ -84,17 +84,17 @@ library has never had a line of code about: no adapter, just a catalogue entry.
 690 tests: 637 run anywhere (including 55 against a scripted agent speaking raw JSON-RPC over an
 in-memory transport), 51 drive real agents, are opt-in, and skip themselves when one is not usable
 here, and 2 download a real agent from the real registry and are opt-in. Of the live ones, 48 are the
-same 16 assertions run against each adapter: `AcpAgentRuntimeContract`, which is the actual definition of the
+same 16 assertions run against each adapter: `AcpHarnessRuntimeContract`, which is the actual definition of the
 abstraction, since an interface alone cannot stop three adapters behaving differently enough that an
 application cannot move between them.
 
 M3 added session list/load/resume/delete (capability-gated, because no two agents implement the
 same set), a workspace jail for the filesystem and terminal methods, connection pooling with idle
 session sweeping, a supervised `goose serve` over WebSocket, a standalone `agents.yaml`, an opt-in
-HTTP endpoint, and an `AcpAgentExecutor` facade with the old `GooseExecutor` signatures.
+HTTP endpoint, and an `AcpHarnessExecutor` facade with the old `GooseExecutor` signatures.
 
 M4 added the registry-driven runtime with SHA-256-verified downloads, `AcpChatModel` for Spring AI,
-a Micrometer observation per turn and per tool call, `AcpAgentEvent.UsageUpdated`, and real ACP version
+a Micrometer observation per turn and per tool call, `AcpHarnessEvent.UsageUpdated`, and real ACP version
 negotiation behind a feature flag.
 
 The [reference documentation](https://spring-ai-community.github.io/spring-ai-acp-harness-client/latest-snapshot/)
@@ -183,7 +183,7 @@ ACP standardizes the *conversation*, not the *provisioning*. So configuration co
 The negotiated tier is the crux: `session/set_config_option` is a standard method, but its option
 IDs and values are agent-declared, so `model:` is a request rather than an assignment.
 `on-unsupported` (`fail` / `warn` / `ignore`) decides what happens when a runtime cannot honor one,
-and `AcpAgentSession.configuration()` reports what actually took effect.
+and `AcpHarnessSession.configuration()` reports what actually took effect.
 
 Two things that tier turned out to require, both measured rather than guessed:
 
@@ -236,7 +236,7 @@ if (acpHarnessClient.sessions().supports(Operation.LOAD)) {
 }
 ```
 
-An operation the agent never advertised throws `UnsupportedAcpAgentOperationException` naming the ACP
+An operation the agent never advertised throws `UnsupportedAcpHarnessOperationException` naming the ACP
 method, rather than failing on the wire with a code the caller has to interpret.
 
 ## An agent nobody wrote an adapter for

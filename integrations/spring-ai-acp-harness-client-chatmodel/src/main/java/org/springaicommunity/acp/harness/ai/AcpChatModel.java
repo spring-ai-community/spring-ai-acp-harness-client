@@ -22,8 +22,8 @@ import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 
 import reactor.core.publisher.Flux;
 
@@ -107,7 +107,7 @@ public class AcpChatModel implements ChatModel {
 	@Override
 	public ChatResponse call(Prompt prompt) {
 		AcpChatOptions options = options(prompt);
-		AcpHarnessClient.AcpAgentResponse response = spec(prompt, options).call();
+		AcpHarnessClient.AcpHarnessResponse response = spec(prompt, options).call();
 		return new ChatResponse(
 				List.of(new Generation(new AssistantMessage(response.content()),
 						ChatGenerationMetadata.builder().finishReason(finishReason(response.completion())).build())),
@@ -119,14 +119,14 @@ public class AcpChatModel implements ChatModel {
 		AcpChatOptions options = options(prompt);
 		return Flux.defer(() -> {
 			// The last usage the agent reported, so the terminal chunk can carry it.
-			AtomicReference<AcpAgentEvent.UsageUpdated> usage = new AtomicReference<>();
+			AtomicReference<AcpHarnessEvent.UsageUpdated> usage = new AtomicReference<>();
 			return spec(prompt, options).stream().events().handle((event, sink) -> {
 				switch (event) {
-					case AcpAgentEvent.Text text -> sink.next(chunk(text.text(), null, options, usage.get()));
-					case AcpAgentEvent.UsageUpdated updated -> usage.set(updated);
-					case AcpAgentEvent.Completed completed ->
+					case AcpHarnessEvent.Text text -> sink.next(chunk(text.text(), null, options, usage.get()));
+					case AcpHarnessEvent.UsageUpdated updated -> usage.set(updated);
+					case AcpHarnessEvent.Completed completed ->
 						sink.next(chunk("", finishReason(completed), options, usage.get()));
-					case AcpAgentEvent.Failed failed -> sink.error(failed.cause());
+					case AcpHarnessEvent.Failed failed -> sink.error(failed.cause());
 					default -> {
 						// Thoughts, tool calls and plans are agent activity, not
 						// assistant output.
@@ -141,7 +141,7 @@ public class AcpChatModel implements ChatModel {
 	}
 
 	private ChatResponse chunk(String text, @Nullable String finishReason, AcpChatOptions options,
-			AcpAgentEvent.@Nullable UsageUpdated usage) {
+			AcpHarnessEvent.@Nullable UsageUpdated usage) {
 		ChatGenerationMetadata generationMetadata = finishReason == null ? ChatGenerationMetadata.NULL
 				: ChatGenerationMetadata.builder().finishReason(finishReason).build();
 		return new ChatResponse(List.of(new Generation(new AssistantMessage(text), generationMetadata)),
@@ -290,7 +290,7 @@ public class AcpChatModel implements ChatModel {
 	 * for. The two ACP reasons with no equivalent keep their own names rather than being
 	 * flattened into one of these.
 	 */
-	private static String finishReason(AcpAgentEvent.Completed completed) {
+	private static String finishReason(AcpHarnessEvent.Completed completed) {
 		if (completed == null || completed.reason() == null) {
 			return "STOP";
 		}
@@ -314,7 +314,7 @@ public class AcpChatModel implements ChatModel {
 	 * measurements, and putting one in the other's field would put a number that means
 	 * "the whole conversation so far" where every dashboard reads "this call".
 	 */
-	private ChatResponseMetadata metadata(AcpChatOptions options, AcpAgentEvent.@Nullable UsageUpdated usage) {
+	private ChatResponseMetadata metadata(AcpChatOptions options, AcpHarnessEvent.@Nullable UsageUpdated usage) {
 		ChatResponseMetadata.Builder builder = ChatResponseMetadata.builder()
 			.model(modelOf(options))
 			.keyValue("acp.runtime", client.runtimeId());
@@ -340,7 +340,7 @@ public class AcpChatModel implements ChatModel {
 		if (options.getSession() != null) {
 			var session = client.session(options.getSession());
 			String applied = session == null ? null
-					: session.configuration().applied(AcpAgentRuntime.PortableOption.MODEL);
+					: session.configuration().applied(AcpHarnessRuntime.PortableOption.MODEL);
 			if (applied != null) {
 				return applied;
 			}

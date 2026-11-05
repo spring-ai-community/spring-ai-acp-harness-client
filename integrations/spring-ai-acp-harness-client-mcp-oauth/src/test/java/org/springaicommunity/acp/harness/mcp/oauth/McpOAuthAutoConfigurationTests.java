@@ -20,10 +20,10 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springaicommunity.acp.harness.boot.AcpAutoConfiguration;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.mcp.McpCredentialsProvider;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,7 +53,7 @@ class McpOAuthAutoConfigurationTests {
 				assertThat(context).hasNotFailed();
 				assertThat(context).doesNotHaveBean(McpCredentialsProvider.class);
 				assertThat(context).doesNotHaveBean(ClientRegistrationRepository.class);
-				assertThat(context.getBean(AcpAgentSettings.class).mcp().credentials())
+				assertThat(context.getBean(AcpHarnessSettings.class).mcp().credentials())
 					.isSameAs(McpCredentialsProvider.none());
 			});
 	}
@@ -61,7 +61,7 @@ class McpOAuthAutoConfigurationTests {
 	@Test
 	void wiresTheProviderResolverAndSpringSecurityBeansForAnOAuthServer() {
 		runner().withPropertyValues(OAUTH_SERVER).run(context -> {
-			AcpAgentSettings settings = context.getBean(AcpAgentSettings.class);
+			AcpHarnessSettings settings = context.getBean(AcpHarnessSettings.class);
 			assertThat(settings.mcp().credentials()).isInstanceOf(OAuth2McpCredentialsProvider.class);
 			assertThat(settings.mcp().principals()).isInstanceOf(SecurityContextPrincipalResolver.class);
 			assertThat(context.getBean(OAuth2McpCredentialsProvider.class).serverNames()).containsExactly("finops-mcp");
@@ -120,7 +120,7 @@ class McpOAuthAutoConfigurationTests {
 		SessionPrincipalResolver own = SessionPrincipalResolver.none();
 		runner().withPropertyValues(OAUTH_SERVER)
 			.withBean(SessionPrincipalResolver.class, () -> own)
-			.run(context -> assertThat(context.getBean(AcpAgentSettings.class).mcp().principals()).isSameAs(own));
+			.run(context -> assertThat(context.getBean(AcpHarnessSettings.class).mcp().principals()).isSameAs(own));
 	}
 
 	@Test
@@ -134,7 +134,7 @@ class McpOAuthAutoConfigurationTests {
 				assertThat(context.getBean(McpSignIn.class)).isInstanceOf(LoopbackSignIn.class);
 				assertThat(context.getBean(McpClientRegistrationRepository.class))
 					.isSameAs(context.getBean(FileMcpOAuthStore.class).registrations());
-				assertThat(context.getBean(AcpAgentSettings.class).mcp().principals())
+				assertThat(context.getBean(AcpHarnessSettings.class).mcp().principals())
 					.isInstanceOf(LocalPrincipalResolver.class);
 			});
 	}
@@ -154,15 +154,15 @@ class McpOAuthAutoConfigurationTests {
 	static class NoAcpAgent {
 
 		@Bean
-		AcpAgentRuntime testRuntime() {
-			return new AcpAgentRuntime() {
+		AcpHarnessRuntime testRuntime() {
+			return new AcpHarnessRuntime() {
 				@Override
 				public String id() {
 					return "test";
 				}
 
 				@Override
-				public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+				public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 					throw new UnsupportedOperationException("no agent in this test");
 				}
 			};

@@ -7,9 +7,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,13 +48,14 @@ class RegistryLiveInstallTests {
 	@Test
 	@DisplayName("an agent from the published catalogue installs and verifies against its own sha256")
 	void installsARealAgentFromTheRealRegistry() throws Exception {
-		AcpAgentRegistry registry = new AcpAgentRegistry(
+		AcpHarnessRegistry registry = new AcpHarnessRegistry(
 				new RegistrySettings(null, temp.resolve("cache"), null, false, true, null));
 		RegistryEntry entry = java.util.Objects.requireNonNull(registry.find(AGENT));
 		assertThat(entry.distribution()).isInstanceOf(RegistryEntry.Distribution.Binary.class);
 
-		AcpAgentRuntime runtime = java.util.Objects.requireNonNull(
-				new RegistryAcpAgentRuntimeProvider(registry, new AcpAgentInstaller(registry.settings())).forId(AGENT));
+		AcpHarnessRuntime runtime = java.util.Objects.requireNonNull(
+				new RegistryAcpHarnessRuntimeProvider(registry, new AcpHarnessInstaller(registry.settings()))
+					.forId(AGENT));
 		Path workspace = Files.createDirectories(temp.resolve("workspace"));
 
 		// The download, the digest check and the unpack all happen here: launch() is the
@@ -62,9 +63,9 @@ class RegistryLiveInstallTests {
 		// moment an agent is needed, which is why a misconfigured one does not stop a
 		// context
 		// refreshing.
-		AcpAgentLaunchSpec spec = runtime.launch(AcpAgentSettings.builder(AGENT, workspace).build());
+		AcpHarnessLaunchSpec spec = runtime.launch(AcpHarnessSettings.builder(AGENT, workspace).build());
 
-		assertThat(spec).isInstanceOfSatisfying(AcpAgentLaunchSpec.Stdio.class, stdio -> {
+		assertThat(spec).isInstanceOfSatisfying(AcpHarnessLaunchSpec.Stdio.class, stdio -> {
 			assertThat(Path.of(stdio.command())).isRegularFile().isExecutable();
 			assertThat(stdio.args()).isNotNull();
 		});
@@ -73,17 +74,17 @@ class RegistryLiveInstallTests {
 	@Test
 	@DisplayName("a second install of the same version is a cache hit, not a second download")
 	void doesNotDownloadAnAgentItAlreadyHas() throws Exception {
-		AcpAgentRegistry registry = new AcpAgentRegistry(
+		AcpHarnessRegistry registry = new AcpHarnessRegistry(
 				new RegistrySettings(null, temp.resolve("cache"), null, false, true, null));
 		RegistryEntry entry = java.util.Objects.requireNonNull(registry.find(AGENT));
-		AcpAgentInstaller installer = new AcpAgentInstaller(registry.settings());
+		AcpHarnessInstaller installer = new AcpHarnessInstaller(registry.settings());
 		RegistryEntry.Artifact artifact = java.util.Objects
 			.requireNonNull(((RegistryEntry.Distribution.Binary) entry.distribution()).forPlatform(Platform.current()));
 
 		Path first = installer.install(entry, artifact);
 		// A fresh installer, so the answer comes off the disk rather than out of the memo
 		// table.
-		Path second = new AcpAgentInstaller(registry.settings()).install(entry, artifact);
+		Path second = new AcpHarnessInstaller(registry.settings()).install(entry, artifact);
 
 		assertThat(second).isEqualTo(first);
 	}

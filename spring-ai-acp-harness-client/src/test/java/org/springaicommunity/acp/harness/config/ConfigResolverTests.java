@@ -9,10 +9,10 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
 
 import com.agentclientprotocol.sdk.capabilities.NegotiatedCapabilities;
@@ -39,14 +39,14 @@ class ConfigResolverTests {
 
 	private final AcpAsyncClient client = mock(AcpAsyncClient.class);
 
-	private final AcpAgentSession session = new SessionRegistry().resolve("s", name -> "sid-1");
+	private final AcpHarnessSession session = new SessionRegistry().resolve("s", name -> "sid-1");
 
-	private AcpAgentSettings settings() {
-		return AcpAgentSettings.builder("fake", workspace).build();
+	private AcpHarnessSettings settings() {
+		return AcpHarnessSettings.builder("fake", workspace).build();
 	}
 
-	private AcpAgentSettings settings(java.util.function.Consumer<AcpAgentSettings.Builder> customizer) {
-		AcpAgentSettings.Builder builder = AcpAgentSettings.builder("fake", workspace);
+	private AcpHarnessSettings settings(java.util.function.Consumer<AcpHarnessSettings.Builder> customizer) {
+		AcpHarnessSettings.Builder builder = AcpHarnessSettings.builder("fake", workspace);
 		customizer.accept(builder);
 		return builder.build();
 	}
@@ -60,11 +60,11 @@ class ConfigResolverTests {
 			.thenReturn(Mono.just(new AcpSchema.SetSessionConfigOptionResponse(List.of())));
 	}
 
-	private SessionConfiguration resolve(AcpAgentRuntime runtime, AcpAgentSettings settings) {
+	private SessionConfiguration resolve(AcpHarnessRuntime runtime, AcpHarnessSettings settings) {
 		return resolve(runtime, settings, ModelCatalog.none());
 	}
 
-	private SessionConfiguration resolve(AcpAgentRuntime runtime, AcpAgentSettings settings, ModelCatalog catalog) {
+	private SessionConfiguration resolve(AcpHarnessRuntime runtime, AcpHarnessSettings settings, ModelCatalog catalog) {
 		return new ConfigResolver(runtime, settings.onUnsupported(), catalog).apply(client, session, settings)
 			.block(Duration.ofSeconds(5));
 	}
@@ -111,7 +111,7 @@ class ConfigResolverTests {
 				select("collaboration_mode", "collaboration_mode", "default", "default", "plan"));
 		acceptsConfigOption();
 
-		AcpAgentRuntime codexLike = new FakeRuntime() {
+		AcpHarnessRuntime codexLike = new FakeRuntime() {
 			@Override
 			public List<String> configIdsFor(PortableOption option) {
 				return option == PortableOption.MODE ? List.of("mode", "collaboration_mode")
@@ -195,9 +195,9 @@ class ConfigResolverTests {
 
 	@Test
 	void anAdapterThatCarriedTheOptionAtLaunchIsNotReportedUnsupported() {
-		AcpAgentRuntime envMapping = new FakeRuntime() {
+		AcpHarnessRuntime envMapping = new FakeRuntime() {
 			@Override
-			public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
+			public boolean appliedOutOfBand(PortableOption option, AcpHarnessSettings settings) {
 				return option == PortableOption.PROVIDER;
 			}
 		};
@@ -213,10 +213,10 @@ class ConfigResolverTests {
 
 	@Test
 	void onUnsupportedFailThrows() {
-		AcpAgentSettings strict = settings(b -> b.model("nope").onUnsupported(OnUnsupported.FAIL));
+		AcpHarnessSettings strict = settings(b -> b.model("nope").onUnsupported(OnUnsupported.FAIL));
 
 		assertThatThrownBy(() -> resolve(new FakeRuntime(), strict))
-			.isInstanceOf(UnsupportedAcpAgentOptionException.class)
+			.isInstanceOf(UnsupportedAcpHarnessOptionException.class)
 			.hasMessageContaining("model='nope'");
 	}
 
@@ -260,9 +260,9 @@ class ConfigResolverTests {
 		when(client.getAgentCapabilities()).thenReturn(NegotiatedCapabilities.fromAgent(
 				new AcpSchema.AgentCapabilities(false, null, null, null, new AcpSchema.ProvidersCapabilities(), null)));
 		when(client.setProvider(any())).thenReturn(Mono.error(new IllegalStateException("Invalid params")));
-		AcpAgentRuntime carriedAtLaunch = new FakeRuntime() {
+		AcpHarnessRuntime carriedAtLaunch = new FakeRuntime() {
 			@Override
-			public boolean appliedOutOfBand(PortableOption option, AcpAgentSettings settings) {
+			public boolean appliedOutOfBand(PortableOption option, AcpHarnessSettings settings) {
 				return option == PortableOption.PROVIDER;
 			}
 		};
@@ -344,11 +344,11 @@ class ConfigResolverTests {
 	void anEndpointThatRefusesAModelStillFailsUnderOnUnsupportedFail() {
 		advertise(select("provider", "provider", "acme", "acme"), select("model", "model", "gpt-4o", "gpt-4o"));
 		acceptsConfigOption();
-		AcpAgentSettings strict = settings(
+		AcpHarnessSettings strict = settings(
 				b -> b.provider(byo()).model("acme/llm-2").onUnsupported(OnUnsupported.FAIL));
 
 		assertThatThrownBy(() -> resolve(new FakeRuntime(), strict, serving("acme/llm-1")))
-			.isInstanceOf(UnsupportedAcpAgentOptionException.class)
+			.isInstanceOf(UnsupportedAcpHarnessOptionException.class)
 			.hasMessageContaining("acme/llm-1");
 	}
 
@@ -384,7 +384,7 @@ class ConfigResolverTests {
 	 * A runtime with no vendor behavior at all, so each test adds only the one thing it
 	 * is about.
 	 */
-	private static class FakeRuntime implements AcpAgentRuntime {
+	private static class FakeRuntime implements AcpHarnessRuntime {
 
 		@Override
 		public String id() {
@@ -392,8 +392,8 @@ class ConfigResolverTests {
 		}
 
 		@Override
-		public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
-			return new AcpAgentLaunchSpec.Stdio("true", List.of(), Map.of());
+		public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
+			return new AcpHarnessLaunchSpec.Stdio("true", List.of(), Map.of());
 		}
 
 	}

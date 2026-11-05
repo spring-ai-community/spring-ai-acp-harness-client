@@ -12,19 +12,19 @@ import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientPool;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.config.OnUnsupported;
 import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
 import org.springaicommunity.acp.harness.config.PoolSettings;
-import org.springaicommunity.acp.harness.config.UnsupportedAcpAgentOptionException;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.config.UnsupportedAcpHarnessOptionException;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.StoredSession;
-import org.springaicommunity.acp.harness.session.UnsupportedAcpAgentOperationException;
+import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -49,24 +49,24 @@ class AcpHarnessClientWireTests {
 
 	private static final Duration LIMIT = Duration.ofSeconds(10);
 
-	private AcpAgentSettings.Builder settings() {
-		return AcpAgentSettings.builder("scripted", workspace).timeout(LIMIT);
+	private AcpHarnessSettings.Builder settings() {
+		return AcpHarnessSettings.builder("scripted", workspace).timeout(LIMIT);
 	}
 
-	private AcpHarnessClient connect(ScriptedAcpAgent agent, AcpAgentSettings settings) {
+	private AcpHarnessClient connect(ScriptedAcpAgent agent, AcpHarnessSettings settings) {
 		return AcpHarnessClientFactory.connect(new ScriptedRuntime(), settings, agent.transport());
 	}
 
-	private AcpHarnessClient connect(ScriptedAcpAgent agent, AcpAgentSettings settings,
-			org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher) {
+	private AcpHarnessClient connect(ScriptedAcpAgent agent, AcpHarnessSettings settings,
+			org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher) {
 		return AcpHarnessClientFactory.connect(new ScriptedRuntime(), settings, agent.transport(),
-				org.springaicommunity.acp.harness.observation.AcpAgentObservations.NONE, watcher);
+				org.springaicommunity.acp.harness.observation.AcpHarnessObservations.NONE, watcher);
 	}
 
 	/** A watcher over a log written by hand, standing in for one the agent wrote. */
-	private org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher(java.nio.file.Path logs) {
-		org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher = new org.springaicommunity.acp.harness.process.AcpAgentLogWatcher(
-				logs, line -> line.startsWith("FAILED ") ? org.springaicommunity.acp.harness.runtime.AcpAgentNotice
+	private org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher(java.nio.file.Path logs) {
+		org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher = new org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher(
+				logs, line -> line.startsWith("FAILED ") ? org.springaicommunity.acp.harness.runtime.AcpHarnessNotice
 					.warning(line.substring(7).split(" ")[0], line) : null);
 		watcher.start();
 		return watcher;
@@ -156,7 +156,7 @@ class AcpHarnessClientWireTests {
 	private AcpHarnessClient connectSigningInWith(ScriptedAcpAgent agent, String method) {
 		ScriptedRuntime runtime = new ScriptedRuntime() {
 			@Override
-			public String authMethod(AcpAgentSettings settings) {
+			public String authMethod(AcpHarnessSettings settings) {
 				return method;
 			}
 		};
@@ -241,10 +241,10 @@ class AcpHarnessClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().emitsUnknownUpdate(true).reply("one", "two").build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
-			List<AcpAgentEvent> events = client.prompt("hi").stream().events().collectList().block(LIMIT);
+			List<AcpHarnessEvent> events = client.prompt("hi").stream().events().collectList().block(LIMIT);
 
-			assertThat(events).containsExactly(new AcpAgentEvent.Text("one"), new AcpAgentEvent.Text("two"),
-					new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+			assertThat(events).containsExactly(new AcpHarnessEvent.Text("one"), new AcpHarnessEvent.Text("two"),
+					new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 		}
 	}
 
@@ -274,7 +274,8 @@ class AcpHarnessClientWireTests {
 				AcpHarnessClient client = connect(agent,
 						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
 
-			assertThatThrownBy(() -> client.prompt("hi").call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+			assertThatThrownBy(() -> client.prompt("hi").call())
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 			assertThat(agent.prompts()).isZero();
 		}
 	}
@@ -333,7 +334,7 @@ class AcpHarnessClientWireTests {
 		};
 	}
 
-	private AcpAgentSettings.Builder withProtectedServer(
+	private AcpHarnessSettings.Builder withProtectedServer(
 			org.springaicommunity.acp.harness.mcp.McpCredentialsProvider provider,
 			org.springaicommunity.acp.harness.session.SessionPrincipalResolver principals) {
 		McpServerSpec server = new McpServerSpec.Http("finops-mcp",
@@ -464,20 +465,20 @@ class AcpHarnessClientWireTests {
 						withProtectedServer(tokensPerUser(askedFor), resolver).build())) {
 
 			signedIn.set("alice");
-			AcpHarnessClient.AcpAgentStream stream = client.prompt().session("s").user("hi").stream();
+			AcpHarnessClient.AcpHarnessStream stream = client.prompt().session("s").user("hi").stream();
 			signedIn.remove();
 
 			StepVerifier
 				.create(stream.events()
 					.subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
-					.filter(AcpAgentEvent.Completed.class::isInstance))
+					.filter(AcpHarnessEvent.Completed.class::isInstance))
 				.expectNextCount(1)
 				.verifyComplete();
 
 			assertThat(askedFor)
 				.containsExactly(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
 			assertThat(client.session("s")).isNotNull()
-				.extracting(org.springaicommunity.acp.harness.session.AcpAgentSession::principal)
+				.extracting(org.springaicommunity.acp.harness.session.AcpHarnessSession::principal)
 				.isEqualTo(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
 		}
 	}
@@ -488,19 +489,19 @@ class AcpHarnessClientWireTests {
 		ThreadLocal<String> signedIn = new ThreadLocal<>();
 		org.springaicommunity.acp.harness.session.SessionPrincipalResolver resolver = () -> signedIn.get() == null
 				? null : org.springaicommunity.acp.harness.session.SessionPrincipal.of(signedIn.get());
-		AcpAgentSettings settings = withProtectedServer(tokensPerUser(askedFor), resolver).build();
+		AcpHarnessSettings settings = withProtectedServer(tokensPerUser(askedFor), resolver).build();
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
 				AcpHarnessClient pool = new org.springaicommunity.acp.harness.client.AcpHarnessClientPool("scripted",
 						settings, () -> connect(agent, settings))) {
 
 			signedIn.set("alice");
-			AcpHarnessClient.AcpAgentStream stream = pool.prompt().session("s").user("hi").stream();
+			AcpHarnessClient.AcpHarnessStream stream = pool.prompt().session("s").user("hi").stream();
 			signedIn.remove();
 			StepVerifier
 				.create(stream.events()
 					.subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
-					.filter(AcpAgentEvent.Completed.class::isInstance))
+					.filter(AcpHarnessEvent.Completed.class::isInstance))
 				.expectNextCount(1)
 				.verifyComplete();
 
@@ -531,17 +532,17 @@ class AcpHarnessClientWireTests {
 			assertThat(askedFor).containsExactly(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"),
 					org.springaicommunity.acp.harness.session.SessionPrincipal.of("bob"));
 			assertThat(client.session("a")).isNotNull()
-				.extracting(org.springaicommunity.acp.harness.session.AcpAgentSession::principal)
+				.extracting(org.springaicommunity.acp.harness.session.AcpHarnessSession::principal)
 				.isEqualTo(org.springaicommunity.acp.harness.session.SessionPrincipal.of("alice"));
 		}
 	}
 
 	@Test
 	void anAdaptersMcpWorkaroundPutsEveryHttpServerBehindTheProxyEvenWithoutCredentials() throws Exception {
-		AcpAgentRuntime withWorkaround = new ScriptedRuntime() {
+		AcpHarnessRuntime withWorkaround = new ScriptedRuntime() {
 			@Override
 			public List<org.springaicommunity.acp.harness.mcp.McpRequestFilter> mcpRequestFilters(
-					AcpAgentSettings settings) {
+					AcpHarnessSettings settings) {
 				return List.of(request -> org.springaicommunity.acp.harness.mcp.McpRequestFilter.Outcome.Answer
 					.json(200, "{}"));
 			}
@@ -588,7 +589,8 @@ class AcpHarnessClientWireTests {
 				AcpHarnessClient client = connect(agent,
 						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
 
-			assertThatThrownBy(() -> client.prompt("hi").call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+			assertThatThrownBy(() -> client.prompt("hi").call())
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(client.sessions().open()).isEmpty();
 			assertThat(agent.methods()).contains("session/close");
@@ -597,7 +599,7 @@ class AcpHarnessClientWireTests {
 
 	@Test
 	void aThrowawayTurnThatCannotBeConfiguredReleasesItsMcpRoute() throws Exception {
-		AcpAgentSettings settings = withProtectedServer(
+		AcpHarnessSettings settings = withProtectedServer(
 				tokensPerUser(new java.util.concurrent.CopyOnWriteArrayList<>()), null)
 			.model("made-up")
 			.onUnsupported(OnUnsupported.FAIL)
@@ -605,7 +607,8 @@ class AcpHarnessClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().select("model", "model", "a", "a").build();
 				AcpHarnessClient client = connect(agent, settings)) {
 
-			assertThatThrownBy(() -> client.prompt("hi").call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+			assertThatThrownBy(() -> client.prompt("hi").call())
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(statusOf(declaredUrl(agent.newSessions().get(0)))).isEqualTo(404);
 		}
@@ -616,7 +619,7 @@ class AcpHarnessClientWireTests {
 	 */
 	@Test
 	void failedThrowawayTurnsDoNotFillThePool() {
-		AcpAgentSettings settings = settings().model("made-up")
+		AcpHarnessSettings settings = settings().model("made-up")
 			.onUnsupported(OnUnsupported.FAIL)
 			.pool(new PoolSettings(1, 2, PoolSettings.DEFAULT_MAX_RESTARTS))
 			.build();
@@ -626,7 +629,7 @@ class AcpHarnessClientWireTests {
 
 			for (int i = 0; i < 4; i++) {
 				assertThatThrownBy(() -> pool.prompt("hi").call())
-					.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+					.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 			}
 			assertThat(pool.sessions().open()).isEmpty();
 		}
@@ -644,7 +647,7 @@ class AcpHarnessClientWireTests {
 				.session("kept")
 				.user("hi")
 				.options(options -> options.model("made-up"))
-				.call()).isInstanceOf(UnsupportedAcpAgentOptionException.class);
+				.call()).isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(client.session("kept")).isNotNull();
 			assertThat(agent.methods()).doesNotContain("session/close");
@@ -653,7 +656,7 @@ class AcpHarnessClientWireTests {
 
 	@Test
 	void aNewNamedSessionThatCannotBeConfiguredLeavesNoSessionBehind() throws Exception {
-		AcpAgentSettings settings = withProtectedServer(
+		AcpHarnessSettings settings = withProtectedServer(
 				tokensPerUser(new java.util.concurrent.CopyOnWriteArrayList<>()), null)
 			.model("made-up")
 			.onUnsupported(OnUnsupported.FAIL)
@@ -664,7 +667,7 @@ class AcpHarnessClientWireTests {
 			.build(); AcpHarnessClient client = connect(agent, settings)) {
 
 			assertThatThrownBy(() -> client.prompt().session("s").user("hi").call())
-				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(client.session("s")).isNull();
 			assertThat(statusOf(declaredUrl(agent.newSessions().get(0)))).isEqualTo(404);
@@ -674,7 +677,7 @@ class AcpHarnessClientWireTests {
 
 	@Test
 	void newNamedSessionsThatCannotBeConfiguredDoNotFillThePool() {
-		AcpAgentSettings settings = settings().model("made-up")
+		AcpHarnessSettings settings = settings().model("made-up")
 			.onUnsupported(OnUnsupported.FAIL)
 			.pool(new PoolSettings(1, 2, PoolSettings.DEFAULT_MAX_RESTARTS))
 			.build();
@@ -685,7 +688,7 @@ class AcpHarnessClientWireTests {
 			for (int i = 0; i < 4; i++) {
 				String name = "conversation-" + i;
 				assertThatThrownBy(() -> pool.prompt().session(name).user("hi").call())
-					.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+					.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 			}
 			assertThat(pool.sessions().open()).isEmpty();
 		}
@@ -698,7 +701,7 @@ class AcpHarnessClientWireTests {
 
 			assertThatThrownBy(
 					() -> client.prompt().session("s").user("hi").options(options -> options.model("made-up")).call())
-				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(client.prompt().session("s").user("hi").call().content()).isEqualTo("ok");
 			assertThat(agent.newSessions()).hasSize(2);
@@ -765,7 +768,7 @@ class AcpHarnessClientWireTests {
 			.promptDelay(Duration.ofSeconds(2))
 			.sessionOperations("close")
 			.build(); AcpHarnessClient client = connect(agent, settings().build())) {
-			AcpHarnessClient.AcpAgentStream stream = client.prompt("hi").stream();
+			AcpHarnessClient.AcpHarnessStream stream = client.prompt("hi").stream();
 			java.util.concurrent.CompletableFuture<Void> first = new java.util.concurrent.CompletableFuture<>();
 			stream.events().subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).subscribe(event -> {
 			}, first::completeExceptionally, () -> first.complete(null));
@@ -827,13 +830,13 @@ class AcpHarnessClientWireTests {
 
 		McpServerSpec server = new McpServerSpec.Http("finops-mcp",
 				java.net.URI.create("https://tools.example.com/mcp"), Map.of());
-		AcpAgentSettings settings = settings().mcpServers(List.of(server))
+		AcpHarnessSettings settings = settings().mcpServers(List.of(server))
 			.mcp(new org.springaicommunity.acp.harness.config.McpSettings(
 					org.springaicommunity.acp.harness.config.McpSettings.OnServerFailure.FAIL, Duration.ofSeconds(2)))
 			.build();
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
-				org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher = watcher(logs);
+				org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher = watcher(logs);
 				AcpHarnessClient client = connect(agent, settings, watcher)) {
 
 			assertThatThrownBy(() -> client.prompt().session("s").user("hi").call()).hasMessageContaining("finops-mcp")
@@ -849,13 +852,13 @@ class AcpHarnessClientWireTests {
 
 		McpServerSpec server = new McpServerSpec.Http("finops-mcp",
 				java.net.URI.create("https://tools.example.com/mcp"), Map.of());
-		AcpAgentSettings settings = settings().mcpServers(List.of(server))
+		AcpHarnessSettings settings = settings().mcpServers(List.of(server))
 			.mcp(new org.springaicommunity.acp.harness.config.McpSettings(
 					org.springaicommunity.acp.harness.config.McpSettings.OnServerFailure.FAIL, Duration.ofMillis(250)))
 			.build();
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("done").build();
-				org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher = watcher(logs);
+				org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher = watcher(logs);
 				AcpHarnessClient client = connect(agent, settings, watcher)) {
 
 			assertThat(client.prompt().session("s").user("hi").call().content()).isEqualTo("done");
@@ -871,7 +874,7 @@ class AcpHarnessClientWireTests {
 				java.net.URI.create("https://tools.example.com/mcp"), Map.of());
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("done").build();
-				org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher = watcher(logs);
+				org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher = watcher(logs);
 				AcpHarnessClient client = connect(agent, settings().mcpServers(List.of(server)).build(), watcher)) {
 			watcher.poll();
 
@@ -887,13 +890,13 @@ class AcpHarnessClientWireTests {
 
 		McpServerSpec server = new McpServerSpec.Http("finops-mcp",
 				java.net.URI.create("https://tools.example.com/mcp"), Map.of());
-		AcpAgentSettings settings = settings().mcpServers(List.of(server))
+		AcpHarnessSettings settings = settings().mcpServers(List.of(server))
 			.mcp(new org.springaicommunity.acp.harness.config.McpSettings(
 					org.springaicommunity.acp.harness.config.McpSettings.OnServerFailure.FAIL, Duration.ofMillis(250)))
 			.build();
 
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("done").build();
-				org.springaicommunity.acp.harness.process.AcpAgentLogWatcher watcher = watcher(logs);
+				org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher watcher = watcher(logs);
 				AcpHarnessClient client = connect(agent, settings, watcher)) {
 
 			// Silence is the normal case, and nothing here infers a failure from it.
@@ -907,12 +910,12 @@ class AcpHarnessClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().toolCall("developer__shell").reply("done").build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
-			List<AcpAgentEvent> events = client.prompt("hi").stream().events().collectList().block(LIMIT);
+			List<AcpHarnessEvent> events = client.prompt("hi").stream().events().collectList().block(LIMIT);
 
 			assertThat(events)
-				.anySatisfy(event -> assertThat(event).isInstanceOfSatisfying(AcpAgentEvent.ToolCallStarted.class,
+				.anySatisfy(event -> assertThat(event).isInstanceOfSatisfying(AcpHarnessEvent.ToolCallStarted.class,
 						started -> assertThat(started.title()).isEqualTo("developer__shell")));
-			assertThat(events).last().isInstanceOf(AcpAgentEvent.Completed.class);
+			assertThat(events).last().isInstanceOf(AcpHarnessEvent.Completed.class);
 		}
 	}
 
@@ -988,14 +991,14 @@ class AcpHarnessClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
-			AcpAgentSessions sessions = client.sessions();
+			AcpHarnessSessions sessions = client.sessions();
 
-			assertThat(sessions.supports(AcpAgentSessions.Operation.LIST)).isFalse();
-			assertThatThrownBy(sessions::list).isInstanceOf(UnsupportedAcpAgentOperationException.class);
+			assertThat(sessions.supports(AcpHarnessSessions.Operation.LIST)).isFalse();
+			assertThatThrownBy(sessions::list).isInstanceOf(UnsupportedAcpHarnessOperationException.class);
 			assertThatThrownBy(() -> sessions.load("a", "sid-1"))
-				.isInstanceOf(UnsupportedAcpAgentOperationException.class);
+				.isInstanceOf(UnsupportedAcpHarnessOperationException.class);
 			assertThatThrownBy(() -> sessions.delete("sid-1"))
-				.isInstanceOf(UnsupportedAcpAgentOperationException.class);
+				.isInstanceOf(UnsupportedAcpHarnessOperationException.class);
 			assertThat(agent.methods()).doesNotContain("session/list", "session/load", "session/delete");
 		}
 	}
@@ -1009,7 +1012,7 @@ class AcpHarnessClientWireTests {
 
 			assertThat(client.sessions().list()).extracting(StoredSession::sessionId)
 				.containsExactly("sid-1", "sid-2", "sid-3");
-			assertThat(client.sessions().supports(AcpAgentSessions.Operation.LIST)).isTrue();
+			assertThat(client.sessions().supports(AcpHarnessSessions.Operation.LIST)).isTrue();
 		}
 	}
 
@@ -1049,7 +1052,7 @@ class AcpHarnessClientWireTests {
 						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
 
 			assertThatThrownBy(() -> client.sessions().load("restored", "sid-1"))
-				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(agent.loaded()).containsExactly("sid-1");
 			assertThat(client.session("restored")).isNull();
@@ -1068,7 +1071,7 @@ class AcpHarnessClientWireTests {
 						settings().model("made-up").onUnsupported(OnUnsupported.FAIL).build())) {
 
 			assertThatThrownBy(() -> client.sessions().resume("restored", "sid-1"))
-				.isInstanceOf(UnsupportedAcpAgentOptionException.class);
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
 
 			assertThat(client.session("restored")).isNull();
 			assertThat(agent.methods()).contains("session/resume", "session/close");
@@ -1127,7 +1130,7 @@ class AcpHarnessClientWireTests {
 	}
 
 	/** A runtime that names no agent: only the core is under test here. */
-	private static class ScriptedRuntime implements AcpAgentRuntime {
+	private static class ScriptedRuntime implements AcpHarnessRuntime {
 
 		@Override
 		public String id() {
@@ -1135,7 +1138,7 @@ class AcpHarnessClientWireTests {
 		}
 
 		@Override
-		public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+		public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 			throw new UnsupportedOperationException("the scripted agent is already running");
 		}
 

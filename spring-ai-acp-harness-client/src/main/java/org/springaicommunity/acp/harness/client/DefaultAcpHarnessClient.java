@@ -17,27 +17,27 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AdvertisedSessionConfig;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.ConfigResolver;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.config.McpSettings;
 import org.springaicommunity.acp.harness.config.SessionConfiguration;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.mcp.McpAccess;
-import org.springaicommunity.acp.harness.observation.AcpAgentObservations;
-import org.springaicommunity.acp.harness.process.AcpAgentLogWatcher;
+import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
+import org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher;
 import org.springaicommunity.acp.harness.protocol.AcpProtocol;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
-import org.springaicommunity.acp.harness.session.DefaultAcpAgentSessions;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
+import org.springaicommunity.acp.harness.session.DefaultAcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
-import org.springaicommunity.acp.harness.turn.AcpAgentTurn;
+import org.springaicommunity.acp.harness.turn.AcpHarnessTurn;
 import org.springaicommunity.acp.harness.turn.SessionUpdateRouter;
 
 import com.agentclientprotocol.sdk.client.AcpAsyncClient;
@@ -55,9 +55,9 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 	private final AcpAsyncClient acp;
 
-	private final AcpAgentRuntime runtime;
+	private final AcpHarnessRuntime runtime;
 
-	private final AcpAgentSettings settings;
+	private final AcpHarnessSettings settings;
 
 	private final SessionRegistry sessions;
 
@@ -67,13 +67,13 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 	private final ConfigResolver configResolver;
 
-	private final @Nullable AcpAgentInfo agentInfo;
+	private final @Nullable AcpHarnessInfo agentInfo;
 
-	private final AcpAgentSessions sessionOperations;
+	private final AcpHarnessSessions sessionOperations;
 
 	private final int protocolVersion;
 
-	private final AcpAgentObservations observations;
+	private final AcpHarnessObservations observations;
 
 	/**
 	 * Null when the transport cannot tell; see {@code AcpHarnessClientFactory.Liveness}.
@@ -85,7 +85,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	private final Runnable onClose;
 
 	/** Set once by the factory before this client is handed out, or left null. */
-	private volatile @Nullable AcpAgentLogWatcher watcher;
+	private volatile @Nullable AcpHarnessLogWatcher watcher;
 
 	/**
 	 * Each session's MCP servers as the agent is to see them; owns the loopback proxy, if
@@ -101,21 +101,22 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * @param alive whether the transport is still up, or null when it cannot tell
 	 * @param onClose run after the connection closes, or null for nothing
 	 */
-	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpHarnessRuntime runtime, AcpHarnessSettings settings,
 			SessionRegistry sessions, SessionUpdateRouter router, @Nullable SessionConfigRecorder recorder,
 			AcpSchema.@Nullable InitializeResponse initialized, @Nullable BooleanSupplier alive,
 			@Nullable Runnable onClose) {
-		this(acp, runtime, settings, sessions, router, recorder, initialized, AcpProtocol.V1, AcpAgentObservations.NONE,
-				alive, onClose);
+		this(acp, runtime, settings, sessions, router, recorder, initialized, AcpProtocol.V1,
+				AcpHarnessObservations.NONE, alive, onClose);
 	}
 
 	/** Same, with the negotiated protocol version and an observation sink. */
-	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpAgentRuntime runtime, AcpAgentSettings settings,
+	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpHarnessRuntime runtime, AcpHarnessSettings settings,
 			SessionRegistry sessions, SessionUpdateRouter router, @Nullable SessionConfigRecorder recorder,
 			AcpSchema.@Nullable InitializeResponse initialized, int protocolVersion,
-			@Nullable AcpAgentObservations observations, @Nullable BooleanSupplier alive, @Nullable Runnable onClose) {
+			@Nullable AcpHarnessObservations observations, @Nullable BooleanSupplier alive,
+			@Nullable Runnable onClose) {
 		this.protocolVersion = protocolVersion;
-		this.observations = observations == null ? AcpAgentObservations.NONE : observations;
+		this.observations = observations == null ? AcpHarnessObservations.NONE : observations;
 		this.acp = acp;
 		this.runtime = runtime;
 		this.settings = settings;
@@ -123,10 +124,10 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		this.router = router;
 		this.recorder = recorder == null ? new SessionConfigRecorder() : recorder;
 		this.configResolver = new ConfigResolver(runtime, settings.onUnsupported());
-		this.agentInfo = initialized == null ? null : AcpAgentInfo.from(initialized.agentInfo());
+		this.agentInfo = initialized == null ? null : AcpHarnessInfo.from(initialized.agentInfo());
 		this.mcpAccess = new McpAccess(settings.mcp().credentials(), settings.timeout(),
 				runtime.mcpRequestFilters(settings), runtime.mcpScope());
-		this.sessionOperations = new DefaultAcpAgentSessions(acp, runtime.id(), settings,
+		this.sessionOperations = new DefaultAcpHarnessSessions(acp, runtime.id(), settings,
 				initialized == null ? null : initialized.agentCapabilities(), sessions, this.recorder,
 				session -> configure(session, settings), mcpAccess);
 		this.alive = alive;
@@ -142,13 +143,13 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * the eleventh thing this class is handed; set once, by
 	 * {@code AcpHarnessClientFactory}, before anything can call {@link #notices()}.
 	 */
-	void watch(@Nullable AcpAgentLogWatcher watcher) {
+	void watch(@Nullable AcpHarnessLogWatcher watcher) {
 		this.watcher = watcher;
 	}
 
 	@Override
-	public List<AcpAgentNotice> notices() {
-		AcpAgentLogWatcher current = watcher;
+	public List<AcpHarnessNotice> notices() {
+		AcpHarnessLogWatcher current = watcher;
 		return current == null ? List.of() : current.notices();
 	}
 
@@ -163,12 +164,12 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	@Override
-	public @Nullable AcpAgentInfo agentInfo() {
+	public @Nullable AcpHarnessInfo agentInfo() {
 		return agentInfo;
 	}
 
 	@Override
-	public AcpAgentSessions sessions() {
+	public AcpHarnessSessions sessions() {
 		return sessionOperations;
 	}
 
@@ -245,12 +246,12 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	@Override
-	public AcpAgentSession openSession(String name) {
+	public AcpHarnessSession openSession(String name) {
 		return openSession(name, settings, currentPrincipal());
 	}
 
 	@Override
-	public AcpAgentSession openSession(String name, @Nullable SessionPrincipal principal) {
+	public AcpHarnessSession openSession(String name, @Nullable SessionPrincipal principal) {
 		return openSession(name, settings, principal);
 	}
 
@@ -277,10 +278,11 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * fails; once the session exists the registry owns it and releases it whenever the
 	 * session is forgotten.
 	 */
-	private AcpAgentSession openSession(String name, AcpAgentSettings effective, @Nullable SessionPrincipal principal) {
+	private AcpHarnessSession openSession(String name, AcpHarnessSettings effective,
+			@Nullable SessionPrincipal principal) {
 		AtomicReference<AdvertisedSessionConfig> advertised = new AtomicReference<>();
 		AtomicBoolean opened = new AtomicBoolean();
-		AcpAgentSession session = sessions.resolve(name, principal, n -> {
+		AcpHarnessSession session = sessions.resolve(name, principal, n -> {
 			opened.set(true);
 			McpAccess.Grant grant = mcpAccess.grant(principal, effective.mcpServers());
 			try {
@@ -384,7 +386,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * the caller's thread; see {@link #closeRemote}.
 	 */
 	private void forgetAndClose(String name) {
-		AcpAgentSession session = sessions.remove(name);
+		AcpHarnessSession session = sessions.remove(name);
 		if (session != null) {
 			closeRemote(session.sessionId());
 		}
@@ -395,7 +397,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * {@link #closeRemoteWithoutWaiting}.
 	 */
 	private void forgetAndCloseWithoutWaiting(String name) {
-		AcpAgentSession session = sessions.remove(name);
+		AcpHarnessSession session = sessions.remove(name);
 		if (session != null) {
 			closeRemoteWithoutWaiting(session.sessionId());
 		}
@@ -422,14 +424,14 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * later turn for a report that can only arrive when the servers are first handed
 	 * over.
 	 */
-	private void failIfAnMcpServerDidNotLoad(String name, AcpAgentSession session, AcpAgentSettings effective) {
-		AcpAgentLogWatcher current = watcher;
+	private void failIfAnMcpServerDidNotLoad(String name, AcpHarnessSession session, AcpHarnessSettings effective) {
+		AcpHarnessLogWatcher current = watcher;
 		if (current == null || effective.mcpServers().isEmpty()
 				|| effective.mcp().onServerFailure() != McpSettings.OnServerFailure.FAIL) {
 			return;
 		}
 		for (McpServerSpec server : effective.mcpServers()) {
-			AcpAgentNotice failure = current.awaitNotice(server.name(), effective.mcp().detectTimeout());
+			AcpHarnessNotice failure = current.awaitNotice(server.name(), effective.mcp().detectTimeout());
 			if (failure == null) {
 				continue;
 			}
@@ -452,7 +454,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * that. It does put what was requested in the log beside it, which is most of the
 	 * distance to the diagnosis. See {@code docs/configuration/mcp-servers.md}.
 	 */
-	private static void logMcpServers(AcpAgentSettings effective, McpAccess.Grant grant, String method) {
+	private static void logMcpServers(AcpHarnessSettings effective, McpAccess.Grant grant, String method) {
 		List<String> handed = McpAccess.describeHanded(effective.mcpServers(), grant);
 		if (handed.isEmpty() || !logger.isInfoEnabled()) {
 			return;
@@ -471,14 +473,14 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * the request genuinely differs from the session's current state and the agent has to
 	 * be told.
 	 */
-	private void configure(AcpAgentSession session, AcpAgentSettings effective) {
+	private void configure(AcpHarnessSession session, AcpHarnessSettings effective) {
 		if (isAlreadyRequested(session.configuration(), effective)) {
 			return;
 		}
 		configResolver.apply(acp, session, effective).block(effective.timeout());
 	}
 
-	private static boolean isAlreadyRequested(SessionConfiguration applied, AcpAgentSettings effective) {
+	private static boolean isAlreadyRequested(SessionConfiguration applied, AcpHarnessSettings effective) {
 		return same(applied.of(PortableOption.MODEL).requested(), effective.model())
 				&& same(applied.of(PortableOption.PROVIDER).requested(), effective.provider().id())
 				&& same(applied.of(PortableOption.MODE).requested(), effective.mode());
@@ -498,7 +500,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 		private @Nullable String sessionName;
 
-		private AcpAgentOptions options = AcpAgentOptions.none();
+		private AcpHarnessOptions options = AcpHarnessOptions.none();
 
 		private @Nullable SessionPrincipal principal;
 
@@ -526,29 +528,29 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		}
 
 		@Override
-		public PromptSpec options(@Nullable AcpAgentOptions options) {
-			this.options = options == null ? AcpAgentOptions.none() : options;
+		public PromptSpec options(@Nullable AcpHarnessOptions options) {
+			this.options = options == null ? AcpHarnessOptions.none() : options;
 			return this;
 		}
 
 		@Override
-		public PromptSpec options(Consumer<AcpAgentOptions.Builder> customizer) {
-			AcpAgentOptions.Builder builder = AcpAgentOptions.builder();
+		public PromptSpec options(Consumer<AcpHarnessOptions.Builder> customizer) {
+			AcpHarnessOptions.Builder builder = AcpHarnessOptions.builder();
 			customizer.accept(builder);
 			return options(builder.build());
 		}
 
 		@Override
-		public AcpAgentResponse call() {
+		public AcpHarnessResponse call() {
 			StringBuilder content = new StringBuilder();
-			AtomicReference<AcpAgentEvent.Completed> completion = new AtomicReference<>();
+			AtomicReference<AcpHarnessEvent.Completed> completion = new AtomicReference<>();
 			AtomicReference<Throwable> failure = new AtomicReference<>();
 
 			stream().events().doOnNext(event -> {
 				switch (event) {
-					case AcpAgentEvent.Text t -> content.append(t.text());
-					case AcpAgentEvent.Completed c -> completion.set(c);
-					case AcpAgentEvent.Failed f -> failure.set(f.cause());
+					case AcpHarnessEvent.Text t -> content.append(t.text());
+					case AcpHarnessEvent.Completed c -> completion.set(c);
+					case AcpHarnessEvent.Failed f -> failure.set(f.cause());
 					default -> {
 					}
 				}
@@ -561,25 +563,25 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 				// Would mean the terminal-event contract was broken upstream.
 				throw new AcpHarnessClientException("Agent turn ended without a terminal event");
 			}
-			return new DefaultAcpAgentResponse(content.toString(), completion.get());
+			return new DefaultAcpHarnessResponse(content.toString(), completion.get());
 		}
 
 		@Override
-		public AcpAgentStream stream() {
+		public AcpHarnessStream stream() {
 			if (text.isEmpty()) {
 				throw new IllegalStateException("prompt is empty; call user(...) before call() or stream()");
 			}
-			AcpAgentSettings effective = settings.merge(options);
+			AcpHarnessSettings effective = settings.merge(options);
 			// Resolved now, on the caller's thread, not inside the deferred turn below.
 			SessionPrincipal owner = principal != null ? principal : currentPrincipal();
 			String named = sessionName;
 			boolean ephemeral = named == null;
 			List<AcpSchema.ContentBlock> prompt = List.of(new AcpSchema.TextContent(text.toString()));
 
-			Flux<AcpAgentEvent> events = Flux.defer(() -> {
+			Flux<AcpHarnessEvent> events = Flux.defer(() -> {
 				// Named per subscription, so subscribing twice is two throwaway turns.
 				String name = named != null ? named : "turn-" + UUID.randomUUID();
-				AcpAgentSession session = openSession(name, effective, owner);
+				AcpHarnessSession session = openSession(name, effective, owner);
 				try {
 					acquireTurn(session, effective.timeout());
 				}
@@ -601,7 +603,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 					}
 					throw ex;
 				}
-				return AcpAgentTurn.on(acp, router, observations, runtime::planOf)
+				return AcpHarnessTurn.on(acp, router, observations, runtime::planOf)
 					.prompt(session, prompt, effective.timeout(), turnContext(session, effective, ephemeral))
 					.doFinally(signal -> {
 						session.endTurn();
@@ -610,10 +612,10 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 						}
 					});
 			});
-			return new DefaultAcpAgentStream(events);
+			return new DefaultAcpHarnessStream(events);
 		}
 
-		private void acquireTurn(AcpAgentSession session, Duration timeout) {
+		private void acquireTurn(AcpHarnessSession session, Duration timeout) {
 			try {
 				if (!session.tryBeginTurn(timeout)) {
 					throw new AcpHarnessClientException(
@@ -641,8 +643,8 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * worse than having no dashboard — and one that said "unknown" for every application
 	 * that never set {@code spring.ai.acp.harness.model} would be worse still.
 	 */
-	private static AcpAgentObservations.TurnContext turnContext(AcpAgentSession session, AcpAgentSettings effective,
-			boolean ephemeral) {
+	private static AcpHarnessObservations.TurnContext turnContext(AcpHarnessSession session,
+			AcpHarnessSettings effective, boolean ephemeral) {
 		String model = session.configuration().applied(PortableOption.MODEL);
 		if (model == null) {
 			model = currentModelOf(session);
@@ -650,7 +652,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		if (model == null) {
 			model = effective.model();
 		}
-		return new AcpAgentObservations.TurnContext(effective.runtime(), session.name(), model, ephemeral);
+		return new AcpHarnessObservations.TurnContext(effective.runtime(), session.name(), model, ephemeral);
 	}
 
 	/**
@@ -661,7 +663,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * is all ACP standardizes — an adapter's candidate ids belong to the resolver, and a
 	 * tag is not worth threading one through for.
 	 */
-	private static @Nullable String currentModelOf(AcpAgentSession session) {
+	private static @Nullable String currentModelOf(AcpHarnessSession session) {
 		AcpSchema.SessionConfigSelect select = session.advertised().select("model", "model");
 		String current = select == null ? null : select.currentValue();
 		if (current != null && !current.isBlank()) {
@@ -671,15 +673,15 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		return models == null ? null : models.currentModelId();
 	}
 
-	private record DefaultAcpAgentResponse(String content,
-			AcpAgentEvent.Completed completion) implements AcpAgentResponse {
+	private record DefaultAcpHarnessResponse(String content,
+			AcpHarnessEvent.Completed completion) implements AcpHarnessResponse {
 	}
 
-	private record DefaultAcpAgentStream(Flux<AcpAgentEvent> events) implements AcpAgentStream {
+	private record DefaultAcpHarnessStream(Flux<AcpHarnessEvent> events) implements AcpHarnessStream {
 	}
 
 	@Override
-	public @Nullable AcpAgentSession session(String name) {
+	public @Nullable AcpHarnessSession session(String name) {
 		return sessions.find(name);
 	}
 

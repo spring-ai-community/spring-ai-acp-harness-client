@@ -5,8 +5,8 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
-import org.springaicommunity.acp.harness.runtime.AcpAgentNotice;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,17 +54,17 @@ class GooseNoticeTests {
 	private final GooseRuntime runtime = new GooseRuntime();
 
 	/** The notice the runtime reads out of {@code line}, which must be one. */
-	private AcpAgentNotice notice(String line) {
-		AcpAgentNotice notice = runtime.noticeOf(line);
+	private AcpHarnessNotice notice(String line) {
+		AcpHarnessNotice notice = runtime.noticeOf(line);
 		assertThat(notice).isNotNull();
 		return notice;
 	}
 
 	@Test
 	void anUnreachableHttpServerIsReportedAgainstTheNameTheApplicationGaveIt() {
-		AcpAgentNotice notice = notice(HTTP_FAILURE);
+		AcpHarnessNotice notice = notice(HTTP_FAILURE);
 
-		assertThat(notice.severity()).isEqualTo(AcpAgentNotice.Severity.WARNING);
+		assertThat(notice.severity()).isEqualTo(AcpHarnessNotice.Severity.WARNING);
 		assertThat(notice.subject()).isEqualTo("finops-mcp");
 		assertThat(notice.concerns("finops-mcp")).isTrue();
 		assertThat(notice.detail()).contains("failed to initialize MCP client").contains("when send discover request");
@@ -72,14 +72,14 @@ class GooseNoticeTests {
 
 	@Test
 	void theRestOfTheJsonRecordIsNotPartOfWhatTheAgentSaid() {
-		AcpAgentNotice notice = notice(HTTP_FAILURE);
+		AcpHarnessNotice notice = notice(HTTP_FAILURE);
 
 		assertThat(notice.detail()).doesNotContain("goose::agents::agent").doesNotContain("\"target\"");
 	}
 
 	@Test
 	void aStdioServerThatExitedIsReportedTheSameWay() {
-		AcpAgentNotice notice = notice(STDIO_FAILURE);
+		AcpHarnessNotice notice = notice(STDIO_FAILURE);
 
 		assertThat(notice.subject()).isEqualTo("local-tools");
 		assertThat(notice.detail()).contains("process quit before initialization");
@@ -87,9 +87,9 @@ class GooseNoticeTests {
 
 	@Test
 	void sinceOneFiftyFiveTheNameAndReasonArriveAsFieldsOfTheirOwn() {
-		AcpAgentNotice notice = notice(HTTP_FAILURE_1_55);
+		AcpHarnessNotice notice = notice(HTTP_FAILURE_1_55);
 
-		assertThat(notice.severity()).isEqualTo(AcpAgentNotice.Severity.WARNING);
+		assertThat(notice.severity()).isEqualTo(AcpHarnessNotice.Severity.WARNING);
 		assertThat(notice.subject()).isEqualTo("spring-ai-acp-harness-client-contract-mcp");
 		assertThat(notice.detail()).contains("failed to initialize MCP client")
 			.contains("when send discover request")
@@ -99,7 +99,7 @@ class GooseNoticeTests {
 
 	@Test
 	void sinceOneFiftyFiveAStdioServerThatExitedIsReportedTheSameWay() {
-		AcpAgentNotice notice = notice(STDIO_FAILURE_1_55);
+		AcpHarnessNotice notice = notice(STDIO_FAILURE_1_55);
 
 		assertThat(notice.subject()).isEqualTo("silence-probe-mcp");
 		assertThat(notice.detail()).contains("process quit before initialization");
@@ -139,8 +139,8 @@ class GooseNoticeTests {
 		assertThat(directory).isEqualTo(Paths.get("/var/log/goose"));
 	}
 
-	private AcpAgentSettings settings(Map<String, Object> options) {
-		return AcpAgentSettings
+	private AcpHarnessSettings settings(Map<String, Object> options) {
+		return AcpHarnessSettings
 			.builder(GooseRuntime.ID, Paths.get(System.getProperty("java.io.tmpdir")).toAbsolutePath())
 			.runtimeOptions(options)
 			.build();

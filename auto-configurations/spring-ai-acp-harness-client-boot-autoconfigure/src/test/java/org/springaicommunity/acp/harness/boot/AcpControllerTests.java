@@ -16,13 +16,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.client.AcpAgentInfo;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.client.AcpHarnessInfo;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.StoredSession;
-import org.springaicommunity.acp.harness.session.UnsupportedAcpAgentOperationException;
+import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -215,22 +215,22 @@ class AcpControllerTests {
 		}
 
 		@Override
-		public AcpAgentInfo agentInfo() {
-			return new AcpAgentInfo("fake", "1.0");
+		public AcpHarnessInfo agentInfo() {
+			return new AcpHarnessInfo("fake", "1.0");
 		}
 
 		@Override
-		public AcpAgentSessions sessions() {
+		public AcpHarnessSessions sessions() {
 			return new FakeSessions();
 		}
 
 		@Override
-		public @Nullable AcpAgentSession session(String name) {
+		public @Nullable AcpHarnessSession session(String name) {
 			return null;
 		}
 
 		@Override
-		public AcpAgentSession openSession(String name) {
+		public AcpHarnessSession openSession(String name) {
 			throw new UnsupportedOperationException();
 		}
 
@@ -251,18 +251,18 @@ class AcpControllerTests {
 			}
 
 			@Override
-			public PromptSpec options(AcpAgentOptions options) {
+			public PromptSpec options(AcpHarnessOptions options) {
 				return this;
 			}
 
 			@Override
-			public PromptSpec options(java.util.function.Consumer<AcpAgentOptions.Builder> customizer) {
+			public PromptSpec options(java.util.function.Consumer<AcpHarnessOptions.Builder> customizer) {
 				return this;
 			}
 
 			@Override
-			public AcpAgentResponse call() {
-				return new AcpAgentResponse() {
+			public AcpHarnessResponse call() {
+				return new AcpHarnessResponse() {
 
 					@Override
 					public String content() {
@@ -270,25 +270,25 @@ class AcpControllerTests {
 					}
 
 					@Override
-					public AcpAgentEvent.Completed completion() {
-						return new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN);
+					public AcpHarnessEvent.Completed completion() {
+						return new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN);
 					}
 				};
 			}
 
 			@Override
-			public AcpAgentStream stream() {
-				return () -> Flux.just(new AcpAgentEvent.Text("ok"),
-						new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+			public AcpHarnessStream stream() {
+				return () -> Flux.just(new AcpHarnessEvent.Text("ok"),
+						new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 			}
 
 		}
 
-		private static final class FakeSessions implements AcpAgentSessions {
+		private static final class FakeSessions implements AcpHarnessSessions {
 
 			@Override
 			public List<StoredSession> list() {
-				throw new UnsupportedAcpAgentOperationException("fake", Operation.LIST);
+				throw new UnsupportedAcpHarnessOperationException("fake", Operation.LIST);
 			}
 
 			@Override
@@ -297,18 +297,18 @@ class AcpControllerTests {
 			}
 
 			@Override
-			public AcpAgentSession load(String name, String sessionId) {
-				throw new UnsupportedAcpAgentOperationException("fake", Operation.LOAD);
+			public AcpHarnessSession load(String name, String sessionId) {
+				throw new UnsupportedAcpHarnessOperationException("fake", Operation.LOAD);
 			}
 
 			@Override
-			public AcpAgentSession resume(String name, String sessionId) {
-				throw new UnsupportedAcpAgentOperationException("fake", Operation.RESUME);
+			public AcpHarnessSession resume(String name, String sessionId) {
+				throw new UnsupportedAcpHarnessOperationException("fake", Operation.RESUME);
 			}
 
 			@Override
 			public void delete(String sessionId) {
-				throw new UnsupportedAcpAgentOperationException("fake", Operation.DELETE);
+				throw new UnsupportedAcpHarnessOperationException("fake", Operation.DELETE);
 			}
 
 			@Override
@@ -316,12 +316,12 @@ class AcpControllerTests {
 			}
 
 			@Override
-			public List<AcpAgentSession> open() {
+			public List<AcpHarnessSession> open() {
 				return List.of();
 			}
 
 			@Override
-			public @Nullable AcpAgentSession find(String name) {
+			public @Nullable AcpHarnessSession find(String name) {
 				return null;
 			}
 

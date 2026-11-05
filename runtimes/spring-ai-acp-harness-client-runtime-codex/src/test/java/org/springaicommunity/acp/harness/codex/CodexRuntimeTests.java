@@ -8,10 +8,10 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.ProviderSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime.PortableOption;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,13 +25,13 @@ class CodexRuntimeTests {
 
 	private final CodexRuntime runtime = new CodexRuntime();
 
-	private AcpAgentSettings.Builder settings() {
-		return AcpAgentSettings.builder(CodexRuntime.ID, workspace).runtimeHome(home);
+	private AcpHarnessSettings.Builder settings() {
+		return AcpHarnessSettings.builder(CodexRuntime.ID, workspace).runtimeHome(home);
 	}
 
 	@Test
 	void launchesThePinnedAdapterThroughNpxByDefault() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings().build());
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings().build());
 
 		assertThat(spec.command()).isEqualTo("npx");
 		assertThat(spec.args()).containsExactly("-y", CodexRuntime.DEFAULT_PACKAGE);
@@ -39,7 +39,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void aLocallyInstalledAdapterReplacesNpxEntirely() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("command", "/usr/local/bin/codex-acp")).build());
 
 		assertThat(spec.command()).isEqualTo("/usr/local/bin/codex-acp");
@@ -48,7 +48,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void anAlternatePackageVersionCanBePinnedWithoutTouchingTheAdapter() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("package", "@agentclientprotocol/codex-acp@1.11.0")).build());
 
 		assertThat(spec.args()).containsExactly("-y", "@agentclientprotocol/codex-acp@1.11.0");
@@ -56,7 +56,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void aNamedLocalAdapterReplacesNpx() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) new CodexRuntime("/opt/codex-acp")
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) new CodexRuntime("/opt/codex-acp")
 			.launch(settings().build());
 
 		assertThat(spec.command()).isEqualTo("/opt/codex-acp");
@@ -65,7 +65,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void theCommandOptionOutranksANamedLocalAdapter() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) new CodexRuntime("/opt/codex-acp")
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) new CodexRuntime("/opt/codex-acp")
 			.launch(settings().runtimeOptions(Map.of("command", "/usr/local/bin/codex-acp")).build());
 
 		assertThat(spec.command()).isEqualTo("/usr/local/bin/codex-acp");
@@ -73,7 +73,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void aPackageTheApplicationNamedOutranksANamedLocalAdapter() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) new CodexRuntime("/opt/codex-acp")
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) new CodexRuntime("/opt/codex-acp")
 			.launch(settings().runtimeOptions(Map.of("package", "@agentclientprotocol/codex-acp@1.11.0")).build());
 
 		assertThat(spec.command()).isEqualTo("npx");
@@ -85,19 +85,19 @@ class CodexRuntimeTests {
 		// Codex keeps auth.json beside config.toml, so relocating the home uninvited
 		// would cost a
 		// developer machine its `codex login`.
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings().build());
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings().build());
 
 		assertThat(spec.env()).doesNotContainKey(CodexRuntime.HOME_ENV);
 	}
 
 	@Test
 	void askingForCodexConfigMovesTheHomeAndWritesTheFile() throws Exception {
-		AcpAgentSettings settings = settings()
+		AcpHarnessSettings settings = settings()
 			.runtimeOptions(Map.of("config-toml", Map.of("model_reasoning_effort", "high")))
 			.build();
 
 		runtime.provision(settings);
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings);
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings);
 
 		assertThat(spec.env()).containsEntry(CodexRuntime.HOME_ENV, home.toString());
 		assertThat(Files.readString(home.resolve("config.toml"))).isEqualTo("model_reasoning_effort = \"high\"\n");
@@ -105,7 +105,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void anExplicitHomeIsHonoredWithoutAnyCodexConfig() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("home", home.toString())).build());
 
 		assertThat(spec.env()).containsEntry(CodexRuntime.HOME_ENV, home.toString());
@@ -122,7 +122,7 @@ class CodexRuntimeTests {
 	void providerCredentialsReachTheProcessAsEnvironment() {
 		ProviderSpec provider = new ProviderSpec("openai", "openai", URI.create("https://ai.example.com/v1"), "sk-x",
 				Map.of());
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().provider(provider).build());
 
 		assertThat(spec.env()).containsEntry("OPENAI_API_KEY", "sk-x")
@@ -132,7 +132,7 @@ class CodexRuntimeTests {
 	@Test
 	void theTierThreeEnvBlockWinsOverEverythingTheAdapterChose() {
 		ProviderSpec provider = new ProviderSpec("openai", "openai", null, "sk-x", Map.of());
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().provider(provider).runtimeOptions(Map.of("env.OPENAI_API_KEY", "override")).build());
 
 		assertThat(spec.env()).containsEntry("OPENAI_API_KEY", "override");
@@ -161,10 +161,10 @@ class CodexRuntimeTests {
 		// model it serves.
 		ProviderSpec provider = new ProviderSpec("acme", "openai",
 				URI.create("https://gateway.example.com/team-x/openai"), "sk-x", Map.of());
-		AcpAgentSettings settings = settings().provider(provider).model("acme/llm-1").build();
+		AcpHarnessSettings settings = settings().provider(provider).model("acme/llm-1").build();
 
 		runtime.provision(settings);
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings);
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings);
 
 		assertThat(spec.env()).containsEntry(CodexRuntime.HOME_ENV, home.toString())
 			.containsEntry("OPENAI_API_KEY", "sk-x");
@@ -184,7 +184,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void aVendorCodexAlreadyKnowsGetsNoModelProviderTable() throws Exception {
-		AcpAgentSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
+		AcpHarnessSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
 			.model("gpt-5.6")
 			.build();
 
@@ -199,11 +199,12 @@ class CodexRuntimeTests {
 	void anOpenAiKeySignsCodexInThroughTheApiKeyMethod() {
 		// codex-acp 1.12 ignores OPENAI_API_KEY on its environment until authenticate
 		// names api-key.
-		AcpAgentSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
+		AcpHarnessSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
 			.build();
 
 		assertThat(runtime.authMethod(settings)).isEqualTo(CodexRuntime.API_KEY_METHOD);
-		assertThat(((AcpAgentLaunchSpec.Stdio) runtime.launch(settings)).env()).containsEntry("OPENAI_API_KEY", "sk-x");
+		assertThat(((AcpHarnessLaunchSpec.Stdio) runtime.launch(settings)).env()).containsEntry("OPENAI_API_KEY",
+				"sk-x");
 	}
 
 	@Test
@@ -211,11 +212,11 @@ class CodexRuntimeTests {
 		// authenticate would otherwise write auth.json into CODEX_HOME — which, left
 		// ambient, is the
 		// user's ~/.codex and their own login.
-		AcpAgentSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
+		AcpHarnessSettings settings = settings().provider(new ProviderSpec("openai", "openai", null, "sk-x", Map.of()))
 			.build();
 
 		runtime.provision(settings);
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime.launch(settings);
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime.launch(settings);
 
 		assertThat(spec.env()).containsEntry(CodexRuntime.HOME_ENV, home.toString());
 		assertThat(Files.readString(home.resolve("config.toml")))
@@ -253,7 +254,7 @@ class CodexRuntimeTests {
 	void theApplicationsOwnCodexConfigStillWins() throws Exception {
 		ProviderSpec provider = new ProviderSpec("acme", "openai", URI.create("https://ai.example.com/v1"), "sk-x",
 				Map.of());
-		AcpAgentSettings settings = settings().provider(provider)
+		AcpHarnessSettings settings = settings().provider(provider)
 			.model("acme/llm-1")
 			.runtimeOptions(Map.of("config-toml", Map.of("model", "something-else")))
 			.build();
@@ -267,7 +268,7 @@ class CodexRuntimeTests {
 
 	@Test
 	void extraArgumentsAreAppendedRatherThanReplacingTheAdapter() {
-		AcpAgentLaunchSpec.Stdio spec = (AcpAgentLaunchSpec.Stdio) runtime
+		AcpHarnessLaunchSpec.Stdio spec = (AcpHarnessLaunchSpec.Stdio) runtime
 			.launch(settings().runtimeOptions(Map.of("args", List.of("--verbose"))).build());
 
 		assertThat(spec.args()).containsExactly("-y", CodexRuntime.DEFAULT_PACKAGE, "--verbose");

@@ -8,8 +8,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -74,7 +74,7 @@ public class SmokeApplication {
 			if (info != null) {
 				logger.info("Agent: {}", info);
 			}
-			for (AcpAgentSessions.Operation operation : AcpAgentSessions.Operation.values()) {
+			for (AcpHarnessSessions.Operation operation : AcpHarnessSessions.Operation.values()) {
 				logger.info("Supports {}: {}", operation.method(), agent.sessions().supports(operation));
 			}
 
@@ -87,7 +87,7 @@ public class SmokeApplication {
 				.stream()
 				.events()
 				.doOnNext(event -> {
-					if (event instanceof AcpAgentEvent.Text text) {
+					if (event instanceof AcpHarnessEvent.Text text) {
 						logger.info("Streamed: {}", text.text().strip());
 					}
 					else if (event.terminal()) {
