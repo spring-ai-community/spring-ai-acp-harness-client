@@ -2007,6 +2007,22 @@
   <code>AcpAgentEvent.UsageUpdated.contextFraction()</code> returns a <code>Double</code> or null instead of an
   <code>OptionalDouble</code>. Replace <code>.isPresent()</code> with a null check and <code>.orElse(x)</code> with a conditional
   to migrate; the compiler finds every call site, since the types changed.</li>
+<li>Every package of a published module is <code>@NullMarked</code>, so a reference is non-null unless it says
+  <code>@Nullable</code>, and the build enforces that with NullAway: main code that passes, returns or stores a
+  possibly-null value where a non-null one is declared no longer compiles. Nothing changes for a
+  caller, except that a <code>@Nullable</code> on this API is now something the compiler checked rather than
+  a comment. A few signatures gained a <code>@Nullable</code> the behaviour already implied, such as
+  <code>AcpAgentExecutor.getVersion()</code>, <code>SkillFetcher.Fetched.revision()</code>, <code>McpServerSpec.Http.url()</code>,
+  <code>AcpAgentLaunchSpec.WebSocket.process()</code> and the optional components of <code>SkillSpec.Git</code> and
+  <code>AcpController</code>'s request and response records; <code>SecretRedactor.redact</code> no longer accepts null.
+  A few behaviours changed where a null used to flow on: <code>SessionConfiguration.of(option)</code> returns
+  a <code>NOT_REQUESTED</code> resolution instead of null for an option the configuration never mentioned; a
+  registry entry with no id, package, archive or command is skipped when the catalogue is parsed
+  instead of failing at launch, and a registry agent with no distribution fails at launch with a
+  message; a stored MCP OAuth client registration missing a required field fails with a message
+  naming it; and an <code>auth: oauth</code> server declared without a <code>url</code> is refused when the credentials
+  provider is built rather than when the first user's session opens. For a contributor, <code>.mvn/jvm.config</code> now opens the javac internals Error Prone needs, and
+  <code>spring-boot-configuration-processor</code> is named on the compiler's processor path.</li>
 <li>Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.</li>
 <li>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
