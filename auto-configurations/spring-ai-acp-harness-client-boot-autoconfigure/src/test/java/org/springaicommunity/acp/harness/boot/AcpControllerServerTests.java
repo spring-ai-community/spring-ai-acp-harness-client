@@ -5,10 +5,10 @@ import java.security.Principal;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -26,14 +26,14 @@ import org.springframework.http.server.reactive.ReactorHttpHandlerAdapter;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.adapter.WebHttpHandlerBuilder;
-import org.springaicommunity.acp.harness.client.AcpAgentInfo;
+import org.springaicommunity.acp.harness.client.AcpHarnessInfo;
 import org.springaicommunity.acp.harness.client.AcpHarnessCapacityException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
-import org.springaicommunity.acp.harness.config.AcpAgentOptions;
-import org.springaicommunity.acp.harness.event.AcpAgentEvent;
-import org.springaicommunity.acp.harness.session.AcpAgentSession;
-import org.springaicommunity.acp.harness.session.AcpAgentSessions;
+import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.SessionOwnershipException;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
@@ -431,23 +431,23 @@ class AcpControllerServerTests {
 		}
 
 		@Override
-		public Optional<AcpAgentInfo> agentInfo() {
+		public @Nullable AcpHarnessInfo harnessInfo() {
 			this.healthThread = Thread.currentThread().getName();
-			return Optional.of(new AcpAgentInfo("fake", "1.0"));
+			return new AcpHarnessInfo("fake", "1.0");
 		}
 
 		@Override
-		public AcpAgentSessions sessions() {
+		public AcpHarnessSessions sessions() {
 			return new Sessions();
 		}
 
 		@Override
-		public Optional<AcpAgentSession> session(String name) {
+		public @Nullable AcpHarnessSession session(String name) {
 			return this.sessions.find(name);
 		}
 
 		@Override
-		public AcpAgentSession openSession(String name) {
+		public AcpHarnessSession openSession(String name) {
 			throw new UnsupportedOperationException();
 		}
 
@@ -493,12 +493,12 @@ class AcpControllerServerTests {
 			}
 
 			@Override
-			public PromptSpec options(AcpAgentOptions options) {
+			public PromptSpec options(AcpHarnessOptions options) {
 				return this;
 			}
 
 			@Override
-			public PromptSpec options(Consumer<AcpAgentOptions.Builder> customizer) {
+			public PromptSpec options(Consumer<AcpHarnessOptions.Builder> customizer) {
 				return this;
 			}
 
@@ -509,21 +509,21 @@ class AcpControllerServerTests {
 			}
 
 			@Override
-			public AcpAgentResponse call() {
+			public AcpHarnessResponse call() {
 				throw new UnsupportedOperationException("A turn must not hold a thread for its whole length");
 			}
 
 			@Override
-			public AcpAgentStream stream() {
+			public AcpHarnessStream stream() {
 				return () -> Flux.defer(() -> {
 					open(this.name, this.principal);
 					return Flux.fromIterable(eventsFor(this.name));
 				});
 			}
 
-			private List<AcpAgentEvent> eventsFor(String name) {
-				AcpAgentEvent text = new AcpAgentEvent.Text("ok");
-				AcpAgentEvent failed = new AcpAgentEvent.Failed(new IllegalStateException("secret the agent read"));
+			private List<AcpHarnessEvent> eventsFor(String name) {
+				AcpHarnessEvent text = new AcpHarnessEvent.Text("ok");
+				AcpHarnessEvent failed = new AcpHarnessEvent.Failed(new IllegalStateException("secret the agent read"));
 				if (name != null && name.endsWith("-failed")) {
 					return List.of(failed);
 				}
@@ -533,12 +533,12 @@ class AcpControllerServerTests {
 				if (name != null && name.endsWith("-no-terminal")) {
 					return List.of(text);
 				}
-				return List.of(text, new AcpAgentEvent.Completed(AcpSchema.StopReason.END_TURN));
+				return List.of(text, new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 			}
 
 		}
 
-		private final class Sessions implements AcpAgentSessions {
+		private final class Sessions implements AcpHarnessSessions {
 
 			@Override
 			public List<StoredSession> list() {
@@ -555,12 +555,12 @@ class AcpControllerServerTests {
 			}
 
 			@Override
-			public AcpAgentSession load(String name, String sessionId) {
+			public AcpHarnessSession load(String name, String sessionId) {
 				throw new UnsupportedOperationException();
 			}
 
 			@Override
-			public AcpAgentSession resume(String name, String sessionId) {
+			public AcpHarnessSession resume(String name, String sessionId) {
 				throw new UnsupportedOperationException();
 			}
 
@@ -576,12 +576,12 @@ class AcpControllerServerTests {
 			}
 
 			@Override
-			public List<AcpAgentSession> open() {
+			public List<AcpHarnessSession> open() {
 				return BlockingClient.this.sessions.all();
 			}
 
 			@Override
-			public Optional<AcpAgentSession> find(String name) {
+			public @Nullable AcpHarnessSession find(String name) {
 				return BlockingClient.this.sessions.find(name);
 			}
 

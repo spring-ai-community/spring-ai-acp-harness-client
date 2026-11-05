@@ -22,10 +22,10 @@ import org.springframework.web.server.WebFilter;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientPool;
-import org.springaicommunity.acp.harness.config.AcpAgentSettings;
+import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.PoolSettings;
-import org.springaicommunity.acp.harness.runtime.AcpAgentLaunchSpec;
-import org.springaicommunity.acp.harness.runtime.AcpAgentRuntime;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
+import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.session.StoredSession;
 import org.springaicommunity.acp.harness.test.ScriptedAcpAgent;
 
@@ -198,7 +198,7 @@ class AcpControllerEndToEndTests {
 
 	private void run(ScriptedAcpAgent.Builder builder, PoolSettings pool,
 			BiConsumer<WebTestClient, ScriptedAcpAgent> test) {
-		AcpAgentSettings settings = AcpAgentSettings.builder("scripted", this.workspace)
+		AcpHarnessSettings settings = AcpHarnessSettings.builder("scripted", this.workspace)
 			.timeout(Duration.ofSeconds(10))
 			.pool(pool)
 			.build();
@@ -226,7 +226,7 @@ class AcpControllerEndToEndTests {
 
 	}
 
-	private static final class Scripted implements AcpAgentRuntime {
+	private static final class Scripted implements AcpHarnessRuntime {
 
 		@Override
 		public String id() {
@@ -234,7 +234,7 @@ class AcpControllerEndToEndTests {
 		}
 
 		@Override
-		public AcpAgentLaunchSpec launch(AcpAgentSettings settings) {
+		public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
 			throw new UnsupportedOperationException("the scripted agent is already running");
 		}
 

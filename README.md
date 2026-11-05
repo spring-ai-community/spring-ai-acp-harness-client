@@ -81,7 +81,7 @@ choices until it is.
 and the reason the abstraction is worth having. Since M4 it also runs against Gemini CLI, which this
 library has never had a line of code about: no adapter, just a catalogue entry.
 
-690 tests: 637 run anywhere (including 55 against a scripted agent speaking raw JSON-RPC over an
+723 tests: 670 run anywhere (including 65 against a scripted agent speaking raw JSON-RPC over an
 in-memory transport), 51 drive real agents, are opt-in, and skip themselves when one is not usable
 here, and 2 download a real agent from the real registry and are opt-in. Of the live ones, 48 are the
 same 16 assertions run against each adapter: `AcpHarnessRuntimeContract`, which is the actual definition of the

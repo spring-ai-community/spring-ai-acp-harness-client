@@ -354,7 +354,8 @@ public class AcpController {
 			return this.content.toString();
 		}
 
-		@Nullable String stopReason() {
+		@Nullable
+		String stopReason() {
 			if (this.completion == null) {
 				// Would mean the terminal-event contract was broken upstream.
 				throw new AcpHarnessClientException("Agent turn ended without a terminal event");
