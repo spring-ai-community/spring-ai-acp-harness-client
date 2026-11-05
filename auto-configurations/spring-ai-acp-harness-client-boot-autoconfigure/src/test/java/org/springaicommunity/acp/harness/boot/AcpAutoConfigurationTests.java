@@ -513,7 +513,7 @@ class AcpAutoConfigurationTests {
 	void anApplicationReplacesABundledAdapterByReusingItsBeanName() {
 		runner.withUserConfiguration(OwnGoose.class).run(context -> {
 			assertThat(context).hasNotFailed();
-			assertThat(context.getBean("gooseAgentRuntime", AcpHarnessRuntime.class))
+			assertThat(context.getBean("gooseHarnessRuntime", AcpHarnessRuntime.class))
 				.isInstanceOf(OwnGoose.Replacement.class);
 		});
 	}
@@ -613,8 +613,8 @@ class AcpAutoConfigurationTests {
 	@Configuration(proxyBeanMethods = false)
 	static class OwnGoose {
 
-		@Bean("gooseAgentRuntime")
-		AcpHarnessRuntime gooseAgentRuntime() {
+		@Bean("gooseHarnessRuntime")
+		AcpHarnessRuntime gooseHarnessRuntime() {
 			return new Replacement();
 		}
 

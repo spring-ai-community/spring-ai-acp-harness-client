@@ -54,8 +54,8 @@ public final class AcpHarnessLogWatcher implements AutoCloseable {
 	private static final Duration POLL = Duration.ofSeconds(1);
 
 	/**
-	 * As many as {@code AcpHarnessDiagnostics} keeps, and for the same reason: this is
-	 * not a log sink.
+	 * As many as {@code AcpHarnessClientFactory} keeps of the agent's stderr, and for the
+	 * same reason: this is not a log sink.
 	 */
 	private static final int KEPT_NOTICES = 20;
 

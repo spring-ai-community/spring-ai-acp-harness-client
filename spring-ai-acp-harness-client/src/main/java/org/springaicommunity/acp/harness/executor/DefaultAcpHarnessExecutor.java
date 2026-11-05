@@ -76,7 +76,7 @@ public final class DefaultAcpHarnessExecutor implements AcpHarnessExecutor {
 
 	@Override
 	public @Nullable String getVersion() {
-		AcpHarnessInfo info = client.agentInfo();
+		AcpHarnessInfo info = client.harnessInfo();
 		return info == null ? null : info.version();
 	}
 

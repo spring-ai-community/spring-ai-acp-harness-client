@@ -179,8 +179,8 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * health endpoint.
 	 */
 	@Override
-	public @Nullable AcpHarnessInfo agentInfo() {
-		return connected().map(AcpHarnessClient::agentInfo).filter(Objects::nonNull).findFirst().orElse(null);
+	public @Nullable AcpHarnessInfo harnessInfo() {
+		return connected().map(AcpHarnessClient::harnessInfo).filter(Objects::nonNull).findFirst().orElse(null);
 	}
 
 	@Override
@@ -192,7 +192,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	 * The version an open connection negotiated, or v1 when none is open.
 	 *
 	 * <p>
-	 * Like {@link #agentInfo()}, this will not start an agent to find out: every
+	 * Like {@link #harnessInfo()}, this will not start an agent to find out: every
 	 * connection in a pool runs the same runtime with the same settings, so the first one
 	 * to have spoken is the answer for all of them.
 	 */

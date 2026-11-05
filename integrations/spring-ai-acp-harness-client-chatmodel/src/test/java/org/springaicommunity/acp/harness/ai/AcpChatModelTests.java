@@ -332,7 +332,7 @@ class AcpChatModelTests {
 		}
 
 		@Override
-		public org.springaicommunity.acp.harness.client.@Nullable AcpHarnessInfo agentInfo() {
+		public org.springaicommunity.acp.harness.client.@Nullable AcpHarnessInfo harnessInfo() {
 			return null;
 		}
 

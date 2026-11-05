@@ -89,7 +89,7 @@ class RegistryInstallAndConnectTests {
 		try (AcpHarnessClient client = AcpHarnessClientFactory.create(runtime,
 				AcpHarnessSettings.builder("house-agent", workspace).timeout(Duration.ofSeconds(30)).build())) {
 
-			assertThat(client.agentInfo()).isNotNull().extracting(info -> info.name()).isEqualTo("house-agent");
+			assertThat(client.harnessInfo()).isNotNull().extracting(info -> info.name()).isEqualTo("house-agent");
 			assertThat(client.protocolVersion()).isEqualTo(1);
 			assertThat(client.prompt("say something").call().content()).isEqualTo("installed from the registry");
 		}

@@ -36,7 +36,7 @@ class McpOAuthAutoConfigurationTests {
 	private ApplicationContextRunner runner() {
 		return new ApplicationContextRunner()
 			.withConfiguration(AutoConfigurations.of(AcpAutoConfiguration.class, McpOAuthAutoConfiguration.class))
-			.withUserConfiguration(NoAcpAgent.class)
+			.withUserConfiguration(NoAcpHarnessClient.class)
 			.withPropertyValues("spring.ai.acp.harness.runtime=test", "spring.ai.acp.harness.workspace=" + workspace);
 	}
 
@@ -151,7 +151,7 @@ class McpOAuthAutoConfigurationTests {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	static class NoAcpAgent {
+	static class NoAcpHarnessClient {
 
 		@Bean
 		AcpHarnessRuntime testRuntime() {

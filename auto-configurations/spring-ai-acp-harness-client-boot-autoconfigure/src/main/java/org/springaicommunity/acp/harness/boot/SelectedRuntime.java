@@ -178,7 +178,7 @@ public record SelectedRuntime(AcpHarnessRuntime runtime) {
 		if (!duplicated.isEmpty()) {
 			throw new IllegalStateException("More than one AcpHarnessRuntime is registered for " + duplicated
 					+ "; to replace a bundled adapter, declare your bean with the same name as the one it replaces"
-					+ " (for example @Bean(\"gooseAgentRuntime\"))");
+					+ " (for example @Bean(\"gooseHarnessRuntime\"))");
 		}
 	}
 }

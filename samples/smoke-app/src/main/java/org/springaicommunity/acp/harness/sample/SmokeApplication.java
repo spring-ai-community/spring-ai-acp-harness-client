@@ -70,7 +70,7 @@ public class SmokeApplication {
 			// ACP and the three runtimes implement different subsets, so an application
 			// that cares
 			// asks rather than finding out from an error.
-			var info = agent.agentInfo();
+			var info = agent.harnessInfo();
 			if (info != null) {
 				logger.info("Agent: {}", info);
 			}

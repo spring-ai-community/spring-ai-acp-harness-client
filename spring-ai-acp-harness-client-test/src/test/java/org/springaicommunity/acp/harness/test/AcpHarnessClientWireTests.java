@@ -1125,7 +1125,7 @@ class AcpHarnessClientWireTests {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().agentInfo("pretend", "9.9.9").build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
-			assertThat(client.agentInfo()).isNotNull().hasToString("pretend 9.9.9");
+			assertThat(client.harnessInfo()).isNotNull().hasToString("pretend 9.9.9");
 		}
 	}
 

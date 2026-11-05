@@ -154,7 +154,7 @@ class DefaultAcpHarnessExecutorTests {
 		}
 
 		@Override
-		public AcpHarnessInfo agentInfo() {
+		public AcpHarnessInfo harnessInfo() {
 			return new AcpHarnessInfo("goose", "1.51.0");
 		}
 

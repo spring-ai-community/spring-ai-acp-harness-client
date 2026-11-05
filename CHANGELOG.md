@@ -29,11 +29,16 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   `AcpHarnessClient.AcpHarnessResponse` and `AcpHarnessStream`, the registry runtime's
   `AcpHarnessRegistry`, `AcpHarnessInstaller` and `AcpHarnessInstallException`, the Boot
   `AcpHarnessConfigDataLoader`, `AcpHarnessConfigDataLocationResolver` and
-  `AcpHarnessConfigDataResource`, and the test kit's `AcpHarnessRuntimeContract` and
-  `AcpHarnessProbe`. The beans `acpAgentSettings`, `acpAgentRegistry`, `acpAgentInstaller`,
-  `acpAgentObservations` and `acpAgentExecutor` follow as `acpHarness…`. The rule is mechanical,
-  so replacing each `AcpAgent` type-name prefix with `AcpHarness` migrates an application; the
-  compiler finds every site. Unchanged: packages, properties, metric names, and the test doubles
+  `AcpHarnessConfigDataResource` (formerly `AcpAgentsConfigData…`, with an s), and the test kit's
+  `AcpHarnessRuntimeContract` and `AcpHarnessProbe`. `AcpHarnessClient.agentInfo()` becomes
+  `harnessInfo()`, on the pool too. The beans `acpAgentSettings`, `acpAgentRegistry`,
+  `acpAgentInstaller`, `acpAgentObservations` and `acpAgentExecutor` follow as `acpHarness…`, and
+  the adapter beans an application overrides by name are now `gooseHarnessRuntime`,
+  `codexHarnessRuntime`, `openCodeHarnessRuntime` and `registryHarnessRuntimeProvider` instead of
+  `…AgentRuntime…`. The rule is mechanical, so replacing each `AcpAgent` or `AcpAgents` type-name
+  prefix with `AcpHarness` migrates an application, and the compiler finds every site; a bean
+  overridden by its old name is the one thing it cannot catch, so check those four by hand.
+  Unchanged: packages, properties, metric names, and the test doubles
   that play the ACP agent role on the wire, `ScriptedAcpAgent` and `LiveAcpAgents`, since those
   are agents in the protocol's sense.
 - **Breaking:** configuration properties move from `spring.acp.*` to `spring.ai.acp.harness.*`,
@@ -44,7 +49,7 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   effect. The `acp:` config import prefix, metric names and Java packages are unchanged.
 - **Breaking:** the API no longer returns or accepts `java.util.Optional`. A value that may be
   absent is now a plain reference annotated with JSpecify's `@Nullable`, as Spring Framework 7 and
-  Spring AI do, so `client.session(name)`, `client.agentInfo()`, `sessions().find(name)`,
+  Spring AI do, so `client.session(name)`, `client.harnessInfo()`, `sessions().find(name)`,
   `SessionConfiguration.applied(option)`, `AcpHarnessSession.principal()`, `RuntimeOptions.text(path)`
   and the `find*` accessors of `ProviderSpec` and `AcpHarnessSettings` return null for "none". The
   SPI follows: `AcpHarnessRuntime.authMethod`, `toolNameOf`, `planOf`, `logDirectory` and `noticeOf`,

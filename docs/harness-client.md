@@ -127,7 +127,7 @@ An operation the agent does not advertise throws `UnsupportedAcpHarnessOperation
 | Method | Returns |
 | --- | --- |
 | `runtimeId()` | The selected runtime, e.g. `"goose"`. |
-| `agentInfo()` | What the agent called itself during `initialize`. |
+| `harnessInfo()` | What the agent called itself during `initialize`. |
 | `protocolVersion()` | The ACP version the connection settled on (always 1 today). |
 | `notices()` | What the agent reported outside the protocol, such as an MCP server it could not load (see [When a server fails to load](configuration/mcp-servers.md#when-a-server-fails-to-load)). |
 | `isAlive()` | Whether the connection is usable. Optimistic: `false` is never wrong, `true` may be. |

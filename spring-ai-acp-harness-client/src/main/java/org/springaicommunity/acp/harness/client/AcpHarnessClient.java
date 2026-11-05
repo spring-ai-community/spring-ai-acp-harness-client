@@ -52,7 +52,7 @@ public interface AcpHarnessClient extends AutoCloseable {
 	 * say.
 	 */
 	@Nullable
-	AcpHarnessInfo agentInfo();
+	AcpHarnessInfo harnessInfo();
 
 	/**
 	 * The ACP version this connection settled on.

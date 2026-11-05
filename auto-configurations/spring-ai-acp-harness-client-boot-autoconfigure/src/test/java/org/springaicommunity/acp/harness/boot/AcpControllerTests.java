@@ -43,7 +43,7 @@ class AcpControllerTests {
 	private final ReactiveWebApplicationContextRunner runner = new ReactiveWebApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(CodecsAutoConfiguration.class, WebFluxAutoConfiguration.class,
 				AcpWebFluxAutoConfiguration.class))
-		.withUserConfiguration(StubAcpAgent.class)
+		.withUserConfiguration(StubAcpHarnessClient.class)
 		.withPropertyValues("spring.ai.acp.harness.controller.enabled=true");
 
 	@Test
@@ -51,7 +51,7 @@ class AcpControllerTests {
 	void offByDefault() {
 		new ReactiveWebApplicationContextRunner()
 			.withConfiguration(AutoConfigurations.of(AcpWebFluxAutoConfiguration.class))
-			.withUserConfiguration(StubAcpAgent.class)
+			.withUserConfiguration(StubAcpHarnessClient.class)
 			.run(context -> assertThat(context).doesNotHaveBean(AcpController.class));
 	}
 
@@ -189,7 +189,7 @@ class AcpControllerTests {
 
 	@Configuration(proxyBeanMethods = false)
 	@EnableConfigurationProperties(AcpProperties.class)
-	static class StubAcpAgent {
+	static class StubAcpHarnessClient {
 
 		@Bean
 		AcpHarnessClient acpHarnessClient() {
@@ -215,7 +215,7 @@ class AcpControllerTests {
 		}
 
 		@Override
-		public AcpHarnessInfo agentInfo() {
+		public AcpHarnessInfo harnessInfo() {
 			return new AcpHarnessInfo("fake", "1.0");
 		}
 

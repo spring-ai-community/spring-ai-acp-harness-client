@@ -70,8 +70,8 @@ public class AcpAutoConfiguration {
 	static class GooseRuntimeConfiguration {
 
 		@Bean
-		@ConditionalOnMissingBean(name = "gooseAgentRuntime")
-		AcpHarnessRuntime gooseAgentRuntime() {
+		@ConditionalOnMissingBean(name = "gooseHarnessRuntime")
+		AcpHarnessRuntime gooseHarnessRuntime() {
 			return new GooseRuntime();
 		}
 
@@ -82,8 +82,8 @@ public class AcpAutoConfiguration {
 	static class CodexRuntimeConfiguration {
 
 		@Bean
-		@ConditionalOnMissingBean(name = "codexAgentRuntime")
-		AcpHarnessRuntime codexAgentRuntime() {
+		@ConditionalOnMissingBean(name = "codexHarnessRuntime")
+		AcpHarnessRuntime codexHarnessRuntime() {
 			return new CodexRuntime();
 		}
 
@@ -94,8 +94,8 @@ public class AcpAutoConfiguration {
 	static class OpenCodeRuntimeConfiguration {
 
 		@Bean
-		@ConditionalOnMissingBean(name = "openCodeAgentRuntime")
-		AcpHarnessRuntime openCodeAgentRuntime() {
+		@ConditionalOnMissingBean(name = "openCodeHarnessRuntime")
+		AcpHarnessRuntime openCodeHarnessRuntime() {
 			return new OpenCodeRuntime();
 		}
 

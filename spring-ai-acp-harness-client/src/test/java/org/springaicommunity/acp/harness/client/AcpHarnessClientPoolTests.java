@@ -457,7 +457,7 @@ class AcpHarnessClientPoolTests {
 		}
 
 		@Override
-		public AcpHarnessInfo agentInfo() {
+		public AcpHarnessInfo harnessInfo() {
 			return new AcpHarnessInfo("fake", "1." + index);
 		}
 
@@ -633,14 +633,14 @@ class AcpHarnessClientPoolTests {
 
 	@Test
 	@DisplayName("asking who the agent is does not start one")
-	void agentInfoDoesNotConnect() {
+	void harnessInfoDoesNotConnect() {
 		try (AcpHarnessClientPool pool = pool(settings(1, 32))) {
-			assertThat(pool.agentInfo()).isNull();
+			assertThat(pool.harnessInfo()).isNull();
 			assertThat(pool.openConnections()).isZero();
 
 			pool.openSession("a");
 
-			assertThat(pool.agentInfo()).isNotNull();
+			assertThat(pool.harnessInfo()).isNotNull();
 		}
 	}
 

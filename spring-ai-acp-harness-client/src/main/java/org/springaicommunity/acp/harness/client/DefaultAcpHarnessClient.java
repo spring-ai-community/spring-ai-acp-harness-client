@@ -67,7 +67,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 	private final ConfigResolver configResolver;
 
-	private final @Nullable AcpHarnessInfo agentInfo;
+	private final @Nullable AcpHarnessInfo harnessInfo;
 
 	private final AcpHarnessSessions sessionOperations;
 
@@ -124,7 +124,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		this.router = router;
 		this.recorder = recorder == null ? new SessionConfigRecorder() : recorder;
 		this.configResolver = new ConfigResolver(runtime, settings.onUnsupported());
-		this.agentInfo = initialized == null ? null : AcpHarnessInfo.from(initialized.agentInfo());
+		this.harnessInfo = initialized == null ? null : AcpHarnessInfo.from(initialized.agentInfo());
 		this.mcpAccess = new McpAccess(settings.mcp().credentials(), settings.timeout(),
 				runtime.mcpRequestFilters(settings), runtime.mcpScope());
 		this.sessionOperations = new DefaultAcpHarnessSessions(acp, runtime.id(), settings,
@@ -164,8 +164,8 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	}
 
 	@Override
-	public @Nullable AcpHarnessInfo agentInfo() {
-		return agentInfo;
+	public @Nullable AcpHarnessInfo harnessInfo() {
+		return harnessInfo;
 	}
 
 	@Override

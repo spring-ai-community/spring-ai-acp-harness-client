@@ -54,8 +54,9 @@ class AcpRegistryConfiguration {
 	}
 
 	@Bean
-	@ConditionalOnMissingBean(name = "registryAgentRuntimeProvider")
-	AcpHarnessRuntimeProvider registryAgentRuntimeProvider(AcpHarnessRegistry registry, AcpHarnessInstaller installer) {
+	@ConditionalOnMissingBean(name = "registryHarnessRuntimeProvider")
+	AcpHarnessRuntimeProvider registryHarnessRuntimeProvider(AcpHarnessRegistry registry,
+			AcpHarnessInstaller installer) {
 		return new RegistryAcpHarnessRuntimeProvider(registry, installer);
 	}
 
