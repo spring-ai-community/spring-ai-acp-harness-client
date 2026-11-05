@@ -1992,6 +1992,21 @@
   <code>spring.ai.*</code> convention of the Spring AI Community projects. Update your configuration: the old
   keys are no longer read, and nothing reports them, so a <code>spring.acp.*.enabled=false</code> stops taking
   effect. The <code>acp:</code> config import prefix, metric names and Java packages are unchanged.</li>
+<li><strong>Breaking:</strong> the API no longer returns or accepts <code>java.util.Optional</code>. A value that may be
+  absent is now a plain reference annotated with JSpecify's <code>@Nullable</code>, as Spring Framework 7 and
+  Spring AI do, so <code>client.session(name)</code>, <code>client.agentInfo()</code>, <code>sessions().find(name)</code>,
+  <code>SessionConfiguration.applied(option)</code>, <code>AcpAgentSession.principal()</code>, <code>RuntimeOptions.text(path)</code>
+  and the <code>find*</code> accessors of <code>ProviderSpec</code> and <code>AcpAgentSettings</code> return null for "none". The
+  SPI follows: <code>AcpAgentRuntime.authMethod</code>, <code>toolNameOf</code>, <code>planOf</code>, <code>logDirectory</code> and <code>noticeOf</code>,
+  <code>AcpAgentRuntimeProvider.forId</code>, <code>McpCredentialsProvider.credentialsFor</code>,
+  <code>McpCredentials.upstream</code>, <code>ModelCatalog.modelsOf</code>, <code>SessionPrincipalResolver.current</code>,
+  <code>PermissionPrompt.ask</code> and both <code>PermissionPolicy.decide</code> methods return null instead of empty,
+  and <code>decide</code> and <code>PermissionQuestion</code> take a nullable tool name. <code>AcpAgentOptions</code> drops its
+  <code>find*</code> methods, since its record accessors already say the same thing; <code>StoredSession</code> likewise
+  drops <code>findCwd</code>, <code>findTitle</code> and <code>findUpdatedAt</code>, and <code>ProviderSpec</code> drops <code>findBaseUrl</code>.
+  <code>AcpAgentEvent.UsageUpdated.contextFraction()</code> returns a <code>Double</code> or null instead of an
+  <code>OptionalDouble</code>. Replace <code>.isPresent()</code> with a null check and <code>.orElse(x)</code> with a conditional
+  to migrate; the compiler finds every call site, since the types changed.</li>
 <li>Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.</li>
 <li>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
