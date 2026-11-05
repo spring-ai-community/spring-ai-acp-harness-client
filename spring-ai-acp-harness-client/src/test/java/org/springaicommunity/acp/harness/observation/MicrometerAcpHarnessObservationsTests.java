@@ -43,11 +43,12 @@ class MicrometerAcpHarnessObservationsTests {
 
 		turn.completed("END_TURN");
 
-		assertThat(meters.get("acp.turn")
-			.tag("acp.runtime", "goose")
-			.tag("acp.model", "gpt-5.4-mini")
-			.tag("acp.session.kind", "named")
-			.tag("acp.outcome", "END_TURN")
+		assertThat(meters.get("spring.ai.acp.harness.turn")
+			.tag("spring.ai.kind", "acp_harness_turn")
+			.tag("spring.ai.acp.harness.runtime", "goose")
+			.tag("gen_ai.response.model", "gpt-5.4-mini")
+			.tag("spring.ai.acp.harness.session.kind", "named")
+			.tag("spring.ai.acp.harness.outcome", "END_TURN")
 			.timer()
 			.count()).isEqualTo(1);
 	}
@@ -57,9 +58,11 @@ class MicrometerAcpHarnessObservationsTests {
 		observations.turnStarted(new AcpHarnessObservations.TurnContext("codex", "turn-abc", null, true))
 			.completed("END_TURN");
 
-		assertThat(
-				meters.get("acp.turn").tag("acp.session.kind", "ephemeral").tag("acp.model", "unknown").timer().count())
-			.isEqualTo(1);
+		assertThat(meters.get("spring.ai.acp.harness.turn")
+			.tag("spring.ai.acp.harness.session.kind", "ephemeral")
+			.tag("gen_ai.response.model", "unknown")
+			.timer()
+			.count()).isEqualTo(1);
 	}
 
 	@Test
@@ -71,7 +74,10 @@ class MicrometerAcpHarnessObservationsTests {
 		turn.failed("TimeoutException",
 				new java.util.concurrent.TimeoutException("session 20260920_224 in /Users/someone/secrets timed out"));
 
-		assertThat(meters.get("acp.turn").tag("acp.outcome", "TimeoutException").timer().count()).isEqualTo(1);
+		assertThat(meters.get("spring.ai.acp.harness.turn")
+			.tag("spring.ai.acp.harness.outcome", "TimeoutException")
+			.timer()
+			.count()).isEqualTo(1);
 		assertThat(meters.getMeters().stream().map(m -> m.getId().getTags().toString()))
 			.noneMatch(tags -> tags.contains("secrets"));
 	}
@@ -86,12 +92,14 @@ class MicrometerAcpHarnessObservationsTests {
 		turn.toolCallUpdated("t1", "COMPLETED");
 		turn.completed("END_TURN");
 
-		assertThat(meters.get("acp.tool.call")
-			.tag("acp.tool.kind", "READ")
-			.tag("acp.tool.status", "COMPLETED")
+		assertThat(meters.get("spring.ai.acp.harness.tool.call")
+			.tag("spring.ai.kind", "acp_harness_tool_call")
+			.tag("spring.ai.acp.harness.runtime", "goose")
+			.tag("spring.ai.acp.harness.tool.kind", "READ")
+			.tag("spring.ai.acp.harness.tool.status", "COMPLETED")
 			.timer()
 			.count()).isEqualTo(1);
-		assertThat(meters.get("acp.turn").timer().count()).isEqualTo(1);
+		assertThat(meters.get("spring.ai.acp.harness.turn").timer().count()).isEqualTo(1);
 	}
 
 	@Test
@@ -106,7 +114,10 @@ class MicrometerAcpHarnessObservationsTests {
 		turn.toolCallStarted("t1", "Search the repository", "SEARCH");
 		turn.failed("cancelled", null);
 
-		assertThat(meters.get("acp.tool.call").tag("acp.tool.status", "unfinished").timer().count()).isEqualTo(1);
+		assertThat(meters.get("spring.ai.acp.harness.tool.call")
+			.tag("spring.ai.acp.harness.tool.status", "unfinished")
+			.timer()
+			.count()).isEqualTo(1);
 	}
 
 	@Test
@@ -117,7 +128,8 @@ class MicrometerAcpHarnessObservationsTests {
 		turn.completed("END_TURN");
 		turn.failed("TimeoutException", new RuntimeException());
 
-		assertThat(meters.get("acp.turn").timers().stream().mapToLong(t -> t.count()).sum()).isEqualTo(1);
+		assertThat(meters.get("spring.ai.acp.harness.turn").timers().stream().mapToLong(t -> t.count()).sum())
+			.isEqualTo(1);
 	}
 
 	@Test
@@ -129,8 +141,8 @@ class MicrometerAcpHarnessObservationsTests {
 		context.usage(4441, 1_050_000, 0.008932, "USD");
 
 		assertThat(new DefaultAcpHarnessTurnObservationConvention().getHighCardinalityKeyValues(context))
-			.anyMatch(kv -> kv.getKey().equals("acp.context.used") && kv.getValue().equals("4441"))
-			.anyMatch(kv -> kv.getKey().equals("acp.cost") && kv.getValue().equals("0.008932 USD"));
+			.anyMatch(kv -> kv.getKey().equals("spring.ai.acp.harness.context.used") && kv.getValue().equals("4441"))
+			.anyMatch(kv -> kv.getKey().equals("spring.ai.acp.harness.cost") && kv.getValue().equals("0.008932 USD"));
 	}
 
 	@Test
@@ -141,7 +153,7 @@ class MicrometerAcpHarnessObservationsTests {
 
 		assertThat(new DefaultAcpHarnessTurnObservationConvention().getHighCardinalityKeyValues(context))
 			.extracting(kv -> kv.getKey())
-			.containsExactly("acp.session.name");
+			.containsExactly("spring.ai.acp.harness.session.name");
 	}
 
 	@Test
@@ -166,9 +178,12 @@ class MicrometerAcpHarnessObservationsTests {
 		turn.toolCallUpdated("t1", "COMPLETED");
 		turn.completed("END_TURN");
 
-		assertThat(meters.get("acp.tool.call").timers().stream().mapToLong(t -> t.count()).sum()).isEqualTo(1);
-		assertThat(List.of(meters.get("acp.tool.call").tag("acp.tool.kind", "READ").timer().count()))
-			.containsExactly(1L);
+		assertThat(meters.get("spring.ai.acp.harness.tool.call").timers().stream().mapToLong(t -> t.count()).sum())
+			.isEqualTo(1);
+		assertThat(List.of(meters.get("spring.ai.acp.harness.tool.call")
+			.tag("spring.ai.acp.harness.tool.kind", "READ")
+			.timer()
+			.count())).containsExactly(1L);
 	}
 
 }

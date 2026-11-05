@@ -26,18 +26,19 @@ public class DefaultToolCallObservationConvention implements ObservationConventi
 
 	@Override
 	public String getName() {
-		return "acp.tool.call";
+		return AcpObservationDocumentation.TOOL_CALL_NAME;
 	}
 
 	@Override
 	public String getContextualName(ToolCallObservationContext context) {
-		return "acp tool call " + orUnknown(context.kind()).toLowerCase(Locale.ROOT);
+		return "acp harness tool call " + orUnknown(context.kind()).toLowerCase(Locale.ROOT);
 	}
 
 	@Override
 	public KeyValues getLowCardinalityKeyValues(ToolCallObservationContext context) {
-		return KeyValues.of(ToolCallLowCardinalityKeys.RUNTIME.withValue(orUnknown(context.runtimeId())),
-				ToolCallLowCardinalityKeys.KIND.withValue(orUnknown(context.kind())),
+		return KeyValues.of(ToolCallLowCardinalityKeys.KIND.withValue(AcpObservationDocumentation.TOOL_CALL_KIND),
+				ToolCallLowCardinalityKeys.RUNTIME.withValue(orUnknown(context.runtimeId())),
+				ToolCallLowCardinalityKeys.TOOL_KIND.withValue(orUnknown(context.kind())),
 				ToolCallLowCardinalityKeys.STATUS.withValue(orUnknown(context.status())));
 	}
 

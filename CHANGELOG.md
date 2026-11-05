@@ -41,6 +41,21 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   Unchanged: packages, properties, metric names, and the test doubles
   that play the ACP agent role on the wire, `ScriptedAcpAgent` and `LiveAcpAgents`, since those
   are agents in the protocol's sense.
+- **Breaking:** the observations and their tags are named the way Spring AI names its own, so a
+  dashboard or alert on the old names must be updated. The two observations are
+  `spring.ai.acp.harness.turn` and `spring.ai.acp.harness.tool.call` (were `acp.turn` and
+  `acp.tool.call`); the model tag is the OpenTelemetry `gen_ai.response.model` (was `acp.model`), the
+  key Spring AI's chat models carry, so one breakdown by model covers both; every other key keeps
+  its suffix under `spring.ai.acp.harness.` instead of `acp.` (`.runtime`, `.session.kind`,
+  `.outcome`, `.session.name`, `.context.used`, `.context.size`, `.cost`, `.tool.kind`,
+  `.tool.status`, `.tool.title`, `.tool.id`); and both observations gain Spring AI's `spring.ai.kind`
+  tag, `acp_harness_turn` or `acp_harness_tool_call`. The outcome deliberately stays a single-valued
+  tag of our own rather than `gen_ai.response.finish_reasons`, which Spring AI records as a
+  high-cardinality list on the span. The bare `acp.` root was no library's to claim: ACP itself
+  defines no telemetry names, and any other ACP library could have used the same ones. The
+  `AcpChatModel` response metadata keys follow, from `acp.runtime`, `acp.session`,
+  `acp.context.used`, `acp.context.size`, `acp.cost.amount` and `acp.cost.currency` to the same
+  names under `spring.ai.acp.harness.`.
 - **Breaking:** configuration properties move from `spring.acp.*` to `spring.ai.acp.harness.*`,
   and environment variables from `SPRING_ACP_*` to `SPRING_AI_ACP_HARNESS_*`. The old root is shared
   with `acp-autoconfig` (`spring.acp.client.*`, `spring.acp.agent.*`), and the new one follows the

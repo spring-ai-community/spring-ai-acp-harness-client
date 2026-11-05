@@ -317,16 +317,17 @@ public class AcpChatModel implements ChatModel {
 	private ChatResponseMetadata metadata(AcpChatOptions options, AcpHarnessEvent.@Nullable UsageUpdated usage) {
 		ChatResponseMetadata.Builder builder = ChatResponseMetadata.builder()
 			.model(modelOf(options))
-			.keyValue("acp.runtime", client.runtimeId());
+			.keyValue("spring.ai.acp.harness.runtime", client.runtimeId());
 		if (options.getSession() != null) {
-			builder = builder.keyValue("acp.session", options.getSession());
+			builder = builder.keyValue("spring.ai.acp.harness.session", options.getSession());
 		}
 		if (usage != null) {
-			builder = builder.keyValue("acp.context.used", usage.contextUsed())
-				.keyValue("acp.context.size", usage.contextSize());
+			builder = builder.keyValue("spring.ai.acp.harness.context.used", usage.contextUsed())
+				.keyValue("spring.ai.acp.harness.context.size", usage.contextSize());
 			if (usage.costAmount() != null) {
-				builder = builder.keyValue("acp.cost.amount", usage.costAmount())
-					.keyValue("acp.cost.currency", usage.costCurrency() == null ? "" : usage.costCurrency());
+				builder = builder.keyValue("spring.ai.acp.harness.cost.amount", usage.costAmount())
+					.keyValue("spring.ai.acp.harness.cost.currency",
+							usage.costCurrency() == null ? "" : usage.costCurrency());
 			}
 		}
 		return builder.build();

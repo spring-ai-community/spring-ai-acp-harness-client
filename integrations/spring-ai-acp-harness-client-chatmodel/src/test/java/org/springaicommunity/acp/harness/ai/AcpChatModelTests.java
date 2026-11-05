@@ -226,9 +226,9 @@ class AcpChatModelTests {
 
 		ChatResponse last = model.stream(new Prompt("go")).blockLast();
 
-		assertThat(last.getMetadata().<Object>get("acp.context.used")).isEqualTo(4441L);
-		assertThat(last.getMetadata().<Object>get("acp.cost.amount")).isEqualTo(0.008932);
-		assertThat(last.getMetadata().<Object>get("acp.runtime")).isEqualTo("fake");
+		assertThat(last.getMetadata().<Object>get("spring.ai.acp.harness.context.used")).isEqualTo(4441L);
+		assertThat(last.getMetadata().<Object>get("spring.ai.acp.harness.cost.amount")).isEqualTo(0.008932);
+		assertThat(last.getMetadata().<Object>get("spring.ai.acp.harness.runtime")).isEqualTo("fake");
 	}
 
 	private String finishReasonFor(AcpSchema.StopReason reason) {

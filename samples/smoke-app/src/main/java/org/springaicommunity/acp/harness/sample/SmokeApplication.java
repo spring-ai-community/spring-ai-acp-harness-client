@@ -111,11 +111,11 @@ public class SmokeApplication {
 			// Every turn above produced a timer and a span. Printed here because a metric
 			// nobody
 			// looks at proves nothing.
-			meters.find("acp.turn")
+			meters.find("spring.ai.acp.harness.turn")
 				.timers()
 				.forEach(timer -> logger.info("Observed {} turn(s) as {} in {}ms", timer.count(),
 						timer.getId().getTags(), (long) timer.totalTime(MILLISECONDS)));
-			meters.find("acp.tool.call")
+			meters.find("spring.ai.acp.harness.tool.call")
 				.timers()
 				.forEach(
 						timer -> logger.info("Observed {} tool call(s) as {}", timer.count(), timer.getId().getTags()));

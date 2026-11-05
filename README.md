@@ -331,12 +331,14 @@ With Micrometer on the classpath, every turn and every tool call becomes an obse
 and a span parented to whatever the caller was already in:
 
 ```
-acp.turn{acp.runtime=goose, acp.model=gpt-5.6-terra, acp.session.kind=named, acp.outcome=END_TURN}
-acp.tool.call{acp.runtime=goose, acp.tool.kind=READ, acp.tool.status=COMPLETED}
+spring.ai.acp.harness.turn{spring.ai.kind=acp_harness_turn, spring.ai.acp.harness.runtime=goose, gen_ai.response.model=gpt-5.6-terra, spring.ai.acp.harness.session.kind=named, spring.ai.acp.harness.outcome=END_TURN}
+spring.ai.acp.harness.tool.call{spring.ai.kind=acp_harness_tool_call, spring.ai.acp.harness.runtime=goose, spring.ai.acp.harness.tool.kind=READ, spring.ai.acp.harness.tool.status=COMPLETED}
 ```
 
-`acp.model` is the model the session is **really** using, not the one that was requested — which with
-`on-unsupported: warn` is not the same thing, and is the whole reason to tag it.
+The names follow Spring AI's own: `spring.ai.kind` and `gen_ai.response.model` are the keys its chat
+clients and models use, so one dashboard covers both. `gen_ai.response.model` is the model the session
+is **really** using, not the one that was requested — which with `on-unsupported: warn` is not the same
+thing, and is the whole reason to tag it.
 
 ## Scope
 
