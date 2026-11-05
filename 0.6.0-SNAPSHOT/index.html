@@ -1449,7 +1449,7 @@
 
 <h1 id="spring-ai-acp-harness-client-reference">Spring AI ACP Harness Client Reference<a class="headerlink" href="#spring-ai-acp-harness-client-reference" title="Permanent link">&para;</a></h1>
 <p>Spring AI ACP Harness Client drives any <a href="https://agentclientprotocol.com">Agent Client Protocol</a> coding agent (Goose, Codex, OpenCode, or any of the agents in the ACP registry) from a Spring Boot application, behind one API and one configuration model.</p>
-<p>A <em>harness</em> is the coding agent runtime you drive, such as Goose, Codex or OpenCode. <code>AcpHarnessClient</code> is your application's client for it. ACP calls the two ends of the connection the client and the agent, so types that describe the far end are named <code>AcpAgent…</code>.</p>
+<p>A <em>harness</em> is the coding agent runtime you drive, such as Goose, Codex or OpenCode. This library creates no agent of its own: it configures a harness, launches or attaches to it, and talks to it over ACP. So its types say harness: <code>AcpHarnessClient</code> is your application's client, <code>AcpHarnessSession</code> a session the harness holds, <code>AcpHarnessEvent</code> what it streamed back. ACP calls the two ends of the connection the client and the agent, and this documentation keeps that word for the running program.</p>
 <p>Spring AI ACP Harness Client relates to coding agents the way Spring Data relates to databases:</p>
 <ul>
 <li>application code talks to one abstraction, <code>AcpHarnessClient</code>;</li>
@@ -1518,7 +1518,7 @@ config:
     wrappingWidth: 640
 ---
 flowchart TD
-    app["&lt;b&gt;Your application&lt;/b&gt;&lt;br/&gt;AcpHarnessClient · AcpAgentSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
+    app["&lt;b&gt;Your application&lt;/b&gt;&lt;br/&gt;AcpHarnessClient · AcpHarnessSessions · AcpChatModel (Spring AI) · optional HTTP endpoint"]
     core["&lt;b&gt;spring-ai-acp-harness-client&lt;/b&gt;&lt;br/&gt;connection pool · session registry · config negotiation · permission policy&lt;br/&gt;MCP credential proxy · skill installer · workspace jail · observations"]
     subgraph adapters["Runtime adapters"]
         direction LR
@@ -1530,7 +1530,7 @@ flowchart TD
     end
     agent["&lt;b&gt;Agent process&lt;/b&gt;&lt;br/&gt;reads AGENTS.md and .agents/skills/ from the workspace, calls MCP servers, calls the model"]
     app --&gt; core
-    core -- "AcpAgentRuntime SPI" --&gt; adapters
+    core -- "AcpHarnessRuntime SPI" --&gt; adapters
     adapters -- "ACP v1 (com.agentclientprotocol:acp-core)" --&gt; agent</code></pre>
 <p><em>Figure 1. Application code depends only on the top layer. Vendor knowledge lives only in the runtime adapters.</em></p>
 <h2 id="three-tiers-of-configuration">Three tiers of configuration<a class="headerlink" href="#three-tiers-of-configuration" title="Permanent link">&para;</a></h2>
@@ -1588,7 +1588,7 @@ flowchart TD
 </tr>
 <tr>
 <td><code>spring-ai-acp-harness-client-boot-starter</code></td>
-<td>Core and auto-configuration with <em>no</em> agent (for bringing your own <code>AcpAgentRuntime</code>)</td>
+<td>Core and auto-configuration with <em>no</em> agent (for bringing your own <code>AcpHarnessRuntime</code>)</td>
 </tr>
 <tr>
 <td><code>spring-ai-acp-harness-client</code></td>
@@ -1608,7 +1608,7 @@ flowchart TD
 </tr>
 <tr>
 <td><code>spring-ai-acp-harness-client-test</code></td>
-<td><code>ScriptedAcpAgent</code>, <code>AcpAgentProbe</code>, and the <code>AcpAgentRuntimeContract</code> conformance suite</td>
+<td><code>ScriptedAcpAgent</code>, <code>AcpHarnessProbe</code>, and the <code>AcpHarnessRuntimeContract</code> conformance suite</td>
 </tr>
 </tbody>
 </table>

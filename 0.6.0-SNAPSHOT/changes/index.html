@@ -1964,12 +1964,35 @@
   imports, and any <code>logging.level.org.springaicommunity.acp</code> setting, which otherwise stops matching
   without an error. The JDBC schema for MCP OAuth moves with them, to
   <code>org/springaicommunity/acp/harness/mcp/oauth/acp-mcp-oauth-schema.sql</code>.</li>
-<li><strong>Breaking:</strong> <code>AcpAgentClient</code> becomes <code>AcpHarnessClient</code>, along with <code>DefaultAcpHarnessClient</code>,
-  <code>AcpHarnessClientPool</code>, <code>AcpHarnessClientFactory</code> and <code>AcpHarnessClientException</code>, and the bean
-  <code>acpAgentClient</code> becomes <code>acpHarnessClient</code>. ACP's two roles are client and agent, so a client type
-  named for both was ambiguous, and it matched neither the project's artifacts nor its properties.
-  Replace <code>AcpAgentClient</code> with <code>AcpHarnessClient</code> to migrate. Types that describe the agent keep
-  their <code>AcpAgent</code> names, as do <code>AcpHarnessClient.AcpAgentResponse</code> and <code>AcpAgentStream</code>.</li>
+<li><strong>Breaking:</strong> every <code>AcpAgent…</code> type becomes <code>AcpHarness…</code>, starting with <code>AcpAgentClient</code>,
+  which becomes <code>AcpHarnessClient</code> (with <code>DefaultAcpHarnessClient</code>, <code>AcpHarnessClientPool</code>,
+  <code>AcpHarnessClientFactory</code> and <code>AcpHarnessClientException</code>, and the bean <code>acpAgentClient</code>
+  becomes <code>acpHarnessClient</code>). This library creates no agent: it configures an existing agent
+  harness such as Goose, Codex or OpenCode, launches or attaches to it, and talks to it over ACP,
+  so the types describe the harness and now say so, as the project, its artifacts, its packages
+  and its <code>spring.ai.acp.harness.*</code> properties already did. ACP itself calls the far end of the
+  connection the agent, and the documentation keeps that word for the running program. Hence
+  <code>AcpHarnessRuntime</code>, <code>AcpHarnessRuntimeProvider</code>, <code>AcpHarnessLaunchSpec</code>, <code>AcpHarnessEnvironment</code>,
+  <code>AcpHarnessNotice</code>, <code>AcpHarnessSession</code>, <code>AcpHarnessSessions</code>, <code>AcpHarnessTurn</code>,
+  <code>AcpHarnessEvent</code>, <code>AcpHarnessEventMapper</code>, <code>AcpHarnessInfo</code>, <code>AcpHarnessSettings</code>,
+  <code>AcpHarnessOptions</code>, <code>AcpHarnessObservations</code>, <code>AcpHarnessTurnObservationContext</code>,
+  <code>AcpHarnessExecutor</code>, <code>AcpHarnessLogWatcher</code>, <code>AcpHarnessProcessSupervisor</code>,
+  <code>UnsupportedAcpHarnessOperationException</code>, <code>UnsupportedAcpHarnessOptionException</code>, the nested
+  <code>AcpHarnessClient.AcpHarnessResponse</code> and <code>AcpHarnessStream</code>, the registry runtime's
+  <code>AcpHarnessRegistry</code>, <code>AcpHarnessInstaller</code> and <code>AcpHarnessInstallException</code>, the Boot
+  <code>AcpHarnessConfigDataLoader</code>, <code>AcpHarnessConfigDataLocationResolver</code> and
+  <code>AcpHarnessConfigDataResource</code> (formerly <code>AcpAgentsConfigData…</code>, with an s), and the test kit's
+  <code>AcpHarnessRuntimeContract</code> and <code>AcpHarnessProbe</code>. <code>AcpHarnessClient.agentInfo()</code> becomes
+  <code>harnessInfo()</code>, on the pool too. The beans <code>acpAgentSettings</code>, <code>acpAgentRegistry</code>,
+  <code>acpAgentInstaller</code>, <code>acpAgentObservations</code> and <code>acpAgentExecutor</code> follow as <code>acpHarness…</code>, and
+  the adapter beans an application overrides by name are now <code>gooseHarnessRuntime</code>,
+  <code>codexHarnessRuntime</code>, <code>openCodeHarnessRuntime</code> and <code>registryHarnessRuntimeProvider</code> instead of
+  <code>…AgentRuntime…</code>. The rule is mechanical, so replacing each <code>AcpAgent</code> or <code>AcpAgents</code> type-name
+  prefix with <code>AcpHarness</code> migrates an application, and the compiler finds every site; a bean
+  overridden by its old name is the one thing it cannot catch, so check those four by hand.
+  Unchanged: packages, properties, metric names, and the test doubles
+  that play the ACP agent role on the wire, <code>ScriptedAcpAgent</code> and <code>LiveAcpAgents</code>, since those
+  are agents in the protocol's sense.</li>
 <li><strong>Breaking:</strong> configuration properties move from <code>spring.acp.*</code> to <code>spring.ai.acp.harness.*</code>,
   and environment variables from <code>SPRING_ACP_*</code> to <code>SPRING_AI_ACP_HARNESS_*</code>. The old root is shared
   with <code>acp-autoconfig</code> (<code>spring.acp.client.*</code>, <code>spring.acp.agent.*</code>), and the new one follows the
@@ -1978,17 +2001,17 @@
   effect. The <code>acp:</code> config import prefix, metric names and Java packages are unchanged.</li>
 <li><strong>Breaking:</strong> the API no longer returns or accepts <code>java.util.Optional</code>. A value that may be
   absent is now a plain reference annotated with JSpecify's <code>@Nullable</code>, as Spring Framework 7 and
-  Spring AI do, so <code>client.session(name)</code>, <code>client.agentInfo()</code>, <code>sessions().find(name)</code>,
-  <code>SessionConfiguration.applied(option)</code>, <code>AcpAgentSession.principal()</code>, <code>RuntimeOptions.text(path)</code>
-  and the <code>find*</code> accessors of <code>ProviderSpec</code> and <code>AcpAgentSettings</code> return null for "none". The
-  SPI follows: <code>AcpAgentRuntime.authMethod</code>, <code>toolNameOf</code>, <code>planOf</code>, <code>logDirectory</code> and <code>noticeOf</code>,
-  <code>AcpAgentRuntimeProvider.forId</code>, <code>McpCredentialsProvider.credentialsFor</code>,
+  Spring AI do, so <code>client.session(name)</code>, <code>client.harnessInfo()</code>, <code>sessions().find(name)</code>,
+  <code>SessionConfiguration.applied(option)</code>, <code>AcpHarnessSession.principal()</code>, <code>RuntimeOptions.text(path)</code>
+  and the <code>find*</code> accessors of <code>ProviderSpec</code> and <code>AcpHarnessSettings</code> return null for "none". The
+  SPI follows: <code>AcpHarnessRuntime.authMethod</code>, <code>toolNameOf</code>, <code>planOf</code>, <code>logDirectory</code> and <code>noticeOf</code>,
+  <code>AcpHarnessRuntimeProvider.forId</code>, <code>McpCredentialsProvider.credentialsFor</code>,
   <code>McpCredentials.upstream</code>, <code>ModelCatalog.modelsOf</code>, <code>SessionPrincipalResolver.current</code>,
   <code>PermissionPrompt.ask</code> and both <code>PermissionPolicy.decide</code> methods return null instead of empty,
-  and <code>decide</code> and <code>PermissionQuestion</code> take a nullable tool name. <code>AcpAgentOptions</code> drops its
+  and <code>decide</code> and <code>PermissionQuestion</code> take a nullable tool name. <code>AcpHarnessOptions</code> drops its
   <code>find*</code> methods, since its record accessors already say the same thing; <code>StoredSession</code> likewise
   drops <code>findCwd</code>, <code>findTitle</code> and <code>findUpdatedAt</code>, and <code>ProviderSpec</code> drops <code>findBaseUrl</code>.
-  <code>AcpAgentEvent.UsageUpdated.contextFraction()</code> returns a <code>Double</code> or null instead of an
+  <code>AcpHarnessEvent.UsageUpdated.contextFraction()</code> returns a <code>Double</code> or null instead of an
   <code>OptionalDouble</code>. Replace <code>.isPresent()</code> with a null check and <code>.orElse(x)</code> with a conditional
   to migrate; the compiler finds every call site, since the types changed.</li>
 <li>Every package of a published module is <code>@NullMarked</code>, so a reference is non-null unless it says
@@ -1996,8 +2019,8 @@
   possibly-null value where a non-null one is declared no longer compiles. Nothing changes for a
   caller, except that a <code>@Nullable</code> on this API is now something the compiler checked rather than
   a comment. A few signatures gained a <code>@Nullable</code> the behaviour already implied, such as
-  <code>AcpAgentExecutor.getVersion()</code>, <code>SkillFetcher.Fetched.revision()</code>, <code>McpServerSpec.Http.url()</code>,
-  <code>AcpAgentLaunchSpec.WebSocket.process()</code> and the optional components of <code>SkillSpec.Git</code> and
+  <code>AcpHarnessExecutor.getVersion()</code>, <code>SkillFetcher.Fetched.revision()</code>, <code>McpServerSpec.Http.url()</code>,
+  <code>AcpHarnessLaunchSpec.WebSocket.process()</code> and the optional components of <code>SkillSpec.Git</code> and
   <code>AcpController</code>'s request and response records; <code>SecretRedactor.redact</code> no longer accepts null.
   A few behaviours changed where a null used to flow on: <code>SessionConfiguration.of(option)</code> returns
   a <code>NOT_REQUESTED</code> resolution instead of null for an option the configuration never mentioned; a
@@ -2032,7 +2055,7 @@
   arrives. A <code>session/new</code> not answered within <code>timeout</code> now fails with an
   <code>AcpHarnessClientException</code> instead of an <code>IllegalStateException</code>; an answer after that is
   dropped by the ACP SDK, so a session created that late still stays on the agent.</li>
-<li>Subscribing twice to one throwaway <code>AcpAgentStream</code> now runs two sessions. They used to share one,
+<li>Subscribing twice to one throwaway <code>AcpHarnessStream</code> now runs two sessions. They used to share one,
   so the first to finish could close it under the other.</li>
 <li>A closed <code>AcpHarnessClientPool</code> would start new agents on request, and a connection still being
   built when the pool closed was never closed. A closed pool now refuses work with an

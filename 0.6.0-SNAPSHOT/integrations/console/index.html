@@ -1728,7 +1728,7 @@
 </div>
 <h2 id="customizing">Customizing<a class="headerlink" href="#customizing" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>How turns look</strong>: register a subclass of <code>ConsoleRenderer</code> as a bean. Every method is an override point, and <code>render(AcpAgentEvent)</code> is the one each event goes through.</li>
+<li><strong>How turns look</strong>: register a subclass of <code>ConsoleRenderer</code> as a bean. Every method is an override point, and <code>render(AcpHarnessEvent)</code> is the one each event goes through.</li>
 <li><strong>Who answers <code>ask</code></strong>: register your own <code>PermissionPrompt</code> bean, and the console's backs off. <code>PermissionQuestion</code> carries the tool name, the agent's title for the call, its kind and the options.</li>
 <li><strong>The terminal</strong>: a JLine <code>Terminal</code> bean replaces the system one.</li>
 </ul>
