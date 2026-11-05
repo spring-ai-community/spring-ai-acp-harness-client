@@ -16,6 +16,11 @@
     <description>A terminal chat over the application's ACP agent: add the dependency, run the application, talk to it</description>
 
     <dependencies>
+        <!-- Nullability annotations: @Nullable where a value may be absent. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springaicommunity</groupId>
             <artifactId>spring-ai-acp-harness-client-boot-autoconfigure</artifactId>

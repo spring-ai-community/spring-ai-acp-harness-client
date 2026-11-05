@@ -98,16 +98,13 @@ public final class AcpAgentProbe {
 				AcpAgentSession session = client.openSession("probe");
 				AcpSchema.SessionConfigSelect model = session.advertised().select("model", "model");
 				List<String> models = model == null ? List.of() : values(model);
-				AcpSchema.SessionModelState modelState = session.advertised().findModels();
-				List<String> legacyModels = modelState == null ? List.of()
-						: modelState.availableModels().stream().map(AcpSchema.ModelInfo::modelId).toList();
+				if (models.isEmpty()) {
+					models = legacyModelIds(session);
+				}
 				AcpSchema.SessionConfigSelect mode = session.advertised().select("mode", "mode");
-				AcpSchema.SessionModeState modeState = session.advertised().findModes();
-				List<String> modes = mode != null ? values(mode) : modeState == null ? List.of()
-						: modeState.availableModes().stream().map(AcpSchema.SessionMode::id).toList();
+				List<String> modes = mode == null ? legacyModeIds(session) : values(mode);
 
-				return new AcpAgentProbe(true, null, models.isEmpty() ? legacyModels : models,
-						model == null ? null : model.currentValue(), modes);
+				return new AcpAgentProbe(true, null, models, model == null ? null : model.currentValue(), modes);
 			}
 		}
 		catch (RuntimeException | IOException ex) {
@@ -118,6 +115,20 @@ public final class AcpAgentProbe {
 		finally {
 			deleteQuietly(workspace);
 		}
+	}
+
+	/**
+	 * The models of the legacy {@code models} state, or none when the agent sent none.
+	 */
+	private static List<String> legacyModelIds(AcpAgentSession session) {
+		AcpSchema.SessionModelState state = session.advertised().findModels();
+		return state == null ? List.of() : state.availableModels().stream().map(AcpSchema.ModelInfo::modelId).toList();
+	}
+
+	/** The modes of the legacy {@code modes} state, or none when the agent sent none. */
+	private static List<String> legacyModeIds(AcpAgentSession session) {
+		AcpSchema.SessionModeState state = session.advertised().findModes();
+		return state == null ? List.of() : state.availableModes().stream().map(AcpSchema.SessionMode::id).toList();
 	}
 
 	private static List<String> values(AcpSchema.SessionConfigSelect select) {

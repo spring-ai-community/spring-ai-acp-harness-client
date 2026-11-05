@@ -135,9 +135,9 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 		if (protectedServer == null) {
 			return null;
 		}
-		requireAuthorized(protectedServer, principal);
+		SessionPrincipal authorized = requireAuthorized(protectedServer, principal);
 		String registrationId = protectedServer.name();
-		String principalName = principal.name();
+		String principalName = authorized.name();
 		return () -> Map.of("Authorization", "Bearer " + accessToken(registrationId, principalName));
 	}
 
@@ -170,7 +170,8 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 		return List.copyOf(servers.keySet());
 	}
 
-	private void requireAuthorized(McpServerSpec.Http server, @Nullable SessionPrincipal principal) {
+	/** The principal, once it is known to hold a token for {@code server}. */
+	private SessionPrincipal requireAuthorized(McpServerSpec.Http server, @Nullable SessionPrincipal principal) {
 		if (principal == null) {
 			throw new IllegalStateException("MCP server '" + server.name() + "' is called with each user's own "
 					+ "OAuth token, and this session was opened on nobody's behalf; pass a SessionPrincipal or "
@@ -178,13 +179,13 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 		}
 		register(server);
 		if (signedIn(server.name(), principal.name())) {
-			return;
+			return principal;
 		}
 		// One sign-in at a time per (server, user): two sessions opening together must
 		// not open two browsers.
 		synchronized (lock(server.name(), principal.name())) {
 			if (authorizedClients.loadAuthorizedClient(server.name(), principal.name()) != null) {
-				return;
+				return principal;
 			}
 			try {
 				signIn.signIn(server, principal);
@@ -199,6 +200,7 @@ public final class OAuth2McpCredentialsProvider implements McpCredentialsProvide
 		if (authorized == null) {
 			throw new ClientAuthorizationRequiredException(server.name());
 		}
+		return principal;
 	}
 
 	/**

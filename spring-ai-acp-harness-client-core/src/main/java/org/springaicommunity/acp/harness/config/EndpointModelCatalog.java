@@ -61,7 +61,14 @@ final class EndpointModelCatalog implements ModelCatalog {
 
 	@Override
 	public @Nullable List<String> modelsOf(@Nullable ProviderSpec provider) {
-		URI url = provider == null ? null : provider.findModelsUrl();
+		if (provider == null) {
+			return null;
+		}
+		return modelsServedBy(provider);
+	}
+
+	private @Nullable List<String> modelsServedBy(ProviderSpec provider) {
+		URI url = provider.findModelsUrl();
 		if (url == null) {
 			return null;
 		}

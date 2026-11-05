@@ -83,7 +83,8 @@ public final class AcpAgentLogWatcher implements AutoCloseable {
 	private volatile @Nullable Thread thread;
 
 	/**
-	 * @param interpret what a redacted log line means to a client, or null for nothing
+	 * @param interpret what a redacted log line means to a client; returns null for a
+	 * line that means nothing
 	 */
 	public AcpAgentLogWatcher(Path directory, Function<String, @Nullable AcpAgentNotice> interpret) {
 		this(directory, interpret, notice -> {

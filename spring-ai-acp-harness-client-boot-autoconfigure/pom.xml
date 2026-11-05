@@ -16,6 +16,11 @@
     <description>Spring Boot auto-configuration and configuration properties</description>
 
     <dependencies>
+        <!-- Nullability annotations: @Nullable where a value may be absent. -->
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springaicommunity</groupId>
             <artifactId>spring-ai-acp-harness-client-core</artifactId>

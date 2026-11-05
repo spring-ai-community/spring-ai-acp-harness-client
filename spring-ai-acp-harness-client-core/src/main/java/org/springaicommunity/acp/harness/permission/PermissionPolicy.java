@@ -68,8 +68,8 @@ public interface PermissionPolicy {
 	}
 
 	private static AcpSchema.@Nullable PermissionOption offered(AcpSchema.@Nullable PermissionOption chosen,
-			List<AcpSchema.PermissionOption> options) {
-		return chosen != null && options.contains(chosen) ? chosen : null;
+			@Nullable List<AcpSchema.PermissionOption> options) {
+		return chosen != null && options != null && options.contains(chosen) ? chosen : null;
 	}
 
 	/** The request's options, which the schema leaves nullable, as a list. */

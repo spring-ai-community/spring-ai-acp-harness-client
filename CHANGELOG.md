@@ -38,7 +38,7 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   drops `findCwd`, `findTitle` and `findUpdatedAt`, and `ProviderSpec` drops `findBaseUrl`.
   `AcpAgentEvent.UsageUpdated.contextFraction()` returns a `Double` or null instead of an
   `OptionalDouble`. Replace `.isPresent()` with a null check and `.orElse(x)` with a conditional
-  to migrate; an IDE that reads JSpecify annotations flags the places that need it.
+  to migrate; the compiler finds every call site, since the types changed.
 - Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
