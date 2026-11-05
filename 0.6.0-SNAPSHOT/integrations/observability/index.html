@@ -1417,10 +1417,33 @@
 
 <h1 id="observability">Observability<a class="headerlink" href="#observability" title="Permanent link">&para;</a></h1>
 <p>With Micrometer on the classpath, every turn and every tool call is an observation: a timer, and a span parented to whatever the caller was in.</p>
-<div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>acp.turn{acp.runtime=goose, acp.model=gpt-5.6-terra, acp.session.kind=named, acp.outcome=END_TURN}
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>acp.tool.call{acp.runtime=goose, acp.tool.kind=READ, acp.tool.status=COMPLETED}
+<div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>spring.ai.acp.harness.turn{spring.ai.kind=acp_harness_turn, spring.ai.acp.harness.runtime=goose, gen_ai.response.model=gpt-5.6-terra, spring.ai.acp.harness.session.kind=named, spring.ai.acp.harness.outcome=END_TURN}
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>spring.ai.acp.harness.tool.call{spring.ai.kind=acp_harness_tool_call, spring.ai.acp.harness.runtime=goose, spring.ai.acp.harness.tool.kind=READ, spring.ai.acp.harness.tool.status=COMPLETED}
 </span></code></pre></div>
-<p><code>acp.model</code> is the model the session is <em>really</em> using, not the one requested. Session names, tool titles and usage are span attributes, not meter tags; contribute an <code>ObservationConvention</code> to change that. Disable with <code>spring.ai.acp.harness.observations.enabled=false</code>.</p>
+<p>The names follow Spring AI's rule: an OpenTelemetry GenAI key where one means the same thing, and otherwise a key scoped under the observation's own name. So <code>spring.ai.kind</code> is the tag Spring AI puts on its chat client, advisor, tool call and vector store observations, and <code>gen_ai.response.model</code> the key its chat models tag the model with; a breakdown by kind or by model covers the harness beside them. Everything else is <code>spring.ai.acp.harness.*</code>, matching the configuration properties.</p>
+<p><code>gen_ai.response.model</code> is the model the session is <em>really</em> using, not the one requested, and <code>none</code> when the agent kept its own default and never said which, as Spring AI spells an absent value on that key. The outcome is the agent's stop reason, or the exception's simple name when the turn did not reach one; it stays a <code>spring.ai.acp.harness.outcome</code> tag rather than <code>gen_ai.response.finish_reasons</code>, which Spring AI records as a high-cardinality list on the span. Session names, tool titles, context usage and cost are span attributes, not meter tags; contribute an <code>ObservationConvention</code> to change that. Disable with <code>spring.ai.acp.harness.observations.enabled=false</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Low-cardinality tags (meter dimensions)</th>
+<th>High-cardinality (span attributes)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spring.ai.acp.harness.turn</code></td>
+<td><code>spring.ai.kind</code>, <code>spring.ai.acp.harness.runtime</code>, <code>gen_ai.response.model</code>, <code>spring.ai.acp.harness.session.kind</code>, <code>spring.ai.acp.harness.outcome</code></td>
+<td><code>spring.ai.acp.harness.session.name</code>, <code>.context.used</code>, <code>.context.size</code>, <code>.cost</code></td>
+</tr>
+<tr>
+<td><code>spring.ai.acp.harness.tool.call</code></td>
+<td><code>spring.ai.kind</code>, <code>spring.ai.acp.harness.runtime</code>, <code>spring.ai.acp.harness.tool.kind</code>, <code>spring.ai.acp.harness.tool.status</code></td>
+<td><code>spring.ai.acp.harness.tool.title</code>, <code>spring.ai.acp.harness.tool.id</code></td>
+</tr>
+</tbody>
+</table>
+<p>The ACP specification defines no telemetry of its own. It does reserve <code>traceparent</code>, <code>tracestate</code> and <code>baggage</code> inside <code>_meta</code> for W3C trace context, which this client does not yet send.</p>
 
 
 

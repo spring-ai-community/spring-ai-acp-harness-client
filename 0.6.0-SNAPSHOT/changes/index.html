@@ -1993,6 +1993,26 @@
   Unchanged: packages, properties, metric names, and the test doubles
   that play the ACP agent role on the wire, <code>ScriptedAcpAgent</code> and <code>LiveAcpAgents</code>, since those
   are agents in the protocol's sense.</li>
+<li><strong>Breaking:</strong> the observations and their tags are named the way Spring AI names its own, so a
+  dashboard or alert on the old names must be updated. The two observations are
+  <code>spring.ai.acp.harness.turn</code> and <code>spring.ai.acp.harness.tool.call</code> (were <code>acp.turn</code> and
+  <code>acp.tool.call</code>); the model tag is the OpenTelemetry <code>gen_ai.response.model</code> (was <code>acp.model</code>), the
+  key Spring AI's chat models carry, so one breakdown by model covers both; every other key keeps
+  its suffix under <code>spring.ai.acp.harness.</code> instead of <code>acp.</code> (<code>.runtime</code>, <code>.session.kind</code>,
+  <code>.outcome</code>, <code>.session.name</code>, <code>.context.used</code>, <code>.context.size</code>, <code>.cost</code>, <code>.tool.kind</code>,
+  <code>.tool.status</code>, <code>.tool.title</code>, <code>.tool.id</code>); and both observations gain Spring AI's <code>spring.ai.kind</code>
+  tag, <code>acp_harness_turn</code> or <code>acp_harness_tool_call</code>. The outcome deliberately stays a single-valued
+  tag of our own rather than <code>gen_ai.response.finish_reasons</code>, which Spring AI records as a
+  high-cardinality list on the span. The bare <code>acp.</code> root was no library's to claim: ACP itself
+  defines no telemetry names, and any other ACP library could have used the same ones. The
+  <code>AcpChatModel</code> response metadata keys follow, and now spell the same thing the same way as the
+  turn span: <code>acp.runtime</code>, <code>acp.session</code>, <code>acp.context.used</code> and <code>acp.context.size</code> become
+  <code>spring.ai.acp.harness.runtime</code>, <code>.session.name</code>, <code>.context.used</code> and <code>.context.size</code>;
+  <code>acp.cost.amount</code> and <code>acp.cost.currency</code> keep their typed split as <code>.cost.amount</code> and
+  <code>.cost.currency</code>. An absent model is tagged <code>none</code>, Spring AI's spelling on that key, where it was
+  <code>unknown</code>. For a custom <code>ObservationConvention</code>, the key constants are unchanged in meaning: the
+  new <code>spring.ai.kind</code> constant is <code>SPRING_AI_KIND</code> on both low-cardinality enums, and
+  <code>ToolCallLowCardinalityKeys.KIND</code> is still the ACP tool kind.</li>
 <li><strong>Breaking:</strong> configuration properties move from <code>spring.acp.*</code> to <code>spring.ai.acp.harness.*</code>,
   and environment variables from <code>SPRING_ACP_*</code> to <code>SPRING_AI_ACP_HARNESS_*</code>. The old root is shared
   with <code>acp-autoconfig</code> (<code>spring.acp.client.*</code>, <code>spring.acp.agent.*</code>), and the new one follows the
