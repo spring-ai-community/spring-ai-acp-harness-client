@@ -27,9 +27,9 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   `ScriptedAcpAgent.Builder.models(...)` still advertises the old state, for testing exactly that.
 - `providers/set` sends the provider as `providerId`, the schema's name for it and the one Codex
   reads. The SDK used to send `id`.
-- A turn that times out, or whose stream is cancelled, now also sends `$/cancel_request` for its
-  `session/prompt`, from the SDK, beside the `session/cancel` it already sent. goose and OpenCode
-  ignore it.
+- A turn that times out, or whose stream is cancelled, and whose agent has not answered
+  `session/cancel` within 5 seconds, also sends `$/cancel_request` for its `session/prompt`, from
+  the SDK. goose and OpenCode ignore it.
 - `session/close` is sent only to an agent that advertises `sessionCapabilities.close`, which the
   SDK now enforces. goose and OpenCode do.
 - A config option the SDK cannot read at all, such as a select mixing options and groups, now
@@ -38,6 +38,8 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 - Removed `SessionConfigRecorder` and `SessionUpdateDecoder`, which worked around SDK gaps that
   0.80.0 closes, and the `recorder` parameter of `DefaultAcpHarnessClient` and
   `DefaultAcpHarnessSessions`. `session/load` and `session/resume` are no longer serialized.
+- `AcpHarnessTurn` now releases the session's turn permit itself, when the agent is done with the
+  session, so a caller of `AcpHarnessTurn.prompt` acquires it and no longer releases it.
 
 ### Fixed
 
@@ -50,9 +52,23 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   entry per timed-out turn. The SDK now forgets a request its caller gave up on.
 - A turn that exceeded `timeout` ended with `Failed` but never sent `session/cancel`, so the agent
   kept working on the prompt, spending tokens on a result nobody received. A timed-out turn now
-  sends `session/cancel`, as a cancelled stream already did. The turn still ends without waiting
-  for the agent to stop, so a prompt sent straight afterwards on the same session can overlap the
-  cancelled one ([#20](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/20)).
+  sends `session/cancel`, as a cancelled stream already did
+  ([#20](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/20)).
+- The next turn on a session could overlap one that was cancelled or timed out. The session was
+  handed on as soon as `session/cancel` was sent, but ACP lets the agent keep sending until it
+  answers the cancelled prompt, and goose, Codex and OpenCode all do: a `usage_update` or
+  `session_info_update` a few milliseconds later, which the next turn received as its own. The
+  agent could also get the next prompt while still finishing the last. The session now stays busy
+  until the agent answers the cancelled prompt, or for 5 seconds if it never does, and what it
+  sends meanwhile is dropped. The caller still hears that the turn ended at once
+  ([#27](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/27)).
+- A permission request still open when its turn was cancelled or timed out was never answered, as
+  ACP requires, and with `policy: ask` the person went on being asked. If they answered, their
+  choice went to the agent for a turn that had already ended. The client now answers such a
+  request `cancelled` at once, answers any that arrive while the agent winds down the same way,
+  and interrupts the `PermissionPrompt` still asking; a later answer is discarded. goose 1.57 was
+  seen to ignore a late answer, so nothing ran
+  ([#26](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/26)).
 
 ## [0.6.0] - 2026-11-06
 

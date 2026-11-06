@@ -59,6 +59,37 @@ class TerminalPermissionPromptTests {
 		assertThat(terminal.written()).doesNotContain("wants to");
 	}
 
+	/**
+	 * The client interrupts a prompt whose turn ended before the person answered; the
+	 * question has already been answered "cancelled" for them.
+	 */
+	@Test
+	void aQuestionWithdrawnWhileTheTerminalWaitsStopsWaiting() throws Exception {
+		TestTerminals.Scripted terminal = TestTerminals.silent();
+		java.util.concurrent.CompletableFuture<AcpSchema.PermissionOption> answer = new java.util.concurrent.CompletableFuture<>();
+		Thread asking = new Thread(() -> answer.complete(prompt(terminal).ask(QUESTION)));
+		asking.start();
+		Thread.sleep(300);
+
+		asking.interrupt();
+
+		assertThat(answer.get(5, java.util.concurrent.TimeUnit.SECONDS)).isNull();
+		assertThat(terminal.written()).contains("request cancelled");
+	}
+
+	@Test
+	void aQuestionWithdrawnBeforeItIsShownIsNotShown() {
+		TestTerminals.Scripted terminal = TestTerminals.typing("1\n");
+		Thread.currentThread().interrupt();
+		try {
+			assertThat(prompt(terminal).ask(QUESTION)).isNull();
+		}
+		finally {
+			Thread.interrupted();
+		}
+		assertThat(terminal.written()).doesNotContain("wants to");
+	}
+
 	private static TerminalPermissionPrompt prompt(TestTerminals.Scripted terminal) {
 		return new TerminalPermissionPrompt(terminal.terminal(), new ConsoleRenderer(terminal.terminal(), true));
 	}

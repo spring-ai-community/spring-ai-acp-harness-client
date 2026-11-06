@@ -37,7 +37,7 @@ A session runs one turn at a time. A request for a session that is still running
 | Response | Meaning |
 | --- | --- |
 | 502 | The turn failed or timed out. The response never repeats what the agent said; on `/prompt`, its `requestId` finds the details in the logs. |
-| 409 | The named session is still running an earlier turn. Send the next turn once that one has answered. |
+| 409 | The named session is still running an earlier turn. Send the next turn once that one has answered. A turn that timed out keeps its session until the agent has stopped, normally a few milliseconds after the 502 and at most 5 seconds, so a request sent the instant a 502 arrives can meet this. |
 | 503 | The agent is fine but cannot take another session right now. Try again later. See `spring.ai.acp.harness.pool`. |
 | 200, then an aborted connection | `/stream` only: the turn failed after text was already sent. A stream that ends normally finished its turn. |
 

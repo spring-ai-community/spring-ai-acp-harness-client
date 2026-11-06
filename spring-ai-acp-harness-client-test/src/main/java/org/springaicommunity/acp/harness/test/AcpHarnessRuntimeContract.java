@@ -34,6 +34,8 @@ import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
 
+import com.agentclientprotocol.sdk.spec.AcpSchema;
+
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -285,6 +287,37 @@ public abstract class AcpHarnessRuntimeContract {
 			.create(client().prompt().user("Count slowly from 1 to 200, one number per line.").stream().events())
 			.thenCancel()
 			.verify(Duration.ofMinutes(1));
+	}
+
+	/**
+	 * ACP requires an agent to answer a cancelled prompt with {@code cancelled}, and the
+	 * client holds the session until it does, so that nothing the agent sends while
+	 * winding down reaches the next turn. Free well inside the grace period means the
+	 * agent answered rather than being given up on.
+	 */
+	@Test
+	@DisplayName("a turn cancelled part-way hands its session on once the agent has stopped")
+	void aCancelledTurnHandsItsSessionOnOnceTheAgentStops() throws InterruptedException {
+		client().prompt()
+			.session("contract-cancelled")
+			.user("Count slowly from 1 to 200, one number per line.")
+			.stream()
+			.events()
+			.takeUntil(event -> event instanceof AcpHarnessEvent.Text)
+			.blockLast(Duration.ofMinutes(1));
+
+		AcpHarnessSession session = Objects.requireNonNull(client().session("contract-cancelled"),
+				"the turn above opened it");
+		assertThat(session.tryBeginTurn(Duration.ofSeconds(4)))
+			.withFailMessage("the agent did not answer its cancelled prompt within 4 seconds")
+			.isTrue();
+		session.endTurn();
+
+		AcpHarnessClient.AcpHarnessResponse next = client().prompt()
+			.session("contract-cancelled")
+			.user("Reply with the single word: ready")
+			.call();
+		assertThat(next.completion().reason()).isEqualTo(AcpSchema.StopReason.END_TURN);
 	}
 
 	@Test

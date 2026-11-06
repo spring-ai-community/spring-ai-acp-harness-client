@@ -43,7 +43,9 @@ public class TerminalPermissionPrompt implements PermissionPrompt {
 	@Override
 	public synchronized AcpSchema.@Nullable PermissionOption ask(PermissionQuestion question) {
 		List<AcpSchema.PermissionOption> options = question.options();
-		if (options.isEmpty()) {
+		// Interrupted while waiting for the question before it: its turn has ended, and
+		// the agent has already been told cancelled.
+		if (options.isEmpty() || Thread.currentThread().isInterrupted()) {
 			return null;
 		}
 		renderer.permission(question);
@@ -53,6 +55,9 @@ public class TerminalPermissionPrompt implements PermissionPrompt {
 				answer = reader.readLine(renderer.choicePrompt(options.size()));
 			}
 			catch (UserInterruptException | EndOfFileException ex) {
+				// Also how a withdrawn question arrives: the client interrupts this
+				// thread when the turn ends, and JLine reports an interrupted read as
+				// Ctrl-C, clearing the interrupt.
 				renderer.info("  request cancelled");
 				return null;
 			}

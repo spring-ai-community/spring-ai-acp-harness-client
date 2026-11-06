@@ -26,6 +26,7 @@ import org.springaicommunity.acp.harness.config.SessionConfiguration;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.mcp.McpAccess;
 import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
+import org.springaicommunity.acp.harness.permission.PendingPermissions;
 import org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher;
 import org.springaicommunity.acp.harness.protocol.AcpProtocol;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
@@ -85,6 +86,9 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	/** Set once by the factory before this client is handed out, or left null. */
 	private volatile @Nullable AcpHarnessLogWatcher watcher;
 
+	/** Replaced once by the factory before this client is handed out. */
+	private volatile PendingPermissions permissions = new PendingPermissions();
+
 	/**
 	 * Each session's MCP servers as the agent is to see them; owns the loopback proxy, if
 	 * any.
@@ -138,6 +142,16 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 */
 	void watch(@Nullable AcpHarnessLogWatcher watcher) {
 		this.watcher = watcher;
+	}
+
+	/**
+	 * Gives this client the permission requests its handler is deciding, so a turn that
+	 * ends early can withdraw them. Set once, by {@code AcpHarnessClientFactory}, for the
+	 * same reason as {@link #watch}; a client built without one has no handler whose
+	 * requests could be pending.
+	 */
+	void permissions(PendingPermissions permissions) {
+		this.permissions = permissions;
 	}
 
 	@Override
@@ -599,22 +613,12 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 					}
 					throw ex;
 				}
-				// The session is free again before the caller hears the turn is over, so
-				// a caller that starts the next turn as soon as this one ends finds it
-				// free, rather than racing a cleanup that runs after its onComplete. Once
-				// only: by the time doFinally runs, the next turn may hold the permit.
-				AtomicBoolean ended = new AtomicBoolean();
-				Runnable endTurn = () -> {
-					if (ended.compareAndSet(false, true)) {
-						session.endTurn();
-					}
-				};
-				return AcpHarnessTurn.on(acp, router, observations, runtime::planOf)
+				// From here the turn releases the permit, and not always when the caller
+				// hears the turn is over: a cancelled or timed-out turn keeps the
+				// session until the agent has finished with it.
+				return AcpHarnessTurn.on(acp, router, observations, runtime::planOf, permissions)
 					.prompt(session, prompt, effective.timeout(), turnContext(session, effective, ephemeral))
-					.doOnTerminate(endTurn)
-					.doOnCancel(endTurn)
 					.doFinally(signal -> {
-						endTurn.run();
 						if (ephemeral) {
 							forgetAndCloseWithoutWaiting(name);
 						}
