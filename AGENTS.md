@@ -146,10 +146,12 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   (`AcpHarnessRuntime.authMethod` → `api-key`). A developer's `~/.codex/auth.json` masks this, so
   test Codex with an empty `CODEX_HOME`. A configured key moves `CODEX_HOME` and sets
   `cli_auth_credentials_store = "ephemeral"` so the key is never written to disk.
-- **acp-core gaps are worked around, not suppressed** (e.g. `configOptions` dropped from
-  `session/new`/`session/load` responses, `sessionUpdate` discriminator with no record). These
-  are wire-format gaps invisible to mocks, hence `ScriptedAcpAgent` wire tests. Each workaround is
-  commented where it lives; keep it that way, since there is no separate list.
+- **acp-core gaps are worked around, not suppressed.** They are wire-format gaps invisible to
+  mocks, hence `ScriptedAcpAgent` wire tests. (0.80.0 closed the ones that started this:
+  `configOptions` dropped from session responses, update kinds with no record, and the provider
+  id spelled `id`.) Each workaround is commented where it lives; keep it that way, since there
+  is no separate list. acp-core's value types (`StopReason`, `ToolCallStatus`,
+  `PermissionOptionKind`, …) are open records: compare with `equals`, switch on `value()`.
 - **An MCP server the agent cannot load is reported nowhere on the wire.** `session/new`
   succeeds, no `session/update` arrives, and goose writes nothing to stdout or stderr — only to
   its own log file. Hence `AcpHarnessRuntime.logDirectory`/`noticeOf` (declarations;

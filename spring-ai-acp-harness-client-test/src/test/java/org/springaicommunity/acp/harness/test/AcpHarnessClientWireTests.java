@@ -234,12 +234,8 @@ class AcpHarnessClientWireTests {
 
 	@Test
 	void aSessionUpdateVariantThisSdkCannotModelIsSkippedRatherThanFatal() {
-		// goose emits session_info_update several times a turn and acp-core has no record
-		// for it. The
-		// SDK's own sessionUpdateConsumer would log an ERROR per occurrence; this client
-		// registers a
-		// raw handler and decodes leniently, so the unknown one is dropped and the turn
-		// is unaffected.
+		// An update kind newer than the SDK reads as UnknownSessionUpdate, which the
+		// event mapper drops, so the turn is unaffected.
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().emitsUnknownUpdate(true).reply("one", "two").build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
@@ -278,6 +274,20 @@ class AcpHarnessClientWireTests {
 
 			assertThatThrownBy(() -> client.prompt("hi").call())
 				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
+			assertThat(agent.prompts()).isZero();
+		}
+	}
+
+	@Test
+	void aModelOfferedOnlyInTheLegacyModelsStateIsUnsupported() {
+		// session/set_model never became stable ACP, and acp-core 0.80.0 cannot send it.
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().models("a", "b").build();
+				AcpHarnessClient client = connect(agent,
+						settings().model("b").onUnsupported(OnUnsupported.FAIL).build())) {
+
+			assertThatThrownBy(() -> client.prompt("hi").call())
+				.isInstanceOf(UnsupportedAcpHarnessOptionException.class);
+			assertThat(agent.methods()).doesNotContain("session/set_model");
 			assertThat(agent.prompts()).isZero();
 		}
 	}
@@ -758,10 +768,10 @@ class AcpHarnessClientWireTests {
 	}
 
 	/**
-	 * It must not take down the session of the subscriber that is mid-turn. The scripted
-	 * agent answers {@code session/new} synchronously, so the interrupt survives the open
-	 * and lands in the wait for the turn, which is the path under test; on a real
-	 * transport it could land in the open instead.
+	 * It must not take down the session of the subscriber that is mid-turn. acp-core
+	 * delivers the answer to {@code session/new} on its own thread, so the interrupt
+	 * lands in the wait for that answer: the second subscriber gives up on the open, and
+	 * the session the agent creates anyway is closed when its answer arrives.
 	 */
 	@Test
 	void aSecondSubscriberThatFailsLeavesTheFirstTurnAlone() throws Exception {
@@ -790,7 +800,8 @@ class AcpHarnessClientWireTests {
 			second.join();
 
 			assertThat(secondFailure.get()).isNotNull();
-			assertThat(agent.newSessions()).hasSize(2);
+			Awaits.until(() -> agent.newSessions().size() == 2, LIMIT);
+			Awaits.until(() -> agent.methods().contains("session/close"), LIMIT);
 			assertThat(first).isNotDone();
 			assertThat(client.sessions().open()).hasSize(1);
 			first.get(10, java.util.concurrent.TimeUnit.SECONDS);
@@ -1014,6 +1025,25 @@ class AcpHarnessClientWireTests {
 	}
 
 	@Test
+	void aPerTurnTimeoutCanBeLongerThanTheClientTimeout() {
+		// The client timeout bounds every other request, but not session/prompt (#25).
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.reply("done")
+			.promptDelay(Duration.ofSeconds(2))
+			.build(); AcpHarnessClient client = connect(agent, settings().timeout(Duration.ofSeconds(1)).build())) {
+
+			List<AcpHarnessEvent> events = client.prompt("hi")
+				.options(options -> options.timeout(Duration.ofSeconds(10)))
+				.stream()
+				.events()
+				.collectList()
+				.block(LIMIT);
+
+			assertThat(events).last().isEqualTo(new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
+		}
+	}
+
+	@Test
 	void aTurnThatTimesOutSendsSessionCancel() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().promptDelay(Duration.ofSeconds(30)).build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
@@ -1044,7 +1074,8 @@ class AcpHarnessClientWireTests {
 
 	@Test
 	void anEphemeralSessionIsClosedWhenItsTurnEnds() {
-		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
+		// session/close is gated by sessionCapabilities.close, which acp-core enforces.
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().sessionOperations("close").build();
 				AcpHarnessClient client = connect(agent, settings().build())) {
 
 			client.prompt("hi").call();

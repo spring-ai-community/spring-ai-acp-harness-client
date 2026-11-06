@@ -110,8 +110,8 @@ class PermissionPolicyTests {
 	}
 
 	private static AcpSchema.RequestPermissionRequest request(String title) {
-		AcpSchema.ToolCallUpdate call = new AcpSchema.ToolCallUpdate("call-1", title, AcpSchema.ToolKind.EXECUTE,
-				AcpSchema.ToolCallStatus.PENDING, null, null, null, null);
+		AcpSchema.ToolCallUpdate call = new AcpSchema.ToolCallUpdate("call-1", title, null, AcpSchema.ToolKind.EXECUTE,
+				AcpSchema.ToolCallStatus.PENDING, null, null, null, null, null);
 		return new AcpSchema.RequestPermissionRequest("session-1", call, BOTH);
 	}
 

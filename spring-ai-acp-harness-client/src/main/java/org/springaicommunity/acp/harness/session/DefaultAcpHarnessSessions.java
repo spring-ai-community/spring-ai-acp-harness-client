@@ -10,7 +10,6 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
-import org.springaicommunity.acp.harness.client.SessionConfigRecorder;
 import org.springaicommunity.acp.harness.config.AdvertisedSessionConfig;
 import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.Validation;
@@ -22,13 +21,10 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * {@link AcpHarnessSessions} over one connected agent.
  *
  * <p>
- * Two things here are not obvious from the interface. Pagination is followed to the end
- * rather than exposed, because a cursor is a protocol detail and an agent with more
- * sessions than fit in one page is not a different kind of agent; the walk is bounded so
- * a misbehaving agent that always returns a cursor cannot spin forever. And load and
- * resume are serialized against each other, because recovering the config options those
- * responses drop depends on claiming them immediately after the call that produced them —
- * see {@link SessionConfigRecorder}.
+ * Pagination is followed to the end rather than exposed, because a cursor is a protocol
+ * detail and an agent with more sessions than fit in one page is not a different kind of
+ * agent; the walk is bounded so a misbehaving agent that always returns a cursor cannot
+ * spin forever.
  */
 public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 
@@ -50,15 +46,8 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 
 	private final SessionRegistry registry;
 
-	private final SessionConfigRecorder recorder;
-
 	/** Applies the negotiated tier to a session this class has just bound. */
 	private final Consumer<AcpHarnessSession> configure;
-
-	/**
-	 * Guards the claim of config options from a response that does not name its session.
-	 */
-	private final Object attachLock = new Object();
 
 	/**
 	 * Routes the re-declared MCP servers through the proxy, exactly as a new session's
@@ -73,21 +62,20 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 	 */
 	public DefaultAcpHarnessSessions(com.agentclientprotocol.sdk.client.AcpAsyncClient acp, String runtimeId,
 			AcpHarnessSettings settings, AcpSchema.@Nullable AgentCapabilities capabilities, SessionRegistry registry,
-			SessionConfigRecorder recorder, Consumer<AcpHarnessSession> configure) {
-		this(acp, runtimeId, settings, capabilities, registry, recorder, configure,
+			Consumer<AcpHarnessSession> configure) {
+		this(acp, runtimeId, settings, capabilities, registry, configure,
 				new McpAccess(settings.mcp().credentials(), settings.timeout()));
 	}
 
 	public DefaultAcpHarnessSessions(com.agentclientprotocol.sdk.client.AcpAsyncClient acp, String runtimeId,
 			AcpHarnessSettings settings, AcpSchema.@Nullable AgentCapabilities capabilities, SessionRegistry registry,
-			SessionConfigRecorder recorder, Consumer<AcpHarnessSession> configure, McpAccess mcpAccess) {
+			Consumer<AcpHarnessSession> configure, McpAccess mcpAccess) {
 		this.mcpAccess = mcpAccess;
 		this.acp = acp;
 		this.runtimeId = runtimeId;
 		this.settings = settings;
 		this.capabilities = capabilities;
 		this.registry = registry;
-		this.recorder = recorder;
 		this.configure = configure;
 	}
 
@@ -169,11 +157,8 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 		boolean attached = false;
 		try {
 			List<AcpSchema.McpServer> servers = mcpServers(grant);
-			AdvertisedSessionConfig advertised;
-			synchronized (attachLock) {
-				advertised = operation == Operation.LOAD ? sendLoad(sessionId, servers)
-						: sendResume(sessionId, servers);
-			}
+			AdvertisedSessionConfig advertised = operation == Operation.LOAD ? sendLoad(sessionId, servers)
+					: sendResume(sessionId, servers);
 			attached = true;
 			session.advertised(advertised);
 			configure.accept(session);
@@ -199,10 +184,9 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 			throw new AcpHarnessClientException(
 					"Agent '" + runtimeId + "' did not answer session/load for " + sessionId);
 		}
-		return new AdvertisedSessionConfig(recorder.claimUnattributed(), response.modes(), response.models());
+		return AdvertisedSessionConfig.of(response.configOptions(), response.modes());
 	}
 
-	@SuppressWarnings("deprecation")
 	private AdvertisedSessionConfig sendResume(String sessionId, List<AcpSchema.McpServer> servers) {
 		AcpSchema.ResumeSessionResponse response = acp
 			.resumeSession(new AcpSchema.ResumeSessionRequest(sessionId, settings.workspace().toString(), servers))
@@ -211,7 +195,7 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 			throw new AcpHarnessClientException(
 					"Agent '" + runtimeId + "' did not answer session/resume for " + sessionId);
 		}
-		return new AdvertisedSessionConfig(recorder.claimUnattributed(), response.modes(), response.models());
+		return AdvertisedSessionConfig.of(response.configOptions(), response.modes());
 	}
 
 	/**
@@ -242,7 +226,6 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 			.filter(s -> sessionId.equals(s.sessionId()))
 			.map(AcpHarnessSession::name)
 			.forEach(registry::remove);
-		recorder.forget(sessionId);
 		acp.deleteSession(new AcpSchema.DeleteSessionRequest(sessionId)).block(settings.timeout());
 	}
 
@@ -252,7 +235,6 @@ public final class DefaultAcpHarnessSessions implements AcpHarnessSessions {
 		if (session == null) {
 			return;
 		}
-		recorder.forget(session.sessionId());
 		if (!supports(Operation.CLOSE)) {
 			return;
 		}

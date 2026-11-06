@@ -111,15 +111,15 @@ public class ConsoleRenderer {
 				line(styled("  → " + title, DIM));
 			}
 			case AcpHarnessEvent.ToolCallUpdated update -> {
-				if (update.status() == AcpSchema.ToolCallStatus.FAILED) {
+				if (AcpSchema.ToolCallStatus.FAILED.equals(update.status())) {
 					line(styled("  ✗ " + toolTitles.getOrDefault(update.id(), "tool call") + " failed", WARNING));
 				}
 			}
 			case AcpHarnessEvent.PlanUpdated plan -> plan(plan.entries());
 			case AcpHarnessEvent.UsageUpdated update -> usage = update;
 			case AcpHarnessEvent.Completed completed -> {
-				if (completed.reason() != null && completed.reason() != AcpSchema.StopReason.END_TURN) {
-					line(styled("  [turn ended: " + completed.reason() + "]", DIM));
+				if (completed.reason() != null && !AcpSchema.StopReason.END_TURN.equals(completed.reason())) {
+					line(styled("  [turn ended: " + completed.reason().value().toUpperCase(Locale.ROOT) + "]", DIM));
 				}
 			}
 			case AcpHarnessEvent.Failed failed -> error(messageOf(failed.cause()));
@@ -193,9 +193,9 @@ public class ConsoleRenderer {
 	}
 
 	protected void plan(List<AcpSchema.PlanEntry> entries) {
-		long done = entries.stream().filter(e -> e.status() == AcpSchema.PlanEntryStatus.COMPLETED).count();
+		long done = entries.stream().filter(e -> AcpSchema.PlanEntryStatus.COMPLETED.equals(e.status())).count();
 		String current = entries.stream()
-			.filter(e -> e.status() == AcpSchema.PlanEntryStatus.IN_PROGRESS)
+			.filter(e -> AcpSchema.PlanEntryStatus.IN_PROGRESS.equals(e.status()))
 			.map(AcpSchema.PlanEntry::content)
 			.findFirst()
 			.map(content -> " — " + firstLine(content))
@@ -232,11 +232,13 @@ public class ConsoleRenderer {
 		if (option.kind() == null) {
 			return option.optionId();
 		}
-		return switch (option.kind()) {
-			case ALLOW_ONCE -> "Allow once";
-			case ALLOW_ALWAYS -> "Always allow";
-			case REJECT_ONCE -> "Reject";
-			case REJECT_ALWAYS -> "Always reject";
+		return switch (option.kind().value()) {
+			case "allow_once" -> "Allow once";
+			case "allow_always" -> "Always allow";
+			case "reject_once" -> "Reject";
+			case "reject_always" -> "Always reject";
+			// A kind from an ACP version newer than this SDK: its id still names it.
+			default -> option.optionId();
 		};
 	}
 

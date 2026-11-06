@@ -181,7 +181,7 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		}
 		catch (Rejected rejected) {
 			return Mono.just(new AcpSchema.JSONRPCResponse("2.0", request.id(), null,
-					new AcpSchema.JSONRPCError(rejected.code, rejected.getMessage(), null)));
+					new AcpSchema.JSONRPCError(rejected.code, rejected.message, null)));
 		}
 	}
 
@@ -193,7 +193,6 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 					: Mono.just(newSession(request)).delayElement(script.newSessionDelay);
 			case "session/set_config_option" -> Mono.just(setConfigOption(request));
 			case "session/set_mode" -> Mono.just(setMode(request));
-			case "session/set_model" -> Mono.just(setModel(request));
 			case "providers/list" -> Mono.just(listProviders());
 			case "providers/set" -> Mono.just(setProvider(request));
 			case "session/prompt" -> prompt(request);
@@ -328,7 +327,7 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		if (!script.authMethods.isEmpty() && !authenticated) {
 			throw new Rejected(-32000, "Authentication required");
 		}
-		newSessions.add(agent.unmarshalFrom(request.params(), new com.agentclientprotocol.sdk.json.TypeRef<>() {
+		newSessions.add(agent.unmarshalFrom(asMap(request.params()), new com.agentclientprotocol.sdk.json.TypeRef<>() {
 		}));
 		String sessionId = "session-" + sessionIds.incrementAndGet();
 
@@ -373,19 +372,11 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		return Map.of();
 	}
 
-	private Map<String, Object> setModel(AcpSchema.JSONRPCRequest request) {
-		String modelId = String.valueOf(asMap(request.params()).get("modelId"));
-		if (!script.models.contains(modelId)) {
-			throw new Rejected(-32602, "Invalid model: " + modelId);
-		}
-		return Map.of();
-	}
-
 	private Map<String, Object> listProviders() {
 		if (!script.providers) {
 			throw new Rejected(-32601, PROTOCOL_ERROR_UNKNOWN_METHOD);
 		}
-		return Map.of("providers", script.providerIds.stream().map(id -> Map.of("id", id)).toList());
+		return Map.of("providers", script.providerIds.stream().map(id -> Map.of("providerId", id)).toList());
 	}
 
 	private Map<String, Object> setProvider(AcpSchema.JSONRPCRequest request) {
@@ -394,8 +385,8 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		}
 		Map<String, Object> params = asMap(request.params());
 		providerSets.add(params);
-		if (!script.providerIds.isEmpty() && !script.providerIds.contains(String.valueOf(params.get("id")))) {
-			throw new Rejected(-32602, "Unknown provider: " + params.get("id"));
+		if (!script.providerIds.isEmpty() && !script.providerIds.contains(String.valueOf(params.get("providerId")))) {
+			throw new Rejected(-32602, "Unknown provider: " + params.get("providerId"));
 		}
 		return Map.of();
 	}
@@ -413,9 +404,11 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 
 		Mono<Void> updates = Mono.fromRunnable(() -> {
 			if (script.emitsUnknownUpdate) {
-				// The shape that makes acp-core log an ERROR per occurrence against a
-				// live goose.
-				notify(sessionId, Map.of("sessionUpdate", "session_info_update", "info", Map.of("title", "scripted")));
+				// A kind from a protocol newer than the SDK: acp-core 0.80.0 reads it as
+				// UnknownSessionUpdate. (goose's session_info_update was this case until
+				// the SDK modelled it.)
+				notify(sessionId,
+						Map.of("sessionUpdate", "scripted_future_update", "info", Map.of("title", "scripted")));
 			}
 			script.toolCalls.forEach(tool -> {
 				notify(sessionId, Map.of("sessionUpdate", "tool_call", "toolCallId", tool, "title", tool, "kind",
@@ -444,7 +437,10 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, Object> asMap(Object params) {
+	private Map<String, Object> asMap(@Nullable Object params) {
+		if (params == null) {
+			return Map.of();
+		}
 		if (params instanceof Map<?, ?> map) {
 			return (Map<String, Object>) map;
 		}
@@ -457,9 +453,13 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 
 		private final int code;
 
+		/** Kept apart from getMessage(), which may be null as far as the type says. */
+		private final String message;
+
 		private Rejected(int code, String message) {
 			super(message);
 			this.code = code;
+			this.message = message;
 		}
 
 	}
@@ -561,8 +561,9 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		}
 
 		/**
-		 * The legacy {@code models} state, for testing the {@code session/set_model}
-		 * fallback.
+		 * The legacy {@code models} state, which never became stable ACP and which the
+		 * client no longer reads: for testing that a model offered only there is reported
+		 * unsupported. {@code session/set_model} is answered as an unknown method.
 		 */
 		public Builder models(String... ids) {
 			models.clear();
@@ -630,7 +631,8 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		}
 
 		/**
-		 * Emit a {@code session_info_update}, which this SDK version has no record for.
+		 * Emit a {@code session/update} of a kind no ACP version defines, as a newer
+		 * agent might.
 		 */
 		public Builder emitsUnknownUpdate(boolean emits) {
 			emitsUnknownUpdate = emits;

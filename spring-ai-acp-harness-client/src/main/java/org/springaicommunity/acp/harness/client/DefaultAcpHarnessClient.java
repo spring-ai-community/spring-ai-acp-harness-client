@@ -63,8 +63,6 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 	private final SessionUpdateRouter router;
 
-	private final SessionConfigRecorder recorder;
-
 	private final ConfigResolver configResolver;
 
 	private final @Nullable AcpHarnessInfo harnessInfo;
@@ -94,26 +92,22 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	private final McpAccess mcpAccess;
 
 	/**
-	 * @param recorder the config-option recorder wrapped around the transport, or null
-	 * for a fresh one
 	 * @param initialized the agent's {@code initialize} answer, or null when none was
 	 * kept
 	 * @param alive whether the transport is still up, or null when it cannot tell
 	 * @param onClose run after the connection closes, or null for nothing
 	 */
 	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpHarnessRuntime runtime, AcpHarnessSettings settings,
-			SessionRegistry sessions, SessionUpdateRouter router, @Nullable SessionConfigRecorder recorder,
-			AcpSchema.@Nullable InitializeResponse initialized, @Nullable BooleanSupplier alive,
-			@Nullable Runnable onClose) {
-		this(acp, runtime, settings, sessions, router, recorder, initialized, AcpProtocol.V1,
-				AcpHarnessObservations.NONE, alive, onClose);
+			SessionRegistry sessions, SessionUpdateRouter router, AcpSchema.@Nullable InitializeResponse initialized,
+			@Nullable BooleanSupplier alive, @Nullable Runnable onClose) {
+		this(acp, runtime, settings, sessions, router, initialized, AcpProtocol.V1, AcpHarnessObservations.NONE, alive,
+				onClose);
 	}
 
 	/** Same, with the negotiated protocol version and an observation sink. */
 	public DefaultAcpHarnessClient(AcpAsyncClient acp, AcpHarnessRuntime runtime, AcpHarnessSettings settings,
-			SessionRegistry sessions, SessionUpdateRouter router, @Nullable SessionConfigRecorder recorder,
-			AcpSchema.@Nullable InitializeResponse initialized, int protocolVersion,
-			@Nullable AcpHarnessObservations observations, @Nullable BooleanSupplier alive,
+			SessionRegistry sessions, SessionUpdateRouter router, AcpSchema.@Nullable InitializeResponse initialized,
+			int protocolVersion, @Nullable AcpHarnessObservations observations, @Nullable BooleanSupplier alive,
 			@Nullable Runnable onClose) {
 		this.protocolVersion = protocolVersion;
 		this.observations = observations == null ? AcpHarnessObservations.NONE : observations;
@@ -122,13 +116,12 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		this.settings = settings;
 		this.sessions = sessions;
 		this.router = router;
-		this.recorder = recorder == null ? new SessionConfigRecorder() : recorder;
 		this.configResolver = new ConfigResolver(runtime, settings.onUnsupported());
 		this.harnessInfo = initialized == null ? null : AcpHarnessInfo.from(initialized.agentInfo());
 		this.mcpAccess = new McpAccess(settings.mcp().credentials(), settings.timeout(),
 				runtime.mcpRequestFilters(settings), runtime.mcpScope());
 		this.sessionOperations = new DefaultAcpHarnessSessions(acp, runtime.id(), settings,
-				initialized == null ? null : initialized.agentCapabilities(), sessions, this.recorder,
+				initialized == null ? null : initialized.agentCapabilities(), sessions,
 				session -> configure(session, settings), mcpAccess);
 		this.alive = alive;
 		this.onClose = onClose == null ? () -> {
@@ -216,7 +209,6 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * {@link #closeRemoteWithoutWaiting} for why the distinction is not a stylistic one.
 	 */
 	private void closeRemote(String sessionId) {
-		recorder.forget(sessionId);
 		try {
 			acp.closeSession(new AcpSchema.CloseSessionRequest(sessionId)).block(Duration.ofSeconds(5));
 		}
@@ -240,7 +232,6 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * open on the agent anyway. Nothing failed, so nothing said so.
 	 */
 	private void closeRemoteWithoutWaiting(String sessionId) {
-		recorder.forget(sessionId);
 		acp.closeSession(new AcpSchema.CloseSessionRequest(sessionId)).subscribe(ignored -> {
 		}, ex -> logger.debug("Could not close session {} on the agent", sessionId, ex));
 	}
@@ -267,12 +258,6 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	 * it.
 	 *
 	 * <p>
-	 * The advertised configuration comes from two places because the SDK splits it:
-	 * {@code modes} and {@code models} off the typed response, {@code configOptions} out
-	 * of the recorder, which is the only way to see a field {@code NewSessionResponse}
-	 * drops.
-	 *
-	 * <p>
 	 * The MCP grant is taken inside the factory, so only a session that is really being
 	 * created asks for credentials, and it is released there if {@code session/new}
 	 * fails; once the session exists the registry owns it and releases it whenever the
@@ -294,8 +279,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 				if (response == null || response.sessionId() == null) {
 					throw new AcpHarnessClientException("Agent did not return a session id for '" + n + "'");
 				}
-				advertised.set(new AdvertisedSessionConfig(recorder.configOptionsFor(response.sessionId()),
-						response.modes(), response.models()));
+				advertised.set(AdvertisedSessionConfig.of(response.configOptions(), response.modes()));
 				return new SessionRegistry.Opened(response.sessionId(), grant::close);
 			}
 			catch (RuntimeException ex) {
@@ -691,11 +675,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	private static @Nullable String currentModelOf(AcpHarnessSession session) {
 		AcpSchema.SessionConfigSelect select = session.advertised().select("model", "model");
 		String current = select == null ? null : select.currentValue();
-		if (current != null && !current.isBlank()) {
-			return current;
-		}
-		AcpSchema.SessionModelState models = session.advertised().findModels();
-		return models == null ? null : models.currentModelId();
+		return current == null || current.isBlank() ? null : current;
 	}
 
 	private record DefaultAcpHarnessResponse(String content,

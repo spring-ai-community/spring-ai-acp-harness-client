@@ -129,7 +129,7 @@ final class TodoPlan {
 			Matcher trailing = TRAILING_STATUS.matcher(checkbox.group(2));
 			if (trailing.matches()) {
 				return entry(trailing.group(1),
-						ticked == AcpSchema.PlanEntryStatus.PENDING ? status(trailing.group(2)) : ticked);
+						AcpSchema.PlanEntryStatus.PENDING.equals(ticked) ? status(trailing.group(2)) : ticked);
 			}
 			return entry(checkbox.group(2), ticked);
 		}

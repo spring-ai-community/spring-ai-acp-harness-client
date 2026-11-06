@@ -150,7 +150,7 @@ class GooseRuntimeTests {
 	@Test
 	void theToolNameComesFromGoosesOwnRawInput() {
 		AcpSchema.ToolCallUpdate call = new AcpSchema.ToolCallUpdate("id", "Ran a shell command", null, null, null,
-				null, Map.of("toolName", "developer__shell"), null);
+				null, null, Map.of("toolName", "developer__shell"), null, null);
 
 		assertThat(runtime.toolNameOf(call)).isEqualTo("developer__shell");
 	}
@@ -158,7 +158,7 @@ class GooseRuntimeTests {
 	@Test
 	void theTitleIsTheFallbackWhenGooseSendsNoRawInput() {
 		AcpSchema.ToolCallUpdate call = new AcpSchema.ToolCallUpdate("id", "developer__text_editor", null, null, null,
-				null, null, null);
+				null, null, null, null, null);
 
 		assertThat(runtime.toolNameOf(call)).isEqualTo("developer__text_editor");
 	}

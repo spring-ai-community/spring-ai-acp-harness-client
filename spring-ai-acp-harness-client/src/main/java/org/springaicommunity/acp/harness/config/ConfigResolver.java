@@ -56,8 +56,8 @@ import reactor.core.publisher.Mono;
  * <ol>
  * <li>{@code session/set_config_option} against an advertised option — the modern path,
  * and the only one all three first-party runtimes support;</li>
- * <li>{@code session/set_mode} and {@code session/set_model}, for an agent still
- * returning the older {@code modes} and {@code models} states;</li>
+ * <li>{@code session/set_mode}, for an agent still returning the older {@code modes}
+ * state;</li>
  * <li>{@code providers/set}, for the provider alone, when the agent advertises that
  * capability;</li>
  * <li>the adapter's own out-of-band mapping, which already happened at launch.</li>
@@ -227,10 +227,11 @@ public final class ConfigResolver {
 	}
 
 	/**
-	 * {@code session/set_mode} and {@code session/set_model}, for an agent that returns
-	 * the older {@code modes} or {@code models} state and no config option for it. Codex
-	 * returns both shapes; an agent written before {@code configOptions} existed returns
-	 * only this one.
+	 * {@code session/set_mode}, for an agent that returns the older {@code modes} state
+	 * and no mode config option. Codex returns both shapes; an agent written before
+	 * {@code configOptions} existed returns only this one. There is no model counterpart:
+	 * {@code session/set_model} never became stable ACP, and acp-core 0.80.0 cannot send
+	 * it.
 	 */
 	private Mono<OptionResolution> viaLegacyState(AcpAsyncClient client, AcpHarnessSession session,
 			PortableOption option, String value) {
@@ -249,19 +250,7 @@ public final class ConfigResolver {
 										"session/set_mode")))
 							.orElseGet(Mono::empty);
 			}
-			case MODEL -> {
-				AcpSchema.SessionModelState state = advertised.findModels();
-				yield state == null ? Mono.empty() : state.availableModels()
-					.stream()
-					.filter(m -> matches(value, m.modelId(), m.name()))
-					.findFirst()
-					.map(model -> client
-						.setSessionModel(new AcpSchema.SetSessionModelRequest(session.sessionId(), model.modelId()))
-						.thenReturn(OptionResolution.applied(option, value, model.modelId(), Mechanism.SESSION_MODEL,
-								"session/set_model")))
-					.orElseGet(Mono::empty);
-			}
-			case PROVIDER -> Mono.empty();
+			case MODEL, PROVIDER -> Mono.empty();
 		};
 	}
 
@@ -270,21 +259,29 @@ public final class ConfigResolver {
 	 *
 	 * <p>
 	 * {@code providers/list} is deliberately not consulted first. It would only confirm
-	 * that the id exists, and acp-core 0.17.0 cannot read the id it comes back as —
-	 * Codex, the one runtime that implements the method, returns {@code providerId} where
-	 * the SDK's record expects {@code id}, so every entry parses with a null name.
-	 * Setting and reading the error is both simpler and, here, the only thing that works.
+	 * that the id exists, and setting and reading the error answers the same question in
+	 * one call. (Before acp-core 0.80.0 the SDK also spelled the id {@code id} where the
+	 * schema, and Codex, say {@code providerId}, so neither method could reach Codex.)
 	 */
 	private Mono<OptionResolution> viaProviders(AcpAsyncClient client, AcpHarnessSettings settings,
 			PortableOption option, String value) {
 		if (option != PortableOption.PROVIDER || !supportsProviders(client)) {
 			return Mono.empty();
 		}
-		ProviderSpec provider = settings.provider();
-		return client
-			.setProvider(new AcpSchema.SetProviderRequest(value, provider.apiType(),
-					provider.baseUrl() == null ? null : provider.baseUrl().toString(), provider.headers()))
+		return client.setProvider(setProviderRequest(value, settings.provider()))
 			.thenReturn(OptionResolution.applied(option, value, value, Mechanism.PROVIDERS_SET, "providers/set"));
+	}
+
+	/**
+	 * A {@code providers/set} carrying only what was configured.
+	 */
+	// The SDK types apiType and baseUrl as required, as the unstable schema does, but
+	// checks neither and omits a null from the JSON. Sending only what was configured
+	// leaves the agent to judge a provider without them, as before acp-core 0.80.0.
+	@SuppressWarnings("NullAway")
+	private static AcpSchema.SetProviderRequest setProviderRequest(String providerId, ProviderSpec provider) {
+		return new AcpSchema.SetProviderRequest(providerId, provider.apiType(),
+				provider.baseUrl() == null ? null : provider.baseUrl().toString(), provider.headers());
 	}
 
 	private boolean supportsProviders(AcpAsyncClient client) {

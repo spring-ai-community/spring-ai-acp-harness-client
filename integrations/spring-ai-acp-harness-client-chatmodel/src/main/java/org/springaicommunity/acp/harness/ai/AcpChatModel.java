@@ -298,18 +298,18 @@ public class AcpChatModel implements ChatModel {
 	 * {@code END_TURN} becomes {@code STOP} and {@code MAX_TOKENS} becomes {@code LENGTH}
 	 * because those are what an advisor or an evaluator written against OpenAI is looking
 	 * for. The two ACP reasons with no equivalent keep their own names rather than being
-	 * flattened into one of these.
+	 * flattened into one of these, and so does a reason from an ACP version newer than
+	 * this SDK, in upper case like the rest.
 	 */
 	private static String finishReason(AcpHarnessEvent.Completed completed) {
 		if (completed == null || completed.reason() == null) {
 			return "STOP";
 		}
-		return switch (completed.reason()) {
-			case END_TURN -> "STOP";
-			case MAX_TOKENS -> "LENGTH";
-			case REFUSAL -> "CONTENT_FILTER";
-			case CANCELLED -> "CANCELLED";
-			case MAX_TURN_REQUESTS -> "MAX_TURN_REQUESTS";
+		return switch (completed.reason().value()) {
+			case "end_turn" -> "STOP";
+			case "max_tokens" -> "LENGTH";
+			case "refusal" -> "CONTENT_FILTER";
+			default -> completed.reason().value().toUpperCase(Locale.ROOT);
 		};
 	}
 

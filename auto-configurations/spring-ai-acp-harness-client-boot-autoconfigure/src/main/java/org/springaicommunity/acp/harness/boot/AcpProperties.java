@@ -225,8 +225,8 @@ public record AcpProperties(String runtime, Path workspace, Path runtimeHome, @D
 	 * property exists because the alternative to a flag is a code change, and ACP v2 is a
 	 * published draft whose own announcement says to gate it behind version negotiation
 	 * <em>and</em> a feature flag. Raising it offers v2; an agent that accepts is then
-	 * refused, loudly, because {@code acp-core} 0.17.0 decodes the v1 wire format and a
-	 * v2 turn would report as having ended for no reason. See {@code AcpProtocol}.
+	 * refused, loudly, because {@code acp-core} decodes the v1 wire format and a v2 turn
+	 * would report as having ended for no reason. See {@code AcpProtocol}.
 	 *
 	 * @param maxVersion The highest ACP version to offer on initialize.
 	 * @param strict Fail when an agent answers a version nobody offered, rather than

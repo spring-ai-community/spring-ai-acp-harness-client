@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -405,7 +406,9 @@ public class AcpController {
 				throw new AcpHarnessClientException("Agent turn ended without a terminal event");
 			}
 			AcpSchema.StopReason reason = this.completion.reason();
-			return reason == null ? null : reason.toString();
+			// END_TURN, as this field has always read: acp-core's enum constant names
+			// before 0.80.0 made the type an open value.
+			return reason == null ? null : reason.value().toUpperCase(Locale.ROOT);
 		}
 
 	}

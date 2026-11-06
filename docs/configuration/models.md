@@ -31,7 +31,7 @@ WARN  Runtime 'goose' cannot honor model='gpt-4o-from-2024' (the agent's 'model'
 
     Leave `model` unset to use whatever the agent is already configured with, which is the one model its credentials are sure to reach. To see what an agent offers, set a deliberately wrong model with `warn` and read the warning, or inspect `acpHarnessClient.openSession("probe").configOptions()`.
 
-Override per turn with `.options(o -> o.model("gpt-5.6-sol"))`. Options are negotiated once per session, and again only when a turn asks for something different. To see what was applied, read `openSession(name).configuration()` ([Named sessions](../harness-client.md#named-sessions)); each option reports a `Mechanism`: `CONFIG_OPTION`, `ENDPOINT`, `SESSION_MODE`, `SESSION_MODEL`, `PROVIDERS_SET`, `OUT_OF_BAND`, `UNSUPPORTED` or `NOT_REQUESTED`.
+Override per turn with `.options(o -> o.model("gpt-5.6-sol"))`. Options are negotiated once per session, and again only when a turn asks for something different. To see what was applied, read `openSession(name).configuration()` ([Named sessions](../harness-client.md#named-sessions)); each option reports a `Mechanism`: `CONFIG_OPTION`, `ENDPOINT`, `SESSION_MODE`, `PROVIDERS_SET`, `OUT_OF_BAND`, `UNSUPPORTED` or `NOT_REQUESTED`.
 
 ## Provider credentials
 

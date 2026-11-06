@@ -16,15 +16,15 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * <p>
  * This exists because of a shape in the ACP SDK that is easy to miss: {@code prompt()}
  * returns a {@code Mono<PromptResponse>} carrying only a stop reason, and every piece of
- * streamed content arrives instead through <em>one</em> {@code sessionUpdateConsumer}
+ * streamed content arrives instead through <em>one</em> {@code sessionUpdateHandler}
  * registered once at client build time, shared by every session. Something has to
  * demultiplex it. This is that something.
  *
  * <p>
- * Dispatch is synchronous on purpose. The SDK delivers notifications in arrival order but
- * completes request futures on a separate path, so a handler that deferred its work could
- * let a turn's terminal event overtake the last content chunk it was supposed to follow.
- * Emitting inline keeps that window closed.
+ * Dispatch is synchronous on purpose. The SDK completes a prompt only after its update
+ * handlers have finished with every notification sent before the answer, so work done
+ * inline is done before the turn's terminal event; a handler that deferred its work would
+ * let that event overtake the last content chunk it was supposed to follow.
  */
 public final class SessionUpdateRouter {
 
@@ -48,7 +48,7 @@ public final class SessionUpdateRouter {
 		listeners.remove(sessionId);
 	}
 
-	/** The callback handed to {@code AcpClient.async(...).sessionUpdateConsumer(...)}. */
+	/** The callback handed to {@code AcpClient.async(...).sessionUpdateHandler(...)}. */
 	public void accept(AcpSchema.SessionNotification notification) {
 		if (notification == null || notification.sessionId() == null) {
 			return;

@@ -169,9 +169,9 @@ class AcpHarnessTurnTests {
 	void reportsTheTurnAndItsToolCallsToTheObservations() {
 		agentStreams(
 				List.of(chunk("working"),
-						new AcpSchema.ToolCall("tool_call", "t1", "Read the build file", AcpSchema.ToolKind.READ, null,
-								null, null, null, null, null),
-						new AcpSchema.ToolCallUpdateNotification("tool_call_update", "t1", null, null,
+						new AcpSchema.ToolCall("tool_call", "t1", "Read the build file", null, AcpSchema.ToolKind.READ,
+								null, null, null, null, null, null),
+						new AcpSchema.ToolCallUpdateNotification("tool_call_update", "t1", null, null, null,
 								AcpSchema.ToolCallStatus.COMPLETED, null, null, null, null, null),
 						new AcpSchema.UsageUpdate("usage_update", 4441L, 1_050_000L, null, null)),
 				AcpSchema.StopReason.END_TURN);
@@ -298,7 +298,7 @@ class AcpHarnessTurnTests {
 	@Test
 	void aReplayedPlanToolCallStaysDropped() {
 		AcpSchema.SessionUpdate replayed = new AcpSchema.ToolCall("tool_call", "plan-1", "todo", null, null, null, null,
-				null, null, Map.of("replay", true));
+				null, null, null, Map.of("replay", true));
 		agentStreams(List.of(replayed), AcpSchema.StopReason.END_TURN);
 
 		List<AcpHarnessEvent> events = AcpHarnessTurn.on(client, router, null, call -> List.of())
@@ -310,16 +310,16 @@ class AcpHarnessTurnTests {
 	}
 
 	private static AcpSchema.SessionUpdate toolCall(String id, String title) {
-		return new AcpSchema.ToolCall("tool_call", id, title, null, null, null, null, null, null, null);
+		return new AcpSchema.ToolCall("tool_call", id, title, null, null, null, null, null, null, null, null);
 	}
 
 	private static AcpSchema.SessionUpdate toolCallUpdate(String id) {
-		return new AcpSchema.ToolCallUpdateNotification("tool_call_update", id, null, null,
+		return new AcpSchema.ToolCallUpdateNotification("tool_call_update", id, null, null, null,
 				AcpSchema.ToolCallStatus.COMPLETED, null, null, null, null, null);
 	}
 
 	private static AcpSchema.SessionUpdate chunk(String text) {
-		return new AcpSchema.AgentMessageChunk("agent_message_chunk", new AcpSchema.TextContent(text));
+		return new AcpSchema.AgentMessageChunk(new AcpSchema.TextContent(text));
 	}
 
 }

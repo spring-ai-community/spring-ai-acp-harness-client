@@ -58,15 +58,15 @@ final class LegacyEventFormat {
 	}
 
 	private List<String> toolResponse(AcpHarnessEvent.ToolCallUpdated updated) {
-		boolean finished = updated.status() == AcpSchema.ToolCallStatus.COMPLETED
-				|| updated.status() == AcpSchema.ToolCallStatus.FAILED;
+		boolean finished = AcpSchema.ToolCallStatus.COMPLETED.equals(updated.status())
+				|| AcpSchema.ToolCallStatus.FAILED.equals(updated.status());
 		if (!finished) {
 			return List.of();
 		}
 		Map<String, Object> item = new LinkedHashMap<>();
 		item.put("type", "toolResponse");
 		item.put("id", updated.id());
-		item.put("is_error", updated.status() == AcpSchema.ToolCallStatus.FAILED);
+		item.put("is_error", AcpSchema.ToolCallStatus.FAILED.equals(updated.status()));
 		return List.of(message("user", item));
 	}
 

@@ -61,9 +61,6 @@ public record OptionResolution(PortableOption option, @Nullable String requested
 		 */
 		SESSION_MODE(true),
 
-		/** {@code session/set_model}, likewise for {@code models}. */
-		SESSION_MODEL(true),
-
 		/** {@code providers/set}, for an agent advertising the providers capability. */
 		PROVIDERS_SET(true),
 

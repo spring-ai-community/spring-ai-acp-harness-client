@@ -5,8 +5,49 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ## [0.7.0] - Unreleased
 
+### Changed
+
+- ACP Java SDK 0.80.0 ([#28](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/28)).
+  An application that uses the SDK's own types through this library meets its breaking changes;
+  its [CHANGELOG](https://github.com/agentclientprotocol/java-sdk/blob/v0.80.0/CHANGELOG.md) has
+  a migration for each. The ones most likely to show:
+  - `StopReason`, `ToolCallStatus`, `PermissionOptionKind`, `PlanEntryStatus`,
+    `PlanEntryPriority` and `Role` are open value records rather than enums, so a newer agent's
+    value no longer fails to read.
+    Compare them with `equals` and switch on `value()`. Observation tags, `AcpController`'s
+    `stopReason` and `AcpChatModel`'s finish reason keep their upper-case spellings (`END_TURN`).
+  - `ToolCall`, `ToolCallUpdate` and their notification gain a `name` component, and the short
+    session-update constructors no longer take the discriminator.
+  - A select option's values are `SessionConfigSelectOptions`, flat or grouped; read them with
+    `allOptions()`. Grouped options are matched like flat ones.
+- **The legacy `models` state and `session/set_model` are no longer used.** They never became
+  stable ACP, and the SDK no longer models them. `Mechanism.SESSION_MODEL` is removed. goose,
+  Codex and OpenCode all offer the model as a config option, which is unchanged; an agent that
+  offers models only the old way now gets `on-unsupported` handling for `model`.
+  `ScriptedAcpAgent.Builder.models(...)` still advertises the old state, for testing exactly that.
+- `providers/set` sends the provider as `providerId`, the schema's name for it and the one Codex
+  reads. The SDK used to send `id`.
+- A turn that times out, or whose stream is cancelled, now also sends `$/cancel_request` for its
+  `session/prompt`, from the SDK, beside the `session/cancel` it already sent. goose and OpenCode
+  ignore it.
+- `session/close` is sent only to an agent that advertises `sessionCapabilities.close`, which the
+  SDK now enforces. goose and OpenCode do.
+- A config option the SDK cannot read at all, such as a select mixing options and groups, now
+  fails `session/new` rather than being skipped. An option of a type it does not know is still
+  kept, as `UnknownSessionConfigOption`.
+- Removed `SessionConfigRecorder` and `SessionUpdateDecoder`, which worked around SDK gaps that
+  0.80.0 closes, and the `recorder` parameter of `DefaultAcpHarnessClient` and
+  `DefaultAcpHarnessSessions`. `session/load` and `session/resume` are no longer serialized.
+
 ### Fixed
 
+- A per-turn `timeout` longer than `spring.ai.acp.harness.timeout` was ignored: the SDK bounded
+  `session/prompt` by the client-wide timeout, so the turn failed at that one. The SDK no longer
+  bounds prompts, so the turn's own timeout applies
+  ([#25](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/25)).
+- A turn that timed out left its `session/prompt` in the SDK's table of pending requests until the
+  agent answered it, so an agent that hung and ignored `session/cancel` grew that table by one
+  entry per timed-out turn. The SDK now forgets a request its caller gave up on.
 - A turn that exceeded `timeout` ended with `Failed` but never sent `session/cancel`, so the agent
   kept working on the prompt, spending tokens on a result nobody received. A timed-out turn now
   sends `session/cancel`, as a cancelled stream already did. The turn still ends without waiting

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +79,7 @@ public final class WorkspaceFileSystem {
 	 * editing will ask for one eventually, and failing the request would turn a race into
 	 * a turn-ending error.
 	 */
-	private String slice(Path file, Integer line, Integer limit) throws IOException {
+	private String slice(Path file, @Nullable Integer line, @Nullable Integer limit) throws IOException {
 		if (line == null && limit == null) {
 			return Files.readString(file, StandardCharsets.UTF_8);
 		}

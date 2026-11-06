@@ -313,8 +313,7 @@ public abstract class AcpHarnessRuntimeContract {
 				settings().model(alternative).build())) {
 			OptionResolution model = switched.openSession("contract-switch").configuration().of(PortableOption.MODEL);
 
-			assertThat(model.mechanism()).isIn(OptionResolution.Mechanism.CONFIG_OPTION,
-					OptionResolution.Mechanism.SESSION_MODEL);
+			assertThat(model.mechanism()).isEqualTo(OptionResolution.Mechanism.CONFIG_OPTION);
 			assertThat(model.applied()).isNotNull();
 		}
 	}

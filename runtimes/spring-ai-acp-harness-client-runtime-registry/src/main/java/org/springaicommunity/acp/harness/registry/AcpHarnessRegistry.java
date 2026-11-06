@@ -235,8 +235,8 @@ public class AcpHarnessRegistry {
 	 * An entry that cannot be read costs that agent rather than the catalogue. The
 	 * registry is a document 41 third parties contribute to, so one of them publishing a
 	 * shape this version does not understand is an ordinary event, and it should not be
-	 * able to take away the other 40 — the same reasoning as
-	 * {@code SessionUpdateDecoder}'s, for the same class of problem.
+	 * able to take away the other 40 — the same reasoning by which acp-core reads an
+	 * update kind it does not know as {@code UnknownSessionUpdate} rather than failing.
 	 */
 	Map<String, RegistryEntry> parse(String json) {
 		JsonNode root;
