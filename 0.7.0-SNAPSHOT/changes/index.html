@@ -1402,6 +1402,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="[0.7.0] - Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1439,7 +1456,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1478,7 +1495,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1517,7 +1534,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1567,7 +1584,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1708,6 +1725,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="[0.7.0] - Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1745,7 +1779,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1784,7 +1818,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1823,7 +1857,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1873,7 +1907,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2001,6 +2035,14 @@
 <p>All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 <a href="https://semver.org/">Semantic Versioning</a> (MAJOR.MINOR.PATCH).</p>
 <h2 id="070-unreleased">[0.7.0] - Unreleased<a class="headerlink" href="#070-unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A turn that exceeded <code>timeout</code> ended with <code>Failed</code> but never sent <code>session/cancel</code>, so the agent
+  kept working on the prompt, spending tokens on a result nobody received. A timed-out turn now
+  sends <code>session/cancel</code>, as a cancelled stream already did. The turn still ends without waiting
+  for the agent to stop, so a prompt sent straight afterwards on the same session can overlap the
+  cancelled one (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/20">#20</a>).</li>
+</ul>
 <h2 id="060-2026-11-06">[0.6.0] - 2026-11-06<a class="headerlink" href="#060-2026-11-06" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2129,7 +2171,7 @@
   requests, so one caller sending overlapping turns to one session could stall every other user's
   agent.</li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>A new session that failed while being configured, such as an unsupported model with
   <code>on-unsupported: fail</code>, stayed open on the agent until <code>session-ttl</code>, with its MCP route still
@@ -2206,7 +2248,7 @@
   Boot now loads the file as ordinary configuration, so its keys miss <code>spring.acp</code> and are
   silently ignored: add <code>acp:</code> to the import.</li>
 </ul>
-<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>spring-ai-acp-harness-client-mcp-oauth</code>: a sign-in that had lapsed — its refresh token no
   longer honoured — was never cleared, so the user was never asked to sign in again and every
@@ -2229,7 +2271,7 @@
   itself. Jackson's annotations (<code>com.fasterxml.jackson.annotation</code>) are unchanged.</li>
 <li>Spring Boot 4.1.1, which brings Jackson 3.1.5, the version the SDK is built against.</li>
 </ul>
-<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>With <code>goose serve</code>, an answer to the agent (a permission decision, a file read, a terminal
   result) could be dropped when it was sent at the same moment as a new request, leaving that
@@ -2276,7 +2318,7 @@
   declared <code>new AcpProperties()</code> as a bean registers it with
   <code>@EnableConfigurationProperties(AcpProperties.class)</code> instead.</li>
 </ul>
-<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_4">Fixed<a class="headerlink" href="#fixed_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li>OpenCode sessions no longer call MCP servers as another user, or through a closed session's
   route. OpenCode keeps one MCP client per server name for its whole process, replaced by each
