@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -16,6 +18,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
 import com.agentclientprotocol.sdk.test.InMemoryTransportPair;
 
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 
 /**
  * An ACP agent that exists only to be talked to: no subprocess, no model, and every
@@ -87,6 +90,21 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 
 	private final List<List<Map<String, Object>>> attachedMcpServers = new CopyOnWriteArrayList<>();
 
+	/** Each in-flight prompt's cancellation, by session: completed by session/cancel. */
+	private final Map<String, Sinks.Empty<Void>> cancels = new ConcurrentHashMap<>();
+
+	/** Sessions with a prompt not yet answered. */
+	private final Set<String> prompting = ConcurrentHashMap.newKeySet();
+
+	private final AtomicInteger overlappingPrompts = new AtomicInteger();
+
+	/** Requests this agent sent the client, by id, awaiting the client's answer. */
+	private final Map<Object, Sinks.Empty<Void>> outbound = new ConcurrentHashMap<>();
+
+	private final AtomicInteger outboundIds = new AtomicInteger();
+
+	private final List<String> permissionAnswers = new CopyOnWriteArrayList<>();
+
 	private final Builder script;
 
 	private ScriptedAcpAgent(Builder script) {
@@ -136,6 +154,22 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		return prompts.size();
 	}
 
+	/**
+	 * How many prompts arrived for a session whose previous prompt was still unanswered —
+	 * a client that started the next turn before the agent finished the last.
+	 */
+	public int overlappingPrompts() {
+		return overlappingPrompts.get();
+	}
+
+	/**
+	 * The client's answers to {@code session/request_permission}, in order: the selected
+	 * option id, or {@code cancelled}.
+	 */
+	public List<String> permissionAnswers() {
+		return List.copyOf(permissionAnswers);
+	}
+
 	/** Session ids this agent still has stored, after any deletes. */
 	public List<String> storedSessions() {
 		return List.copyOf(storedSessions);
@@ -168,7 +202,15 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 			methods.add(notification.method());
 			if ("session/cancel".equals(notification.method())) {
 				cancellations.incrementAndGet();
+				Sinks.Empty<Void> cancel = cancels.get(String.valueOf(asMap(notification.params()).get("sessionId")));
+				if (cancel != null) {
+					cancel.tryEmitEmpty();
+				}
 			}
+			return Mono.empty();
+		}
+		if (message instanceof AcpSchema.JSONRPCResponse response) {
+			answered(response);
 			return Mono.empty();
 		}
 		if (!(message instanceof AcpSchema.JSONRPCRequest request)) {
@@ -401,6 +443,11 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 	private Mono<Map<String, Object>> prompt(AcpSchema.JSONRPCRequest request) {
 		prompts.add(request.params());
 		String sessionId = String.valueOf(asMap(request.params()).get("sessionId"));
+		if (!prompting.add(sessionId)) {
+			overlappingPrompts.incrementAndGet();
+		}
+		Sinks.Empty<Void> cancel = Sinks.empty();
+		cancels.put(sessionId, cancel);
 
 		Mono<Void> updates = Mono.fromRunnable(() -> {
 			if (script.emitsUnknownUpdate) {
@@ -420,9 +467,55 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 					Map.of("sessionUpdate", "agent_message_chunk", "content", Map.of("type", "text", "text", text))));
 		});
 
+		Mono<Void> permission = script.permissionFor == null ? Mono.empty()
+				: requestPermission(sessionId, script.permissionFor);
 		Mono<Map<String, Object>> answer = Mono.just(Map.<String, Object>of("stopReason", script.stopReason));
-		return script.promptDelay == null ? updates.then(answer)
-				: updates.then(answer).delayElement(script.promptDelay);
+		Mono<Map<String, Object>> turn = script.promptDelay == null ? updates.then(permission).then(answer)
+				: updates.then(permission).then(answer).delayElement(script.promptDelay);
+		Duration windDown = script.windDown;
+		if (windDown != null) {
+			// What goose, OpenCode and Codex do: keep sending for a moment after the
+			// cancel, then answer the prompt with cancelled.
+			Mono<Map<String, Object>> cancelled = cancel.asMono()
+				.then(Mono.delay(windDown))
+				.then(Mono.fromRunnable(() -> script.afterCancel.forEach(text -> notify(sessionId,
+						Map.of("sessionUpdate", "agent_message_chunk", "content",
+								Map.of("type", "text", "text", text))))))
+				.then(Mono.just(Map.<String, Object>of("stopReason", "cancelled")));
+			turn = Mono.firstWithSignal(turn, cancelled);
+		}
+		return turn.doFinally(signal -> {
+			prompting.remove(sessionId);
+			cancels.remove(sessionId, cancel);
+		});
+	}
+
+	/**
+	 * Asks the client for permission to run {@code tool}, and completes when it answers.
+	 */
+	private Mono<Void> requestPermission(String sessionId, String tool) {
+		String id = "permission-" + outboundIds.incrementAndGet();
+		Sinks.Empty<Void> answered = Sinks.empty();
+		outbound.put(id, answered);
+		Map<String, Object> params = Map.of("sessionId", sessionId, "toolCall",
+				Map.of("toolCallId", tool, "title", tool, "kind", "execute", "status", "pending", "rawInput",
+						Map.of("toolName", tool)),
+				"options", List.of(Map.of("optionId", "allow", "name", "Allow", "kind", "allow_once"),
+						Map.of("optionId", "reject", "name", "Reject", "kind", "reject_once")));
+		return agent.sendMessage(new AcpSchema.JSONRPCRequest("2.0", id, "session/request_permission", params))
+			.then(answered.asMono());
+	}
+
+	private void answered(AcpSchema.JSONRPCResponse response) {
+		Sinks.Empty<Void> waiting = outbound.remove(String.valueOf(response.id()));
+		if (waiting == null) {
+			return;
+		}
+		Object outcome = asMap(response.result()).get("outcome");
+		Map<String, Object> answer = outcome == null ? Map.of() : asMap(outcome);
+		permissionAnswers.add("selected".equals(answer.get("outcome")) ? String.valueOf(answer.get("optionId"))
+				: String.valueOf(answer.get("outcome")));
+		waiting.tryEmitEmpty();
 	}
 
 	private void notify(String sessionId, Map<String, Object> update) {
@@ -544,6 +637,12 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 
 		private @Nullable Duration newSessionDelay;
 
+		private @Nullable Duration windDown;
+
+		private List<String> afterCancel = List.of();
+
+		private @Nullable String permissionFor;
+
 		/** A {@code select} config option with an explicit set of legal values. */
 		public Builder select(String id, String category, String current, String... values) {
 			selects.put(id, new Select(id, category, current, List.of(values)));
@@ -644,6 +743,28 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		 */
 		public Builder promptDelay(Duration delay) {
 			promptDelay = delay;
+			return this;
+		}
+
+		/**
+		 * Answer a cancelled prompt the way real agents do: after {@code delay}, send
+		 * {@code chunks} as {@code agent_message_chunk}s — updates ACP allows after
+		 * {@code session/cancel} — and then answer the prompt with {@code cancelled}.
+		 * Without this the cancel is recorded and otherwise ignored.
+		 */
+		public Builder windsDownAfterCancel(Duration delay, String... chunks) {
+			windDown = delay;
+			afterCancel = List.of(chunks);
+			return this;
+		}
+
+		/**
+		 * Ask {@code session/request_permission} for {@code tool} during every prompt,
+		 * after the scripted updates, and answer the prompt only once the client has
+		 * answered — or once the prompt is cancelled, with {@link #windsDownAfterCancel}.
+		 */
+		public Builder asksPermission(String tool) {
+			permissionFor = tool;
 			return this;
 		}
 

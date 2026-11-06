@@ -4,6 +4,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,8 @@ import org.springaicommunity.acp.harness.config.OptionResolution.Mechanism;
 import org.springaicommunity.acp.harness.config.PoolSettings;
 import org.springaicommunity.acp.harness.config.UnsupportedAcpHarnessOptionException;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
+import org.springaicommunity.acp.harness.permission.PermissionPolicy;
+import org.springaicommunity.acp.harness.permission.PermissionPrompt;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
@@ -1056,6 +1060,111 @@ class AcpHarnessClientWireTests {
 				.verify(LIMIT);
 
 			Awaits.until(() -> agent.cancellations() == 1, LIMIT);
+		}
+	}
+
+	// --- what follows a turn that ended early (#26, #27)
+	// ------------------------------------
+
+	/**
+	 * An agent winding down the way goose, OpenCode and Codex do: still sending after
+	 * {@code session/cancel}, then answering {@code cancelled}.
+	 */
+	private static ScriptedAcpAgent windingDownAgent() {
+		return ScriptedAcpAgent.builder()
+			.reply("answer")
+			.promptDelay(Duration.ofSeconds(1))
+			.windsDownAfterCancel(Duration.ofMillis(300), "late, from the first turn")
+			.build();
+	}
+
+	@Test
+	void theNextTurnDoesNotReceiveWhatATimedOutTurnSentAfterItsCancel() {
+		try (ScriptedAcpAgent agent = windingDownAgent();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+
+			List<AcpHarnessEvent> first = client.prompt()
+				.session("s")
+				.user("one")
+				.options(options -> options.timeout(Duration.ofMillis(200)))
+				.stream()
+				.events()
+				.collectList()
+				.block(LIMIT);
+			List<AcpHarnessEvent> second = client.prompt()
+				.session("s")
+				.user("two")
+				.stream()
+				.events()
+				.collectList()
+				.block(LIMIT);
+
+			assertThat(first).last().isInstanceOf(AcpHarnessEvent.Failed.class);
+			assertThat(second).containsExactly(new AcpHarnessEvent.Text("answer"),
+					new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
+			assertThat(agent.overlappingPrompts()).as("prompts sent while the agent was still finishing one").isZero();
+		}
+	}
+
+	@Test
+	void theNextTurnDoesNotReceiveWhatACancelledTurnSentAfterItsCancel() {
+		try (ScriptedAcpAgent agent = windingDownAgent();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+
+			client.prompt()
+				.session("s")
+				.user("one")
+				.stream()
+				.events()
+				.takeUntil(AcpHarnessEvent.Text.class::isInstance)
+				.blockLast(LIMIT);
+			List<AcpHarnessEvent> second = client.prompt()
+				.session("s")
+				.user("two")
+				.stream()
+				.events()
+				.collectList()
+				.block(LIMIT);
+
+			assertThat(second).containsExactly(new AcpHarnessEvent.Text("answer"),
+					new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
+			assertThat(agent.overlappingPrompts()).isZero();
+		}
+	}
+
+	@Test
+	void aPermissionQuestionStillOpenWhenItsTurnTimesOutIsAnsweredCancelled() throws InterruptedException {
+		// A person who has not answered by the time the turn gives up, and who would
+		// answer "allow" once they are interrupted.
+		CountDownLatch interrupted = new CountDownLatch(1);
+		PermissionPrompt person = question -> {
+			try {
+				new CountDownLatch(1).await();
+			}
+			catch (InterruptedException ex) {
+				interrupted.countDown();
+			}
+			return question.options().getFirst();
+		};
+
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder()
+			.asksPermission("developer__shell")
+			.windsDownAfterCancel(Duration.ZERO)
+			.build();
+				AcpHarnessClient client = connect(agent,
+						settings().permissions(PermissionPolicy.ask(person)).build())) {
+
+			List<AcpHarnessEvent> events = client.prompt("hi")
+				.options(options -> options.timeout(Duration.ofMillis(500)))
+				.stream()
+				.events()
+				.collectList()
+				.block(LIMIT);
+
+			assertThat(events).last().isInstanceOf(AcpHarnessEvent.Failed.class);
+			Awaits.until(() -> !agent.permissionAnswers().isEmpty(), LIMIT);
+			assertThat(agent.permissionAnswers()).containsExactly("cancelled");
+			assertThat(interrupted.await(5, TimeUnit.SECONDS)).as("the person was told the question is gone").isTrue();
 		}
 	}
 

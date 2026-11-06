@@ -177,7 +177,14 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
 - **`permissions.policy: ask` blocks on a person.** `PermissionPolicy.decide(request, toolName)`
   is what the client calls (the 2-arg form is the rule-only default), on `boundedElastic` so
   the transport's inbound thread keeps delivering the turn. `ask` without a `PermissionPrompt`
-  bean fails at startup.
+  bean fails at startup. A turn that ends early withdraws its open questions
+  (`PendingPermissions`): the agent is answered `cancelled`, as ACP requires, the prompt's
+  thread is interrupted, and a late answer is discarded.
+- **A cancelled or timed-out turn keeps its session until the agent answers the prompt.** ACP
+  lets the agent send updates after `session/cancel` until then, and goose, Codex and OpenCode
+  all do. `AcpHarnessTurn` drops them and releases the router registration and the turn permit
+  only on that answer, or after `CANCEL_GRACE`. It owns the permit's release for that reason;
+  callers acquire it and must not release it around the turn.
 - **`permissions.policy: deny` does not stop an agent writing files.** Combine with an agent
   mode that asks first (`mode: plan`). Workspace jail confines fs/terminal requests by real
   path (symlinks followed), not just `normalize()`.

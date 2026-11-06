@@ -37,6 +37,8 @@ Flux<String> text = acpHarnessClient.prompt("Explain the build").stream().conten
 | `call()` | Blocks and returns the finished turn. |
 | `stream()` | A `Flux` ending in exactly one terminal event. Cancelling the subscription cancels the turn on the agent. |
 
+A turn that ends early, because its subscription was cancelled or it exceeded `timeout`, is over for the caller at once. The agent is sent `session/cancel`, and the session stays busy until the agent answers the cancelled prompt. Goose, Codex and OpenCode answer within a few milliseconds; an agent that never answers is given 5 seconds. What the agent sends in the meantime is dropped rather than delivered to the next turn, and any permission request still open is answered `cancelled`. A turn started on the same session straight away waits for this, as it would for any turn still running.
+
 !!! note
 
     Workspace, credentials and MCP servers are not per-request options. They are fixed when the agent process starts, so a per-request override would silently do nothing.

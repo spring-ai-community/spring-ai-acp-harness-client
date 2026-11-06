@@ -21,7 +21,7 @@ spring:
 | `deny` | Rejects everything. The agent degrades to answering from context. |
 | `allowlist` | Approves exactly the named tools (case-insensitive) and rejects the rest, including any request whose tool name cannot be determined. |
 | `auto-approve` | Approves everything. Only in a sandbox, or when the gate that matters is elsewhere (see acp-meridian's `AGENTS.md`). |
-| `ask` | Puts each request to a person through the application's `PermissionPrompt` bean. `spring-ai-acp-harness-client-console` provides one (see [the console](../integrations/console.md#answering-permission-requests)); without one, the application fails to start rather than guess. |
+| `ask` | Puts each request to a person through the application's `PermissionPrompt` bean. `spring-ai-acp-harness-client-console` provides one (see [the console](../integrations/console.md#answering-permission-requests)); without one, the application fails to start rather than guess. If the turn ends before the person answers, the agent is told `cancelled` straight away and the thread asking is interrupted; an answer given after that is discarded. |
 
 To find the names an agent reports, run once with `logging.level.org.springaicommunity.acp.harness: DEBUG` and read them off the permission requests.
 

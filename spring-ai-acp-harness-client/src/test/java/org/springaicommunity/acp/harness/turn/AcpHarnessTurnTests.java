@@ -3,19 +3,24 @@ package org.springaicommunity.acp.harness.turn;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
+import org.springaicommunity.acp.harness.permission.PendingPermissions;
 import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
+import org.springaicommunity.acp.harness.turn.AcpHarnessTurn.PlanTool;
 
 import com.agentclientprotocol.sdk.client.AcpAsyncClient;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,8 +50,129 @@ class AcpHarnessTurnTests {
 	@BeforeEach
 	void setUp() {
 		client = mock(AcpAsyncClient.class);
+		when(client.cancel(any())).thenReturn(Mono.empty());
 		router = new SessionUpdateRouter();
 		session = new SessionRegistry().resolve("s", name -> "sid-1");
+	}
+
+	// --- a turn that ends early
+	// -------------------------------------------------------------
+
+	/**
+	 * The consumer hears nothing more, but the session stays this turn's until the agent
+	 * answers the cancelled prompt: ACP lets the agent send updates until then, and the
+	 * next turn would receive them as its own.
+	 */
+	@Test
+	void aCancelledTurnKeepsTheSessionUntilTheAgentAnswersThePrompt() throws InterruptedException {
+		Sinks.One<AcpSchema.PromptResponse> agent = Sinks.one();
+		when(client.prompt(any())).thenReturn(agent.asMono());
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isTrue();
+
+		AcpHarnessTurn.on(client, router).prompt(session, PROMPT, Duration.ofSeconds(30)).subscribe().dispose();
+
+		assertThat(session.tryBeginTurn(Duration.ZERO)).as("free while the agent winds down").isFalse();
+		assertThat(router.activeTurns()).isOne();
+		router.accept(new AcpSchema.SessionNotification("sid-1", chunk("after the cancel")));
+
+		agent.tryEmitValue(new AcpSchema.PromptResponse(AcpSchema.StopReason.CANCELLED));
+
+		assertThat(router.activeTurns()).isZero();
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isTrue();
+	}
+
+	@Test
+	void aTimedOutTurnReportsAtOnceButKeepsTheSessionUntilTheAgentAnswers() throws InterruptedException {
+		Sinks.One<AcpSchema.PromptResponse> agent = Sinks.one();
+		AtomicBoolean cancelled = new AtomicBoolean();
+		when(client.prompt(any())).thenReturn(agent.asMono());
+		when(client.cancel(any())).thenReturn(Mono.fromRunnable(() -> cancelled.set(true)));
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isTrue();
+
+		StepVerifier.create(AcpHarnessTurn.on(client, router).prompt(session, PROMPT, Duration.ofMillis(100)))
+			.assertNext(event -> assertThat(event).isInstanceOf(AcpHarnessEvent.Failed.class))
+			.verifyComplete();
+
+		assertThat(cancelled).isTrue();
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isFalse();
+
+		agent.tryEmitValue(new AcpSchema.PromptResponse(AcpSchema.StopReason.CANCELLED));
+
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isTrue();
+	}
+
+	@Test
+	void anAgentThatNeverAnswersTheCancelIsGivenUpOnAfterTheGrace() throws InterruptedException {
+		AtomicBoolean requestWithdrawn = new AtomicBoolean();
+		when(client.prompt(any()))
+			.thenReturn(Mono.<AcpSchema.PromptResponse>never().doOnCancel(() -> requestWithdrawn.set(true)));
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isTrue();
+
+		AcpHarnessTurn.on(client, router)
+			.cancelGrace(Duration.ofMillis(200))
+			.prompt(session, PROMPT, Duration.ofSeconds(30))
+			.subscribe()
+			.dispose();
+
+		assertThat(session.tryBeginTurn(Duration.ofSeconds(5))).isTrue();
+		assertThat(router.activeTurns()).isZero();
+		// acp-core forgets the request, and tells the agent, only when it is cancelled.
+		assertThat(requestWithdrawn).isTrue();
+	}
+
+	@Test
+	void aTurnTheAgentFinishedHandsTheSessionOnBeforeItsTerminalEvent() throws InterruptedException {
+		agentStreams(List.of(), AcpSchema.StopReason.END_TURN);
+		assertThat(session.tryBeginTurn(Duration.ZERO)).isTrue();
+		AtomicBoolean freeOnCompletion = new AtomicBoolean();
+
+		AcpHarnessTurn.on(client, router).prompt(session, PROMPT, Duration.ofSeconds(5)).doOnComplete(() -> {
+			try {
+				freeOnCompletion.set(session.tryBeginTurn(Duration.ZERO));
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+		}).blockLast(Duration.ofSeconds(5));
+
+		assertThat(freeOnCompletion).isTrue();
+	}
+
+	@Test
+	void cancellingATurnWithdrawsItsPendingPermissionRequests() {
+		PendingPermissions permissions = new PendingPermissions();
+		CountDownLatch asked = new CountDownLatch(1);
+		CountDownLatch never = new CountDownLatch(1);
+		when(client.prompt(any())).thenReturn(Mono.never());
+		Mono<AcpSchema.RequestPermissionResponse> question = permissions.decide("sid-1", () -> {
+			asked.countDown();
+			try {
+				never.await();
+			}
+			catch (InterruptedException ex) {
+				Thread.currentThread().interrupt();
+			}
+			return null;
+		}).cache();
+		question.subscribe();
+
+		var subscription = AcpHarnessTurn.on(client, router, AcpHarnessObservations.NONE, PlanTool.NONE, permissions)
+			.prompt(session, PROMPT, Duration.ofSeconds(30))
+			.subscribe();
+		await(asked);
+		subscription.dispose();
+
+		assertThat(question.block(Duration.ofSeconds(5)).outcome()).isInstanceOf(AcpSchema.PermissionCancelled.class);
+	}
+
+	private static void await(CountDownLatch latch) {
+		try {
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	/** Lets a test drive the two channels independently, as a real agent does. */

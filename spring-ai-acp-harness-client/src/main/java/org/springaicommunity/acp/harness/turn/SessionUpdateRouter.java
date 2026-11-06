@@ -48,6 +48,14 @@ public final class SessionUpdateRouter {
 		listeners.remove(sessionId);
 	}
 
+	/**
+	 * Stops directing updates for {@code sessionId} to {@code listener}, and leaves a
+	 * registration that belongs to anyone else in place.
+	 */
+	public void unregister(String sessionId, Consumer<AcpSchema.SessionUpdate> listener) {
+		listeners.remove(sessionId, listener);
+	}
+
 	/** The callback handed to {@code AcpClient.async(...).sessionUpdateHandler(...)}. */
 	public void accept(AcpSchema.SessionNotification notification) {
 		if (notification == null || notification.sessionId() == null) {
@@ -55,9 +63,8 @@ public final class SessionUpdateRouter {
 		}
 		Consumer<AcpSchema.SessionUpdate> listener = listeners.get(notification.sessionId());
 		if (listener == null) {
-			// Expected between turns: an agent may emit a trailing update after the turn
-			// it belonged
-			// to has already ended. Dropping it is correct; the turn is closed.
+			// Expected between turns: a turn the agent never finished winding down
+			// stops listening after a grace period, and anything later is dropped here.
 			logger.trace("No active turn for session {}; dropping update", notification.sessionId());
 			return;
 		}

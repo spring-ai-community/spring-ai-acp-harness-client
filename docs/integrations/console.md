@@ -86,7 +86,7 @@ spring:
   choose 1-3 (Ctrl-C to cancel) › 3
 ```
 
-Ctrl-C at that prompt cancels the request, which the agent hears as a cancellation rather than a refusal. This is the most direct way to see what an agent is about to do while designing it. It is also a prompt per tool call, so an agent whose job is calling tools may be better served by `allowlist` and a gate in its instructions, as [acp-meridian](../guides/acp-meridian.md) does.
+Ctrl-C at that prompt cancels the request, which the agent hears as a cancellation rather than a refusal. A question still open when its turn ends, because it exceeded `timeout`, is taken down and answered the same way. This is the most direct way to see what an agent is about to do while designing it. It is also a prompt per tool call, so an agent whose job is calling tools may be better served by `allowlist` and a gate in its instructions, as [acp-meridian](../guides/acp-meridian.md) does.
 
 !!! note
 

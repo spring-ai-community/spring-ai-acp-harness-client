@@ -32,6 +32,20 @@ final class TestTerminals {
 		}
 	}
 
+	/** A terminal whose person never types anything. */
+	static Scripted silent() {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		try {
+			java.io.PipedOutputStream keyboard = new java.io.PipedOutputStream();
+			Terminal terminal = new DumbTerminal("test", Terminal.TYPE_DUMB, new java.io.PipedInputStream(keyboard),
+					output, StandardCharsets.UTF_8);
+			return new Scripted(terminal, output);
+		}
+		catch (IOException ex) {
+			throw new UncheckedIOException(ex);
+		}
+	}
+
 	record Scripted(Terminal terminal, ByteArrayOutputStream output) {
 
 		String written() {

@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
+import org.springaicommunity.acp.harness.permission.PendingPermissions;
 import org.springaicommunity.acp.harness.permission.PermissionPolicy;
 import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
 import org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher;
@@ -34,7 +35,6 @@ import com.agentclientprotocol.sdk.spec.AcpClientTransport;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 /**
  * Starts an agent and hands back a connected {@link AcpHarnessClient}.
@@ -239,6 +239,7 @@ public final class AcpHarnessClientFactory {
 	private static AcpHarnessClient connect(AcpHarnessRuntime runtime, AcpHarnessSettings settings, Launched launched,
 			AcpHarnessObservations observations) {
 		SessionUpdateRouter router = new SessionUpdateRouter();
+		PendingPermissions permissions = new PendingPermissions();
 
 		WorkspaceFileSystem files = new WorkspaceFileSystem(settings.workspace(), settings.filesystem());
 		WorkspaceTerminals terminals = new WorkspaceTerminals(files.jail(), settings.terminal());
@@ -255,7 +256,8 @@ public final class AcpHarnessClientFactory {
 				router.accept(notification);
 				return Mono.empty();
 			})
-			.requestPermissionHandler(request -> handlePermission(runtime, settings.permissions(), request));
+			.requestPermissionHandler(
+					request -> handlePermission(runtime, settings.permissions(), permissions, request));
 
 		if (settings.filesystem().read()) {
 			spec = spec.readTextFileHandler(files::read);
@@ -293,6 +295,7 @@ public final class AcpHarnessClientFactory {
 				router, handshake.initialized(), handshake.protocolVersion(), observations,
 				liveness.knowable() ? liveness.alive() : null, release);
 		client.watch(launched.watcher());
+		client.permissions(permissions);
 		return client;
 	}
 
@@ -454,21 +457,15 @@ public final class AcpHarnessClientFactory {
 	 * policy declines to choose for.
 	 */
 	private static Mono<AcpSchema.RequestPermissionResponse> handlePermission(AcpHarnessRuntime runtime,
-			PermissionPolicy policy, AcpSchema.RequestPermissionRequest request) {
-		return Mono.fromSupplier(() -> {
-			String toolName = request.toolCall() == null ? null : runtime.toolNameOf(request.toolCall());
-			AcpSchema.PermissionOption chosen = policy.decide(request, toolName);
-			logger.debug("Permission for tool {} -> {}", toolName == null ? "(unknown)" : toolName,
-					chosen == null ? "cancelled" : chosen.optionId());
-			AcpSchema.RequestPermissionOutcome outcome = chosen == null ? new AcpSchema.PermissionCancelled()
-					: new AcpSchema.PermissionSelected(chosen.optionId());
-			return new AcpSchema.RequestPermissionResponse(outcome);
-		})
-			// A policy may be a person thinking it over, and the transport's inbound
-			// thread is also the
-			// one delivering the rest of the turn; blocking it would freeze the text they
-			// are reading.
-			.subscribeOn(Schedulers.boundedElastic());
+			PermissionPolicy policy, PendingPermissions pending, AcpSchema.RequestPermissionRequest request) {
+		String toolName = request.toolCall() == null ? null : runtime.toolNameOf(request.toolCall());
+		// Tracked by session, so that a turn ending early answers it cancelled rather
+		// than leaving a person deciding a question nobody will act on.
+		return pending.decide(request.sessionId(), () -> policy.decide(request, toolName))
+			.doOnNext(
+					response -> logger.debug("Permission for tool {} -> {}", toolName == null ? "(unknown)" : toolName,
+							response.outcome() instanceof AcpSchema.PermissionSelected selected ? selected.optionId()
+									: "cancelled"));
 	}
 
 	/**
