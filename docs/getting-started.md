@@ -15,25 +15,16 @@
 
 ## Add the dependency
 
-0.6.0 is not released yet. Until it is, use its snapshots from the Maven Central snapshot repository; no credentials are needed to read it. Add the repository and **one runtime starter**:
+Releases are on Maven Central. Add **one runtime starter**:
 
 === "Maven"
 
     ```xml
-    <repositories>
-        <repository>
-            <id>central-portal-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-            <releases><enabled>false</enabled></releases>
-            <snapshots><enabled>true</enabled></snapshots>
-        </repository>
-    </repositories>
-
     <dependencies>
         <dependency>
             <groupId>org.springaicommunity</groupId>
             <artifactId>spring-ai-acp-harness-client-boot-starter-goose</artifactId>
-            <version>0.6.0-SNAPSHOT</version>
+            <version>0.6.0</version>
         </dependency>
     </dependencies>
     ```
@@ -43,22 +34,14 @@
     ```kotlin
     repositories {
         mavenCentral()
-        maven {
-            url = uri("https://central.sonatype.com/repository/maven-snapshots/")
-            mavenContent { snapshotsOnly() }
-        }
     }
 
     dependencies {
-        implementation("org.springaicommunity:spring-ai-acp-harness-client-boot-starter-goose:0.6.0-SNAPSHOT")
+        implementation("org.springaicommunity:spring-ai-acp-harness-client-boot-starter-goose:0.6.0")
     }
     ```
 
 Replace `-goose` with `-codex`, `-opencode` or `-registry` for another agent. No `@Enable…` annotation or bean definition is needed.
-
-!!! warning
-
-    This documentation describes `spring.ai.acp.harness.*`. Version 0.5.0, the latest release, reads `spring.acp.*` instead and ignores these keys without an error. It is available from the Artifact Registry repository `https://us-central1-maven.pkg.dev/cf-mcp/maven-public`.
 
 ## Configure
 
