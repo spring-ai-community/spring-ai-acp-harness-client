@@ -1014,6 +1014,22 @@ class AcpHarnessClientWireTests {
 	}
 
 	@Test
+	void aTurnThatTimesOutSendsSessionCancel() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().promptDelay(Duration.ofSeconds(30)).build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+
+			StepVerifier.create(
+					client.prompt("hi").options(options -> options.timeout(Duration.ofMillis(500))).stream().events())
+				.thenConsumeWhile(event -> !(event instanceof AcpHarnessEvent.Failed))
+				.expectNextMatches(AcpHarnessEvent.Failed.class::isInstance)
+				.expectComplete()
+				.verify(LIMIT);
+
+			Awaits.until(() -> agent.cancellations() == 1, LIMIT);
+		}
+	}
+
+	@Test
 	void aNamedSessionIsOpenedOnceAndReusedAcrossTurns() {
 		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
 				AcpHarnessClient client = connect(agent, settings().build())) {

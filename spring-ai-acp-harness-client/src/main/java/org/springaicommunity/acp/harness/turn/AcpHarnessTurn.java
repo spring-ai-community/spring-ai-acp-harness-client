@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.jspecify.annotations.Nullable;
@@ -132,8 +133,8 @@ public final class AcpHarnessTurn {
 		// and the other becomes a no-op.
 		AtomicBoolean finished = new AtomicBoolean();
 		// Distinguishes "the consumer walked away" from "the turn ended on its own", so
-		// we only
-		// send session/cancel in the former case.
+		// onDispose sends session/cancel in the former case only.
+		// A timeout sends its own, from doOnError below.
 		AtomicBoolean cancelledByConsumer = new AtomicBoolean();
 		// The tool calls this turn reported as its plan, whose updates are then dropped.
 		Set<String> planCalls = ConcurrentHashMap.newKeySet();
@@ -158,6 +159,8 @@ public final class AcpHarnessTurn {
 
 		Disposable subscription = client.prompt(new AcpSchema.PromptRequest(sessionId, content))
 			.timeout(timeout)
+			// The agent is still working on a prompt whose result nobody will receive.
+			.doOnError(TimeoutException.class, ex -> cancelRemoteTurn(sessionId))
 			.subscribe(
 					response -> finish(sink, finished, recording, sessionId,
 							new AcpHarnessEvent.Completed(response.stopReason())),
@@ -290,10 +293,10 @@ public final class AcpHarnessTurn {
 	}
 
 	/**
-	 * Tells the agent to stop work the consumer is no longer listening to.
-	 * Fire-and-forget by necessity — the subscriber is already gone, so there is nobody
-	 * left to report an error to — but it must be sent before the turn is torn down, or
-	 * the agent keeps burning tokens.
+	 * Tells the agent to stop work nobody is listening to any more: the consumer walked
+	 * away, or the turn timed out. Fire-and-forget by necessity — the turn is already
+	 * over for the consumer, so there is nobody left to report an error to — but it must
+	 * be sent before the turn is torn down, or the agent keeps burning tokens.
 	 */
 	private void cancelRemoteTurn(String sessionId) {
 		client.cancel(new AcpSchema.CancelNotification(sessionId))
