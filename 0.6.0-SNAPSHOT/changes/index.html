@@ -2089,18 +2089,17 @@
   changes no artifact id.</li>
 <li>Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.</li>
-<li>
-<p>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
-  site, published to GitHub Pages from <code>docs/</code>.</p>
-</li>
-<li>
-<p><strong>Breaking:</strong> <code>GET {path}/sessions</code> on the HTTP endpoint returns
+<li>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
+  site, published to GitHub Pages from <code>docs/</code>.</li>
+<li><strong>Breaking:</strong> <code>AcpController</code>'s handlers return <code>Mono</code> or <code>Flux</code>, all but <code>health</code>, so that no
+  request blocks a Netty event-loop thread. Requests over HTTP are unaffected; an application that
+  calls the controller's methods directly subscribes to what they return.</li>
+<li><strong>Breaking:</strong> <code>GET {path}/sessions</code> on the HTTP endpoint returns
   <code>[{"name", "sessionId", "title", "updatedAt"}]</code>, naming each of the caller's open sessions the
   way the caller did, so it can be continued or closed, instead of the agent's stored sessions. It
   no longer needs the agent to implement <code>session/list</code> (no more 501), asks the agent nothing when
   the caller has nothing open, and lists every open session, including one the agent has not saved
-  yet or that runs in another process of the pool.</p>
-</li>
+  yet or that runs in another process of the pool.</li>
 <li>The HTTP endpoint answers a request for a named session that is still running an earlier turn
   with a 409 at once, instead of waiting for it for up to the request's timeout and then returning
   a 502. Waiting held a thread on the scheduler that also answers agents' permission and workspace
