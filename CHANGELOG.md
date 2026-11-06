@@ -117,7 +117,9 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
-
+- **Breaking:** `AcpController`'s handlers return `Mono` or `Flux`, all but `health`, so that no
+  request blocks a Netty event-loop thread. Requests over HTTP are unaffected; an application that
+  calls the controller's methods directly subscribes to what they return.
 - **Breaking:** `GET {path}/sessions` on the HTTP endpoint returns
   `[{"name", "sessionId", "title", "updatedAt"}]`, naming each of the caller's open sessions the
   way the caller did, so it can be continued or closed, instead of the agent's stored sessions. It
