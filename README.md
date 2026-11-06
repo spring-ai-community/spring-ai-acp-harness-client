@@ -40,23 +40,13 @@ Flux<AcpHarnessEvent> events = acpHarnessClient.prompt()
 
 ## Choosing an agent
 
-0.6.0 is not released yet. Until it is, use its snapshots from the Maven Central snapshot repository;
-no credentials are needed to read it:
+Releases are on Maven Central:
 
 ```xml
-<repositories>
-    <repository>
-        <id>central-portal-snapshots</id>
-        <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-        <releases><enabled>false</enabled></releases>
-        <snapshots><enabled>true</enabled></snapshots>
-    </repository>
-</repositories>
-
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>spring-ai-acp-harness-client-boot-starter-goose</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.6.0</version>
 </dependency>
 ```
 

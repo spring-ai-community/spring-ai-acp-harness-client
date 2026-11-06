@@ -3,7 +3,7 @@
 All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH).
 
-## [0.6.0] - Unreleased
+## [0.6.0] - 2026-11-06
 
 ### Added
 
@@ -113,8 +113,8 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   either changes the artifact id. Java packages are unchanged. The modules are also grouped into `runtimes/`,
   `auto-configurations/`, `starters/` and `integrations/` folders in the repository, which
   changes no artifact id.
-- Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
-  Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
+- Releases are published to Maven Central, and snapshots to the Maven Central snapshot repository.
+  Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
 - **Breaking:** `AcpController`'s handlers return `Mono` or `Flux`, all but `health`, so that no
