@@ -1406,6 +1406,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1445,7 +1456,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1484,7 +1495,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1523,7 +1534,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1573,7 +1584,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1729,6 +1740,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1768,7 +1790,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed" class="md-nav__link">
+  <a href="#changed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1807,7 +1829,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_1" class="md-nav__link">
+  <a href="#changed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1846,7 +1868,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#changed_2" class="md-nav__link">
+  <a href="#changed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -1896,7 +1918,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#changed_3" class="md-nav__link">
+  <a href="#changed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Changed
@@ -2035,8 +2057,49 @@
 <p>All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 <a href="https://semver.org/">Semantic Versioning</a> (MAJOR.MINOR.PATCH).</p>
 <h2 id="070-unreleased">[0.7.0] - Unreleased<a class="headerlink" href="#070-unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>ACP Java SDK 0.80.0 (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/28">#28</a>).
+  An application that uses the SDK's own types through this library meets its breaking changes;
+  its <a href="https://github.com/agentclientprotocol/java-sdk/blob/v0.80.0/CHANGELOG.md">CHANGELOG</a> has
+  a migration for each. The ones most likely to show:</li>
+<li><code>StopReason</code>, <code>ToolCallStatus</code>, <code>PermissionOptionKind</code>, <code>PlanEntryStatus</code>,
+    <code>PlanEntryPriority</code> and <code>Role</code> are open value records rather than enums, so a newer agent's
+    value no longer fails to read.
+    Compare them with <code>equals</code> and switch on <code>value()</code>. Observation tags, <code>AcpController</code>'s
+    <code>stopReason</code> and <code>AcpChatModel</code>'s finish reason keep their upper-case spellings (<code>END_TURN</code>).</li>
+<li><code>ToolCall</code>, <code>ToolCallUpdate</code> and their notification gain a <code>name</code> component, and the short
+    session-update constructors no longer take the discriminator.</li>
+<li>A select option's values are <code>SessionConfigSelectOptions</code>, flat or grouped; read them with
+    <code>allOptions()</code>. Grouped options are matched like flat ones.</li>
+<li><strong>The legacy <code>models</code> state and <code>session/set_model</code> are no longer used.</strong> They never became
+  stable ACP, and the SDK no longer models them. <code>Mechanism.SESSION_MODEL</code> is removed. goose,
+  Codex and OpenCode all offer the model as a config option, which is unchanged; an agent that
+  offers models only the old way now gets <code>on-unsupported</code> handling for <code>model</code>.
+  <code>ScriptedAcpAgent.Builder.models(...)</code> still advertises the old state, for testing exactly that.</li>
+<li><code>providers/set</code> sends the provider as <code>providerId</code>, the schema's name for it and the one Codex
+  reads. The SDK used to send <code>id</code>.</li>
+<li>A turn that times out, or whose stream is cancelled, now also sends <code>$/cancel_request</code> for its
+  <code>session/prompt</code>, from the SDK, beside the <code>session/cancel</code> it already sent. goose and OpenCode
+  ignore it.</li>
+<li><code>session/close</code> is sent only to an agent that advertises <code>sessionCapabilities.close</code>, which the
+  SDK now enforces. goose and OpenCode do.</li>
+<li>A config option the SDK cannot read at all, such as a select mixing options and groups, now
+  fails <code>session/new</code> rather than being skipped. An option of a type it does not know is still
+  kept, as <code>UnknownSessionConfigOption</code>.</li>
+<li>Removed <code>SessionConfigRecorder</code> and <code>SessionUpdateDecoder</code>, which worked around SDK gaps that
+  0.80.0 closes, and the <code>recorder</code> parameter of <code>DefaultAcpHarnessClient</code> and
+  <code>DefaultAcpHarnessSessions</code>. <code>session/load</code> and <code>session/resume</code> are no longer serialized.</li>
+</ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
+<li>A per-turn <code>timeout</code> longer than <code>spring.ai.acp.harness.timeout</code> was ignored: the SDK bounded
+  <code>session/prompt</code> by the client-wide timeout, so the turn failed at that one. The SDK no longer
+  bounds prompts, so the turn's own timeout applies
+  (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/25">#25</a>).</li>
+<li>A turn that timed out left its <code>session/prompt</code> in the SDK's table of pending requests until the
+  agent answered it, so an agent that hung and ignored <code>session/cancel</code> grew that table by one
+  entry per timed-out turn. The SDK now forgets a request its caller gave up on.</li>
 <li>A turn that exceeded <code>timeout</code> ended with <code>Failed</code> but never sent <code>session/cancel</code>, so the agent
   kept working on the prompt, spending tokens on a result nobody received. A timed-out turn now
   sends <code>session/cancel</code>, as a cancelled stream already did. The turn still ends without waiting
@@ -2052,7 +2115,7 @@
   again before its caller hears that a turn ended, so a caller that goes straight on to the next
   turn never finds it busy.</li>
 </ul>
-<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Breaking:</strong> Java packages move from <code>org.springaicommunity.acp.*</code> to
   <code>org.springaicommunity.acp.harness.*</code>, to match the artifacts and the properties. Update your
@@ -2207,7 +2270,7 @@
   as a 503 instead of a 502 or 500.</li>
 </ul>
 <h2 id="050-2026-10-20">[0.5.0] - 2026-10-20<a class="headerlink" href="#050-2026-10-20" title="Permanent link">&para;</a></h2>
-<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Renamed from Spring AI ACP to <strong>Spring AI ACP Harness Client</strong>, ahead of moving to the Spring AI
   Community organisation. Every artifact moves from <code>spring-ai-acp-*</code> to
@@ -2262,7 +2325,7 @@
   refusal, such as an authorization server that is down, still keeps the token for next time.</li>
 </ul>
 <h2 id="040-2026-10-04">[0.4.0] - 2026-10-04<a class="headerlink" href="#040-2026-10-04" title="Permanent link">&para;</a></h2>
-<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
+<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>ACP Java SDK 0.18.0, with its Jackson 3 JSON module (<code>acp-json-jackson3</code>). The SDK no longer
   carries a JSON implementation in <code>acp-core</code>, and this library now uses Jackson 3 throughout, as
@@ -2309,7 +2372,7 @@
     <code>GOOSE_CLI_PATH</code>, and checks it at startup.</li>
 <li><code>AgentSettings.findModel()</code> returns the requested model, or empty when it is blank.</li>
 </ul>
-<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">&para;</a></h3>
+<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>AcpProperties</code> and its nested types are records, bound through their constructors. Code that
   reads them uses record accessors (<code>properties.model()</code>, <code>properties.pool().sessionTtl()</code>) in
