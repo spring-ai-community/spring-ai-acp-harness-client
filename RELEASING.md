@@ -15,13 +15,14 @@ So:
 
 - never merge a release branch into `main`, and never open a PR from one;
 - move a fix between `main` and a release branch by cherry-picking the fix commit, never the
-  `Release version …` or `Next development version` commits.
+  `Release version …` or `Next development version` commits. The release commit's docs and
+  CHANGELOG changes reach `main` as a path-limited diff that leaves out every POM (step 6).
 
 | Workflow | Runs on | Does |
 |---|---|---|
 | `Publish Snapshot` | push to `main`, or by hand | `-Prelease deploy` of the POM's version |
 | `Release to Maven Central` | by hand only | `clean verify`, then `-Prelease deploy` of the chosen ref's version |
-| `Deploy Documentation` | docs pushed to `main`; a published GitHub Release | mike: `latest-snapshot` from `main`, the plain version plus `latest` from a release tag |
+| `Deploy Documentation` | docs, `mkdocs.yml` or `CHANGELOG.md` pushed to `main`; a published GitHub Release; by hand | mike: see [The docs site](#the-docs-site) |
 
 ## Before you start
 
@@ -97,25 +98,50 @@ Then check that the release is there. It can take a while to appear after the wo
 
 Create a GitHub Release from the tag `v0.6.0` and paste in the version's `CHANGELOG.md` section.
 Publishing it runs `Deploy Documentation`, which publishes the tag's docs as `0.6.0` with the
-alias `latest` and makes that the site's default.
+alias `latest`. From then on the site opens on `latest`.
 
-### 6. Move `main` to the next minor version
+### 6. Bring `main` up to date and move it to the next minor version
 
-Like any change to `main`, this goes through a pull request. Branch from `main`, never from
-`0.6.x`, so the PR carries only the version change:
+`main` still says 0.6.0 is unreleased, offers `0.6.0-SNAPSHOT`, and has `## [0.6.0] - Unreleased`
+at the top of its CHANGELOG. One pull request fixes all three. Branch from `main`, never from
+`0.6.x`:
 
 ```bash
 git switch main && git pull --ff-only
-git switch -c next-development-version
-./mvnw versions:set -DgenerateBackupPoms=false -DnewVersion=0.7.0-SNAPSHOT
-git commit -a -s -m "Next development version"
-git push -u origin next-development-version
+git switch -c after-release-0.6.0
+# The release commit's docs and CHANGELOG changes, and nothing else: no POM.
+git diff v0.6.0^ v0.6.0 -- README.md CHANGELOG.md docs .github/ISSUE_TEMPLATE | git apply --3way
 ```
 
-Open a PR to `main` and merge it once CI passes. Until it merges, pushes to `main` keep
-publishing `0.6.0-SNAPSHOT`, which does no harm.
+At the top of `CHANGELOG.md`, above the now dated 0.6.0 section, add:
+
+```markdown
+## [0.7.0] - Unreleased
+```
+
+Then move the version, check the docs as in [What the docs change](#what-the-docs-change), and
+open the PR:
+
+```bash
+./mvnw versions:set -DgenerateBackupPoms=false -DnewVersion=0.7.0-SNAPSHOT
+grep -rnE '0\.6\.0-SNAPSHOT|0\.5\.0|not released yet|maven-snapshots|snapshot version' \
+  README.md docs .github/ISSUE_TEMPLATE        # should print nothing
+git commit -a -s -m "Next development version"
+git push -u origin after-release-0.6.0
+```
+
+`git apply --3way` stops on a conflict if a file changed on `main` after `0.6.x` was cut;
+resolve it like any merge. Merge the PR once CI passes. Until then, pushes to `main` keep
+publishing `0.6.0-SNAPSHOT`, which does no harm. The merge redeploys `main`'s docs as
+`0.7.0-SNAPSHOT`, which replaces `0.6.0-SNAPSHOT` in the site's version selector; the site still
+opens on 0.6.0.
 
 ## Patch release (0.6.1)
+
+A fix lands on `main` first, with its CHANGELOG entry under `## [0.7.0] - Unreleased`. When you
+cherry-pick it onto `0.6.x`, put that entry under `## [0.6.1] - Unreleased` instead, adding the
+heading above `## [0.6.0] - …` with the first fix; the cherry-pick will usually stop on
+`CHANGELOG.md` for exactly this.
 
 On the existing `0.6.x` branch, with the fixes already cherry-picked onto it:
 
@@ -133,7 +159,20 @@ git push origin 0.6.x
 
 Then run `Release to Maven Central` on the tag `v0.6.1`, check
 https://central.sonatype.com/artifact/org.springaicommunity/spring-ai-acp-harness-client/0.6.1,
-and publish a GitHub Release from `v0.6.1`. `main` doesn't change.
+and publish a GitHub Release from `v0.6.1`.
+
+`main` keeps its version, but its docs and CHANGELOG catch up through a pull request branched
+from `main`:
+
+```bash
+git switch main && git pull --ff-only
+git switch -c after-release-0.6.1
+git diff v0.6.1^ v0.6.1 -- README.md docs .github/ISSUE_TEMPLATE | git apply --3way
+```
+
+Copy the dated `## [0.6.1] - …` section from `git show v0.6.1:CHANGELOG.md` into `main`'s
+`CHANGELOG.md`, between `## [0.7.0] - Unreleased` and `## [0.6.0] - …`, and take the same
+entries out of the 0.7.0 section. Commit, push and open the PR.
 
 ## What the docs change
 
@@ -154,7 +193,22 @@ grep -rnE '0\.6\.0-SNAPSHOT|0\.5\.0|not released yet|maven-snapshots|snapshot ve
   README.md docs .github/ISSUE_TEMPLATE
 ```
 
-For a patch release, the same places move from the previous release to the new one.
+For a patch release, the same places move from the previous release to the new one. Step 6
+brings the same changes to `main`.
+
+## The docs site
+
+`Deploy Documentation` publishes with mike to `gh-pages`, whose `versions.json` lists every
+published version and its aliases:
+
+- A push to `main` publishes `main`'s version, a `-SNAPSHOT`, with the alias `latest-snapshot`,
+  and deletes any other `-SNAPSHOT` version, so the version selector shows only the snapshot
+  that is still published.
+- A published GitHub Release publishes the tag's version. It takes the alias `latest` only if it
+  is the newest release in `versions.json`, so a patch to an older line (0.6.2 after 0.7.0) is
+  listed without taking `latest`.
+- After either, the site opens on `latest` if `versions.json` has it, and on `latest-snapshot`
+  only until the first release.
 
 ## Earlier releases
 

@@ -58,12 +58,39 @@ jobs:
             ALIAS="latest"
           fi
           mike deploy --push --update-aliases "${PROJECT_VERSION}" "${ALIAS}"
-          mike set-default latest-snapshot --push
+          # Once main has moved to the next snapshot, the previous one's docs describe
+          # artifacts nobody publishes any more, so take them out of the version selector.
+          if [[ "${ALIAS}" == "latest-snapshot" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            mike list --json \
+              | jq -r --arg current "${PROJECT_VERSION}" \
+                  '.[].version | select(endswith("-SNAPSHOT") and . != $current)' \
+              | while read -r old; do
+                  mike delete --push "${old}"
+                done
+          fi
 
       - name: Deploy versioned docs (release)
         if: github.event_name == 'release'
         run: |
           # Tags are v-prefixed (v0.5.0); publish under the plain version.
           VERSION=${GITHUB_REF_NAME#v}
-          mike deploy --push --update-aliases "${VERSION}" latest
-          mike set-default latest --push
+          # `latest` goes to the newest release in versions.json, so a patch to an older
+          # line (0.6.2 after 0.7.0) is published without taking it.
+          NEWEST=$({ mike list --json | jq -r '.[].version | select(endswith("-SNAPSHOT") | not)'; \
+            echo "${VERSION}"; } | sort -V | tail -n 1)
+          if [[ "${VERSION}" == "${NEWEST}" ]]; then
+            mike deploy --push --update-aliases "${VERSION}" latest
+          else
+            mike deploy --push "${VERSION}"
+          fi
+
+      - name: Choose the version the site opens on
+        run: |
+          # versions.json on gh-pages decides: the latest release once there is one,
+          # and main's snapshot until then. Set on every deploy, so a docs change on
+          # main no longer moves readers off the release.
+          if mike list --json | jq -e 'any(.[]; .aliases | index("latest"))' > /dev/null; then
+            mike set-default latest --push
+          else
+            mike set-default latest-snapshot --push
+          fi
