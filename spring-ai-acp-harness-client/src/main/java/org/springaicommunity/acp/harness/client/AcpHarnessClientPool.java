@@ -610,6 +610,8 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 
 		private @Nullable SessionPrincipal principal;
 
+		private @Nullable Duration busyWait;
+
 		@Override
 		public PromptSpec session(String name) {
 			this.sessionName = name;
@@ -619,6 +621,15 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		@Override
 		public PromptSpec principal(@Nullable SessionPrincipal principal) {
 			this.principal = principal;
+			return this;
+		}
+
+		@Override
+		public PromptSpec waitIfBusy(@Nullable Duration wait) {
+			if (wait != null && wait.isNegative()) {
+				throw new IllegalArgumentException("wait must not be negative but was " + wait);
+			}
+			this.busyWait = wait;
 			return this;
 		}
 
@@ -685,7 +696,7 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 		}
 
 		private PromptSpec delegate(AcpHarnessClient client, @Nullable SessionPrincipal owner) {
-			PromptSpec spec = client.prompt().principal(owner);
+			PromptSpec spec = client.prompt().principal(owner).waitIfBusy(busyWait);
 			if (sessionName != null) {
 				spec = spec.session(sessionName);
 			}

@@ -504,6 +504,8 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 
 		private @Nullable SessionPrincipal principal;
 
+		private @Nullable Duration busyWait;
+
 		@Override
 		public PromptSpec session(String name) {
 			this.sessionName = name;
@@ -513,6 +515,15 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		@Override
 		public PromptSpec principal(@Nullable SessionPrincipal principal) {
 			this.principal = principal;
+			return this;
+		}
+
+		@Override
+		public PromptSpec waitIfBusy(@Nullable Duration wait) {
+			if (wait != null && wait.isNegative()) {
+				throw new IllegalArgumentException("wait must not be negative but was " + wait);
+			}
+			this.busyWait = wait;
 			return this;
 		}
 
@@ -576,6 +587,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 			SessionPrincipal owner = principal != null ? principal : currentPrincipal();
 			String named = sessionName;
 			boolean ephemeral = named == null;
+			Duration wait = busyWait != null ? busyWait : effective.timeout();
 			List<AcpSchema.ContentBlock> prompt = List.of(new AcpSchema.TextContent(text.toString()));
 
 			Flux<AcpHarnessEvent> events = Flux.defer(() -> {
@@ -583,7 +595,7 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 				String name = named != null ? named : "turn-" + UUID.randomUUID();
 				AcpHarnessSession session = openSession(name, effective, owner);
 				try {
-					acquireTurn(session, effective.timeout());
+					acquireTurn(session, wait);
 				}
 				catch (RuntimeException ex) {
 					if (ephemeral) {
@@ -603,10 +615,22 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 					}
 					throw ex;
 				}
+				// The session is free again before the caller hears the turn is over, so
+				// a caller that starts the next turn as soon as this one ends finds it
+				// free, rather than racing a cleanup that runs after its onComplete. Once
+				// only: by the time doFinally runs, the next turn may hold the permit.
+				AtomicBoolean ended = new AtomicBoolean();
+				Runnable endTurn = () -> {
+					if (ended.compareAndSet(false, true)) {
+						session.endTurn();
+					}
+				};
 				return AcpHarnessTurn.on(acp, router, observations, runtime::planOf)
 					.prompt(session, prompt, effective.timeout(), turnContext(session, effective, ephemeral))
+					.doOnTerminate(endTurn)
+					.doOnCancel(endTurn)
 					.doFinally(signal -> {
-						session.endTurn();
+						endTurn.run();
 						if (ephemeral) {
 							forgetAndCloseWithoutWaiting(name);
 						}
@@ -615,11 +639,12 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 			return new DefaultAcpHarnessStream(events);
 		}
 
-		private void acquireTurn(AcpHarnessSession session, Duration timeout) {
+		private void acquireTurn(AcpHarnessSession session, Duration wait) {
 			try {
-				if (!session.tryBeginTurn(timeout)) {
-					throw new AcpHarnessClientException(
-							"Session '" + session.name() + "' is busy with another turn after " + timeout);
+				if (!session.tryBeginTurn(wait)) {
+					throw new AcpHarnessSessionBusyException(
+							wait.isZero() ? "Session '" + session.name() + "' is busy with another turn"
+									: "Session '" + session.name() + "' is busy with another turn after " + wait);
 				}
 			}
 			catch (InterruptedException ex) {

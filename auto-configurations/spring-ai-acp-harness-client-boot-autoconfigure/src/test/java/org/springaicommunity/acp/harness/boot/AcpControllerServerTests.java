@@ -30,6 +30,7 @@ import org.springaicommunity.acp.harness.client.AcpHarnessInfo;
 import org.springaicommunity.acp.harness.client.AcpHarnessCapacityException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
+import org.springaicommunity.acp.harness.client.AcpHarnessSessionBusyException;
 import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.session.AcpHarnessSession;
@@ -189,18 +190,81 @@ class AcpControllerServerTests {
 			prompt(client, "alice", "pr-1").expectStatus().isOk();
 			prompt(client, "bob", "pr-2").expectStatus().isOk();
 
-			List<StoredSession> listed = client.get()
-				.uri("/api/acp/sessions")
-				.header("X-User", "bob")
-				.exchange()
-				.expectStatus()
-				.isOk()
-				.expectBody(new ParameterizedTypeReference<List<StoredSession>>() {
-				})
-				.returnResult()
-				.getResponseBody();
+			assertThat(sessions(client, "bob")).singleElement()
+				.satisfies(session -> assertThat(session.title()).endsWith("-pr-2"));
+		});
+	}
 
-			assertThat(listed).singleElement().satisfies(session -> assertThat(session.title()).endsWith("-pr-2"));
+	@Test
+	@DisplayName("listing names each session the way the caller named it, so it can be continued or closed")
+	void listsSessionsByTheCallersNames() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "pr-2").expectStatus().isOk();
+			prompt(client, "alice", "pr-1").expectStatus().isOk();
+
+			List<AcpController.SessionResponse> listed = sessions(client, "alice");
+
+			assertThat(listed).extracting(AcpController.SessionResponse::name).containsExactly("pr-1", "pr-2");
+			assertThat(listed).allSatisfy(session -> {
+				assertThat(session.sessionId()).startsWith("id-u-").endsWith("-" + session.name());
+				assertThat(session.title()).isEqualTo("title of " + session.sessionId().substring(3));
+			});
+			close(client, "alice", listed.get(0).name()).expectStatus().isNoContent();
+			assertThat(sessions(client, "alice")).extracting(AcpController.SessionResponse::name)
+				.containsExactly("pr-2");
+		});
+	}
+
+	@Test
+	@DisplayName("an agent that cannot list sessions still lists the caller's, without titles")
+	void listsWithoutAnAgentThatLists() {
+		onServer((client, agent) -> {
+			agent.lists = false;
+			prompt(client, "alice", "pr-1").expectStatus().isOk();
+
+			assertThat(sessions(client, "alice")).singleElement().satisfies(session -> {
+				assertThat(session.name()).isEqualTo("pr-1");
+				assertThat(session.title()).isNull();
+			});
+			assertThat(agent.listed).isZero();
+		});
+	}
+
+	@Test
+	@DisplayName("a listing the agent fails costs the titles, not the answer")
+	void listsWhenTheAgentsListingFails() {
+		onServer((client, agent) -> {
+			agent.listFails = true;
+			prompt(client, "alice", "pr-1").expectStatus().isOk();
+
+			assertThat(sessions(client, "alice")).singleElement().satisfies(session -> {
+				assertThat(session.name()).isEqualTo("pr-1");
+				assertThat(session.title()).isNull();
+			});
+		});
+	}
+
+	@Test
+	@DisplayName("a caller with nothing open is answered without asking the agent")
+	void listsNothingWithoutAskingTheAgent() {
+		onServer((client, agent) -> {
+			prompt(client, "bob", "pr-1").expectStatus().isOk();
+
+			assertThat(sessions(client, "alice")).isEmpty();
+			assertThat(agent.listed).isZero();
+		});
+	}
+
+	/**
+	 * Waiting would hold a thread on the scheduler that answers every running agent's
+	 * permission requests, so the fake fails the test if the endpoint is willing to.
+	 */
+	@Test
+	@DisplayName("a session busy with another turn is a 409 at once, on both endpoints")
+	void refusesABusySessionAtOnce() {
+		onServer((client, agent) -> {
+			prompt(client, "alice", "busy").expectStatus().isEqualTo(HttpStatus.CONFLICT);
+			stream(client, "alice", "busy").expectStatus().isEqualTo(HttpStatus.CONFLICT);
 		});
 	}
 
@@ -303,6 +367,19 @@ class AcpControllerServerTests {
 				test.run(server.client(), context.getBean(BlockingClient.class));
 			}
 		});
+	}
+
+	static List<AcpController.SessionResponse> sessions(WebTestClient client, String user) {
+		return client.get()
+			.uri("/api/acp/sessions")
+			.header("X-User", user)
+			.exchange()
+			.expectStatus()
+			.isOk()
+			.expectBody(new ParameterizedTypeReference<List<AcpController.SessionResponse>>() {
+			})
+			.returnResult()
+			.getResponseBody();
 	}
 
 	static WebTestClient.ResponseSpec prompt(WebTestClient client, String user, String session) {
@@ -418,6 +495,12 @@ class AcpControllerServerTests {
 
 		volatile int opened;
 
+		volatile int listed;
+
+		volatile boolean lists = true;
+
+		volatile boolean listFails;
+
 		volatile String healthThread;
 
 		@Override
@@ -455,11 +538,17 @@ class AcpControllerServerTests {
 		public void close() {
 		}
 
-		private void open(String name, SessionPrincipal principal) {
+		private void open(String name, SessionPrincipal principal, @Nullable Duration busyWait) {
 			blockLikeTheRealClient();
 			this.opened++;
 			if (name == null) {
 				return;
+			}
+			if (name.endsWith("-busy")) {
+				if (!Duration.ZERO.equals(busyWait)) {
+					throw new AssertionError("waited " + busyWait + " for a busy session, holding a thread");
+				}
+				throw new AcpHarnessSessionBusyException("Session '" + name + "' is busy with another turn");
 			}
 			if (name.endsWith("-boom")) {
 				throw new AcpHarnessClientException("secret the agent read");
@@ -480,6 +569,14 @@ class AcpControllerServerTests {
 			private String name;
 
 			private SessionPrincipal principal;
+
+			private @Nullable Duration busyWait;
+
+			@Override
+			public PromptSpec waitIfBusy(@Nullable Duration wait) {
+				this.busyWait = wait;
+				return this;
+			}
 
 			@Override
 			public PromptSpec session(String name) {
@@ -516,7 +613,7 @@ class AcpControllerServerTests {
 			@Override
 			public AcpHarnessStream stream() {
 				return () -> Flux.defer(() -> {
-					open(this.name, this.principal);
+					open(this.name, this.principal, this.busyWait);
 					return Flux.fromIterable(eventsFor(this.name));
 				});
 			}
@@ -543,6 +640,10 @@ class AcpControllerServerTests {
 			@Override
 			public List<StoredSession> list() {
 				blockLikeTheRealClient();
+				BlockingClient.this.listed++;
+				if (BlockingClient.this.listFails) {
+					throw new AcpHarnessClientException("listing failed");
+				}
 				return BlockingClient.this.sessions.all()
 					.stream()
 					.map(session -> new StoredSession(session.sessionId(), null, "title of " + session.name(), null))
@@ -587,7 +688,7 @@ class AcpControllerServerTests {
 
 			@Override
 			public boolean supports(Operation operation) {
-				return true;
+				return operation != Operation.LIST || BlockingClient.this.lists;
 			}
 
 		}

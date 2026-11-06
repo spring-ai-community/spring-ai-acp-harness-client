@@ -5,11 +5,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.jspecify.annotations.Nullable;
@@ -28,14 +31,15 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springaicommunity.acp.harness.client.AcpHarnessCapacityException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
+import org.springaicommunity.acp.harness.client.AcpHarnessSessionBusyException;
 import org.springaicommunity.acp.harness.config.AcpHarnessOptions;
 import org.springaicommunity.acp.harness.config.Validation;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.session.AcpHarnessSession;
+import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.SessionOwnershipException;
 import org.springaicommunity.acp.harness.session.SessionPrincipal;
 import org.springaicommunity.acp.harness.session.StoredSession;
-import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
 
@@ -133,28 +137,39 @@ public class AcpController {
 	}
 
 	/**
-	 * The caller's open sessions, as the agent reports them, when it implements
-	 * {@code session/list}.
+	 * The caller's open sessions, by the names they gave them, so each can be continued
+	 * or closed.
 	 *
 	 * <p>
-	 * Limited to those because a stored session's title can repeat its first prompt, and
-	 * the agent does not record who a session belongs to.
+	 * Built from the sessions this client has open, not from the agent's
+	 * {@code session/list}: only the client knows a session's name and who it belongs to,
+	 * and the agent may not list a session yet, or list only those of one process. The
+	 * agent's listing, when it has one, adds the title and time; it is not asked at all
+	 * when the caller has nothing open, so listing never starts an agent.
+	 *
+	 * <p>
+	 * Limited to the caller's own sessions because a title can repeat a first prompt.
 	 */
 	@GetMapping("${spring.ai.acp.harness.controller.path:/api/acp}/sessions")
-	public Mono<ResponseEntity<List<StoredSession>>> sessions(Principal principal) {
+	public Mono<ResponseEntity<List<SessionResponse>>> sessions(Principal principal) {
 		requireAuthorized(principal);
 		String scope = scope(principal);
 		return blocking(() -> {
-			Set<String> mine = agent.sessions()
+			List<AcpHarnessSession> mine = agent.sessions()
 				.open()
 				.stream()
 				.filter(session -> session.name().startsWith(scope))
-				.map(AcpHarnessSession::sessionId)
-				.collect(Collectors.toSet());
-			return agent.sessions().list().stream().filter(stored -> mine.contains(stored.sessionId())).toList();
-		}).map(ResponseEntity::ok)
-			.onErrorMap(UnsupportedAcpHarnessOperationException.class,
-					ex -> new ResponseStatusException(HttpStatus.NOT_IMPLEMENTED, ex.getMessage()));
+				.toList();
+			if (mine.isEmpty()) {
+				return List.<SessionResponse>of();
+			}
+			Map<String, StoredSession> stored = stored();
+			return mine.stream().map(session -> {
+				StoredSession record = stored.get(session.sessionId());
+				return new SessionResponse(session.name().substring(scope.length()), session.sessionId(),
+						record == null ? null : record.title(), record == null ? null : record.updatedAt());
+			}).sorted(Comparator.comparing(SessionResponse::name)).toList();
+		}).map(ResponseEntity::ok);
 	}
 
 	/**
@@ -183,6 +198,27 @@ public class AcpController {
 		var info = agent.harnessInfo();
 		return ResponseEntity.status(available ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
 			.body(new HealthResponse(available, agent.runtimeId(), info == null ? null : info.toString()));
+	}
+
+	/**
+	 * The agent's own records of its sessions, by session id, or none when it cannot list
+	 * them. They only add a title and a time to what the client knows, so a listing that
+	 * fails costs those and not the answer.
+	 */
+	private Map<String, StoredSession> stored() {
+		if (!agent.sessions().supports(AcpHarnessSessions.Operation.LIST)) {
+			return Map.of();
+		}
+		try {
+			return agent.sessions()
+				.list()
+				.stream()
+				.collect(Collectors.toMap(StoredSession::sessionId, Function.identity(), (first, second) -> first));
+		}
+		catch (AcpHarnessClientException ex) {
+			logger.warn("Agent could not list its sessions; listing without titles", ex);
+			return Map.of();
+		}
 	}
 
 	/**
@@ -216,6 +252,8 @@ public class AcpController {
 			})
 			.onErrorMap(SessionOwnershipException.class,
 					ex -> new ResponseStatusException(HttpStatus.FORBIDDEN, ex.getMessage()))
+			.onErrorMap(AcpHarnessSessionBusyException.class,
+					ex -> new ResponseStatusException(HttpStatus.CONFLICT, "The session is busy with another turn"))
 			.onErrorMap(AcpHarnessCapacityException.class, ex -> {
 				logger.warn("Agent request refused: {}", ex.getMessage());
 				return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
@@ -226,11 +264,17 @@ public class AcpController {
 	/**
 	 * Passes the caller on explicitly, because a principal resolver has no thread-bound
 	 * context to read on a reactive stack, and scopes the session name to them.
+	 *
+	 * <p>
+	 * A session still running an earlier turn is refused at once rather than waited for:
+	 * waiting holds a thread on the scheduler that also answers every running agent's
+	 * permission and workspace requests, so a caller sending overlapping turns to one
+	 * session could otherwise stall everyone else's.
 	 */
 	private AcpHarnessClient.PromptSpec spec(PromptRequest request, Principal principal) {
 		AcpHarnessClient.PromptSpec spec = agent.prompt().principal(sessionPrincipal(principal)).user(request.prompt());
 		if (request.session() != null) {
-			spec = spec.session(scope(principal) + request.session());
+			spec = spec.session(scope(principal) + request.session()).waitIfBusy(Duration.ZERO);
 		}
 		return spec.options(options(request));
 	}
@@ -364,6 +408,18 @@ public class AcpController {
 			return reason == null ? null : reason.toString();
 		}
 
+	}
+
+	/**
+	 * One of the caller's open sessions.
+	 *
+	 * @param name the name the caller gave it, which continues or closes it
+	 * @param sessionId the agent's id for it
+	 * @param title the agent's title for it, or null when the agent does not list
+	 * sessions or has not titled this one
+	 * @param updatedAt when the agent last updated it, or null when it does not say
+	 */
+	public record SessionResponse(String name, String sessionId, @Nullable String title, @Nullable Instant updatedAt) {
 	}
 
 	/**

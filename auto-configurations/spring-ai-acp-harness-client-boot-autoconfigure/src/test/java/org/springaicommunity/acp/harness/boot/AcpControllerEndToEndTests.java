@@ -2,8 +2,9 @@ package org.springaicommunity.acp.harness.boot;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,7 +15,6 @@ import org.springframework.boot.http.codec.autoconfigure.CodecsAutoConfiguration
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
 import org.springframework.boot.webflux.autoconfigure.WebFluxAutoConfiguration;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -26,7 +26,6 @@ import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.PoolSettings;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
-import org.springaicommunity.acp.harness.session.StoredSession;
 import org.springaicommunity.acp.harness.test.ScriptedAcpAgent;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -96,26 +95,90 @@ class AcpControllerEndToEndTests {
 	}
 
 	@Test
-	@DisplayName("listing returns only what the caller has open")
+	@DisplayName("listing returns only what the caller has open, by the caller's names, with the agent's titles")
 	void listsOnlyYourOwnSessions() {
 		run(ScriptedAcpAgent.builder().reply("ok").sessionOperations("list").storedSessions("session-1", "session-2"),
 				PoolSettings.defaults(), (client, agent) -> {
 					AcpControllerServerTests.prompt(client, "alice", "pr-1").expectStatus().isOk();
 					AcpControllerServerTests.prompt(client, "bob", "pr-1").expectStatus().isOk();
 
-					List<StoredSession> listed = client.get()
-						.uri("/api/acp/sessions")
-						.header("X-User", "alice")
-						.exchange()
-						.expectStatus()
-						.isOk()
-						.expectBody(new ParameterizedTypeReference<List<StoredSession>>() {
-						})
-						.returnResult()
-						.getResponseBody();
-
-					assertThat(listed).extracting(StoredSession::sessionId).containsExactly("session-1");
+					assertThat(AcpControllerServerTests.sessions(client, "alice")).singleElement()
+						.satisfies(session -> {
+							assertThat(session.name()).isEqualTo("pr-1");
+							assertThat(session.sessionId()).isEqualTo("session-1");
+							assertThat(session.title()).isEqualTo("stored session-1");
+						});
 				});
+	}
+
+	@Test
+	@DisplayName("an agent without session/list still lists the caller's sessions")
+	void listsWithAnAgentThatCannotList() {
+		run(ScriptedAcpAgent.builder().reply("ok"), PoolSettings.defaults(), (client, agent) -> {
+			AcpControllerServerTests.prompt(client, "alice", "pr-1").expectStatus().isOk();
+
+			assertThat(AcpControllerServerTests.sessions(client, "alice")).singleElement().satisfies(session -> {
+				assertThat(session.name()).isEqualTo("pr-1");
+				assertThat(session.title()).isNull();
+			});
+			assertThat(agent.methods()).doesNotContain("session/list");
+		});
+	}
+
+	@Test
+	@DisplayName("listing with nothing open does not start an agent")
+	void listingNothingStartsNoAgent() {
+		run(ScriptedAcpAgent.builder().reply("ok").sessionOperations("list"), PoolSettings.defaults(),
+				(client, agent) -> {
+					assertThat(AcpControllerServerTests.sessions(client, "alice")).isEmpty();
+					assertThat(agent.methods()).isEmpty();
+				});
+	}
+
+	/**
+	 * The second turn would otherwise wait for the first on a boundedElastic thread, for
+	 * as long as its timeout, and enough of those stall every agent's permission
+	 * requests.
+	 */
+	@Test
+	@DisplayName("a second turn on a busy session is a 409 at once, and the first still finishes")
+	void refusesABusySessionAtOnce() {
+		run(ScriptedAcpAgent.builder().reply("ok").promptDelay(Duration.ofSeconds(2)), PoolSettings.defaults(),
+				(client, agent) -> {
+					CompletableFuture<Void> first = CompletableFuture
+						.runAsync(() -> AcpControllerServerTests.prompt(client, "alice", "pr-1").expectStatus().isOk());
+					until(() -> agent.prompts() == 1);
+
+					long started = System.nanoTime();
+					AcpControllerServerTests.prompt(client, "alice", "pr-1")
+						.expectStatus()
+						.isEqualTo(HttpStatus.CONFLICT);
+					AcpControllerServerTests.stream(client, "alice", "pr-1")
+						.expectStatus()
+						.isEqualTo(HttpStatus.CONFLICT);
+					assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(1));
+
+					first.join();
+					assertThat(agent.prompts()).isEqualTo(1);
+				});
+	}
+
+	/**
+	 * Refusing a busy session at once is only safe if a session is free by the time its
+	 * caller hears the last turn ended; otherwise a caller going turn after turn would
+	 * race the previous turn's cleanup and get a 409 now and then.
+	 */
+	@Test
+	@DisplayName("a caller can continue a session as soon as its last turn has answered")
+	void continuesASessionTurnAfterTurn() {
+		run(ScriptedAcpAgent.builder().reply("ok"), PoolSettings.defaults(), (client, agent) -> {
+			for (int turn = 0; turn < 25; turn++) {
+				AcpControllerServerTests.prompt(client, "alice", "pr-1").expectStatus().isOk();
+				assertThat(AcpControllerServerTests.events(AcpControllerServerTests.stream(client, "alice", "pr-1")))
+					.containsExactly("ok");
+			}
+			assertThat(agent.prompts()).isEqualTo(50);
+		});
 	}
 
 	@Test
@@ -185,6 +248,16 @@ class AcpControllerEndToEndTests {
 			client.get().uri("/api/acp/health").exchange().expectStatus().isOk();
 			assertThat(agent.methods()).isEmpty();
 		});
+	}
+
+	private static void until(BooleanSupplier condition) {
+		long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+		while (!condition.getAsBoolean()) {
+			if (System.nanoTime() > deadline) {
+				throw new AssertionError("condition was not met within 10s");
+			}
+			Thread.onSpinWait();
+		}
 	}
 
 	private static WebTestClient.ResponseSpec timingOut(WebTestClient client, String path) {

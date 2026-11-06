@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.client;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -201,6 +202,27 @@ public interface AcpHarnessClient extends AutoCloseable {
 				return this;
 			}
 			throw new UnsupportedOperationException(getClass().getName() + " does not support session principals");
+		}
+
+		/**
+		 * How long to wait when the named session is still running an earlier turn,
+		 * before failing with {@link AcpHarnessSessionBusyException}.
+		 *
+		 * <p>
+		 * A session runs one turn at a time, and by default a second turn waits for the
+		 * first for up to the turn's own timeout, holding the thread that opens it. A
+		 * caller that should not hold a thread for that long, such as a server answering
+		 * many users from a shared pool, passes {@link Duration#ZERO} to fail at once.
+		 * Has no effect on a turn without a session name, which is never busy.
+		 *
+		 * <p>
+		 * An implementation that cannot fail early may ignore this and wait as before:
+		 * unlike {@link #principal(SessionPrincipal)}, ignoring it changes how long a
+		 * caller waits, not whose turn runs.
+		 * @param wait how long to wait, zero for not at all, or null for the default
+		 */
+		default PromptSpec waitIfBusy(@Nullable Duration wait) {
+			return this;
 		}
 
 		/** Runs the turn and blocks for the assistant text. */

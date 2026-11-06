@@ -146,15 +146,18 @@ class AcpControllerTests {
 				.isBadRequest());
 	}
 
+	/** The list comes from the client's open sessions, which every agent has. */
 	@Test
-	@DisplayName("an operation the agent does not implement is 501, not 500")
-	void reportsUnsupportedOperations() {
+	@DisplayName("listing sessions does not need the agent to implement session/list")
+	void listsSessionsWithoutSessionList() {
 		runner.withPropertyValues("spring.ai.acp.harness.controller.allow-unauthenticated=true")
 			.run(context -> client(context).get()
 				.uri("/api/acp/sessions")
 				.exchange()
 				.expectStatus()
-				.isEqualTo(HttpStatus.NOT_IMPLEMENTED));
+				.isOk()
+				.expectBody()
+				.json("[]"));
 	}
 
 	@Test

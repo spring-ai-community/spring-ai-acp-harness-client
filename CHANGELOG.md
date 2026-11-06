@@ -5,6 +5,14 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ## [0.6.0] - Unreleased
 
+### Added
+
+- `PromptSpec.waitIfBusy(Duration)` sets how long a turn waits for a named session that is still
+  running an earlier turn, before failing with the new `AcpHarnessSessionBusyException`.
+  `Duration.ZERO` fails at once; the default is still the turn's timeout. A session is now free
+  again before its caller hears that a turn ended, so a caller that goes straight on to the next
+  turn never finds it busy.
+
 ### Changed
 
 - **Breaking:** Java packages move from `org.springaicommunity.acp.*` to
@@ -109,6 +117,18 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.
 - The reference documentation moved from a single `docs/user-guide.html` to a versioned MkDocs
   site, published to GitHub Pages from `docs/`.
+
+- **Breaking:** `GET {path}/sessions` on the HTTP endpoint returns
+  `[{"name", "sessionId", "title", "updatedAt"}]`, naming each of the caller's open sessions the
+  way the caller did, so it can be continued or closed, instead of the agent's stored sessions. It
+  no longer needs the agent to implement `session/list` (no more 501), asks the agent nothing when
+  the caller has nothing open, and lists every open session, including one the agent has not saved
+  yet or that runs in another process of the pool.
+- The HTTP endpoint answers a request for a named session that is still running an earlier turn
+  with a 409 at once, instead of waiting for it for up to the request's timeout and then returning
+  a 502. Waiting held a thread on the scheduler that also answers agents' permission and workspace
+  requests, so one caller sending overlapping turns to one session could stall every other user's
+  agent.
 
 ### Fixed
 

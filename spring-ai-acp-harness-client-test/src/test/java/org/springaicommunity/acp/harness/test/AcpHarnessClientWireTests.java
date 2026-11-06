@@ -12,6 +12,7 @@ import org.springaicommunity.acp.harness.client.AcpHarnessClient;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientException;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientFactory;
 import org.springaicommunity.acp.harness.client.AcpHarnessClientPool;
+import org.springaicommunity.acp.harness.client.AcpHarnessSessionBusyException;
 import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.config.McpServerSpec;
 import org.springaicommunity.acp.harness.config.OnUnsupported;
@@ -22,6 +23,7 @@ import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessLaunchSpec;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime.PortableOption;
+import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
 import org.springaicommunity.acp.harness.session.StoredSession;
 import org.springaicommunity.acp.harness.session.UnsupportedAcpHarnessOperationException;
@@ -792,6 +794,82 @@ class AcpHarnessClientWireTests {
 			assertThat(first).isNotDone();
 			assertThat(client.sessions().open()).hasSize(1);
 			first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+		}
+	}
+
+	/**
+	 * A server answering many users passes zero, so that a second turn on a busy session
+	 * fails at once instead of holding a thread for as long as the first one runs.
+	 */
+	@Test
+	void aBusySessionFailsAtOnceForACallerThatWillNotWait() throws Exception {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").promptDelay(Duration.ofSeconds(2)).build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			assertBusySessionFailsAtOnce(agent, client);
+		}
+	}
+
+	@Test
+	void aBusySessionFailsAtOnceThroughThePool() throws Exception {
+		AcpHarnessSettings settings = settings().build();
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").promptDelay(Duration.ofSeconds(2)).build();
+				AcpHarnessClient pool = new AcpHarnessClientPool("scripted", settings,
+						() -> connect(agent, settings))) {
+			assertBusySessionFailsAtOnce(agent, pool);
+		}
+	}
+
+	private static void assertBusySessionFailsAtOnce(ScriptedAcpAgent agent, AcpHarnessClient client) throws Exception {
+		java.util.concurrent.CompletableFuture<AcpHarnessClient.AcpHarnessResponse> first = java.util.concurrent.CompletableFuture
+			.supplyAsync(() -> client.prompt().session("shared").user("one").call());
+		Awaits.until(() -> agent.prompts() == 1, LIMIT);
+
+		org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(Duration.ofSeconds(1),
+				() -> assertThatThrownBy(
+						() -> client.prompt().session("shared").user("two").waitIfBusy(Duration.ZERO).call())
+					.isInstanceOf(AcpHarnessSessionBusyException.class));
+
+		assertThat(first.get(10, java.util.concurrent.TimeUnit.SECONDS).content()).isEqualTo("ok");
+		assertThat(agent.prompts()).isEqualTo(1);
+	}
+
+	@Test
+	void aNegativeWaitIsRefused() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			assertThatThrownBy(() -> client.prompt().waitIfBusy(Duration.ofSeconds(-1)))
+				.isInstanceOf(IllegalArgumentException.class);
+		}
+	}
+
+	/**
+	 * Without this, a caller that starts the next turn as soon as it hears this one ended
+	 * races the turn's cleanup, which runs after the caller's onComplete: harmless while
+	 * every caller waited for a busy session, a spurious failure for one that does not.
+	 * The sleep is for the negative half: the first turn's cleanup runs on the thread
+	 * that delivered its completion, right after this test saw it, and must not release
+	 * the turn the test began in the meantime.
+	 */
+	@Test
+	void aSessionIsFreeBeforeItsCallerHearsTheTurnEnded() throws Exception {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("ok").build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			java.util.concurrent.atomic.AtomicBoolean freeOnCompletion = new java.util.concurrent.atomic.AtomicBoolean();
+
+			client.prompt().session("shared").user("one").stream().events().doOnComplete(() -> {
+				try {
+					freeOnCompletion.set(client.session("shared").tryBeginTurn(Duration.ZERO));
+				}
+				catch (InterruptedException ex) {
+					Thread.currentThread().interrupt();
+				}
+			}).blockLast(LIMIT);
+
+			assertThat(freeOnCompletion).isTrue();
+			AcpHarnessSession session = client.session("shared");
+			Thread.sleep(200);
+			assertThat(session.tryBeginTurn(Duration.ZERO)).isFalse();
+			session.endTurn();
 		}
 	}
 

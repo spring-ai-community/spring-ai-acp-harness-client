@@ -85,7 +85,7 @@ acpHarnessClient.prompt().session("pr-482").user("What does this PR change?").ca
 acpHarnessClient.prompt().session("pr-482").user("Any security concerns in it?").call();   // remembers the first turn
 ```
 
-Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (60 minutes by default). Scope names to a unit of work, such as a PR, a ticket or a chat, so context does not grow without bound. Only one turn runs in a session at a time.
+Idle named sessions are closed after `spring.ai.acp.harness.pool.session-ttl` (60 minutes by default). Scope names to a unit of work, such as a PR, a ticket or a chat, so context does not grow without bound. Only one turn runs in a session at a time: a second waits for the first, for up to its own timeout, holding the thread that started it. A server answering many users should not hold threads that long, so it passes `.waitIfBusy(Duration.ZERO)` and gets an `AcpHarnessSessionBusyException` at once instead.
 
 `openSession(name)` opens a session without spending a turn. It is how to learn what the negotiated tier actually achieved before the first prompt:
 
