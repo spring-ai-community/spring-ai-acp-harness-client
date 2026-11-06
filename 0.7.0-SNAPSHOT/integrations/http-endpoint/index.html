@@ -1567,7 +1567,7 @@
 </tr>
 <tr>
 <td>409</td>
-<td>The named session is still running an earlier turn. Send the next turn once that one has answered.</td>
+<td>The named session is still running an earlier turn. Send the next turn once that one has answered. A turn that timed out keeps its session until the agent has stopped, normally a few milliseconds after the 502 and at most 5 seconds, so a request sent the instant a 502 arrives can meet this.</td>
 </tr>
 <tr>
 <td>503</td>

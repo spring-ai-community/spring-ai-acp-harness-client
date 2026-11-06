@@ -1583,7 +1583,7 @@
 </tr>
 <tr>
 <td><code>ask</code></td>
-<td>Puts each request to a person through the application's <code>PermissionPrompt</code> bean. <code>spring-ai-acp-harness-client-console</code> provides one (see <a href="../../integrations/console/#answering-permission-requests">the console</a>); without one, the application fails to start rather than guess.</td>
+<td>Puts each request to a person through the application's <code>PermissionPrompt</code> bean. <code>spring-ai-acp-harness-client-console</code> provides one (see <a href="../../integrations/console/#answering-permission-requests">the console</a>); without one, the application fails to start rather than guess. If the turn ends before the person answers, the agent is told <code>cancelled</code> straight away and the thread asking is interrupted; an answer given after that is discarded.</td>
 </tr>
 </tbody>
 </table>

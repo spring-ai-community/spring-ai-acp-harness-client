@@ -2079,9 +2079,9 @@
   <code>ScriptedAcpAgent.Builder.models(...)</code> still advertises the old state, for testing exactly that.</li>
 <li><code>providers/set</code> sends the provider as <code>providerId</code>, the schema's name for it and the one Codex
   reads. The SDK used to send <code>id</code>.</li>
-<li>A turn that times out, or whose stream is cancelled, now also sends <code>$/cancel_request</code> for its
-  <code>session/prompt</code>, from the SDK, beside the <code>session/cancel</code> it already sent. goose and OpenCode
-  ignore it.</li>
+<li>A turn that times out, or whose stream is cancelled, and whose agent has not answered
+  <code>session/cancel</code> within 5 seconds, also sends <code>$/cancel_request</code> for its <code>session/prompt</code>, from
+  the SDK. goose and OpenCode ignore it.</li>
 <li><code>session/close</code> is sent only to an agent that advertises <code>sessionCapabilities.close</code>, which the
   SDK now enforces. goose and OpenCode do.</li>
 <li>A config option the SDK cannot read at all, such as a select mixing options and groups, now
@@ -2090,6 +2090,8 @@
 <li>Removed <code>SessionConfigRecorder</code> and <code>SessionUpdateDecoder</code>, which worked around SDK gaps that
   0.80.0 closes, and the <code>recorder</code> parameter of <code>DefaultAcpHarnessClient</code> and
   <code>DefaultAcpHarnessSessions</code>. <code>session/load</code> and <code>session/resume</code> are no longer serialized.</li>
+<li><code>AcpHarnessTurn</code> now releases the session's turn permit itself, when the agent is done with the
+  session, so a caller of <code>AcpHarnessTurn.prompt</code> acquires it and no longer releases it.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2102,9 +2104,23 @@
   entry per timed-out turn. The SDK now forgets a request its caller gave up on.</li>
 <li>A turn that exceeded <code>timeout</code> ended with <code>Failed</code> but never sent <code>session/cancel</code>, so the agent
   kept working on the prompt, spending tokens on a result nobody received. A timed-out turn now
-  sends <code>session/cancel</code>, as a cancelled stream already did. The turn still ends without waiting
-  for the agent to stop, so a prompt sent straight afterwards on the same session can overlap the
-  cancelled one (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/20">#20</a>).</li>
+  sends <code>session/cancel</code>, as a cancelled stream already did
+  (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/20">#20</a>).</li>
+<li>The next turn on a session could overlap one that was cancelled or timed out. The session was
+  handed on as soon as <code>session/cancel</code> was sent, but ACP lets the agent keep sending until it
+  answers the cancelled prompt, and goose, Codex and OpenCode all do: a <code>usage_update</code> or
+  <code>session_info_update</code> a few milliseconds later, which the next turn received as its own. The
+  agent could also get the next prompt while still finishing the last. The session now stays busy
+  until the agent answers the cancelled prompt, or for 5 seconds if it never does, and what it
+  sends meanwhile is dropped. The caller still hears that the turn ended at once
+  (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/27">#27</a>).</li>
+<li>A permission request still open when its turn was cancelled or timed out was never answered, as
+  ACP requires, and with <code>policy: ask</code> the person went on being asked. If they answered, their
+  choice went to the agent for a turn that had already ended. The client now answers such a
+  request <code>cancelled</code> at once, answers any that arrive while the agent winds down the same way,
+  and interrupts the <code>PermissionPrompt</code> still asking; a later answer is discarded. goose 1.57 was
+  seen to ignore a late answer, so nothing ran
+  (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/26">#26</a>).</li>
 </ul>
 <h2 id="060-2026-11-06">[0.6.0] - 2026-11-06<a class="headerlink" href="#060-2026-11-06" title="Permanent link">&para;</a></h2>
 <h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
