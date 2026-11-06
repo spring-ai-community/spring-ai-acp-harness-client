@@ -1406,6 +1406,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1523,7 +1534,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1690,6 +1701,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#changed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1807,7 +1829,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1957,6 +1979,14 @@
 <p>All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 <a href="https://semver.org/">Semantic Versioning</a> (MAJOR.MINOR.PATCH).</p>
 <h2 id="060-unreleased">[0.6.0] - Unreleased<a class="headerlink" href="#060-unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>PromptSpec.waitIfBusy(Duration)</code> sets how long a turn waits for a named session that is still
+  running an earlier turn, before failing with the new <code>AcpHarnessSessionBusyException</code>.
+  <code>Duration.ZERO</code> fails at once; the default is still the turn's timeout. A session is now free
+  again before its caller hears that a turn ended, so a caller that goes straight on to the next
+  turn never finds it busy.</li>
+</ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Breaking:</strong> Java packages move from <code>org.springaicommunity.acp.*</code> to
@@ -2059,8 +2089,23 @@
   changes no artifact id.</li>
 <li>Snapshots are published to the Maven Central snapshot repository, and releases will go to Maven
   Central. Versions up to 0.5.0 remain in the Artifact Registry repository.</li>
-<li>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
-  site, published to GitHub Pages from <code>docs/</code>.</li>
+<li>
+<p>The reference documentation moved from a single <code>docs/user-guide.html</code> to a versioned MkDocs
+  site, published to GitHub Pages from <code>docs/</code>.</p>
+</li>
+<li>
+<p><strong>Breaking:</strong> <code>GET {path}/sessions</code> on the HTTP endpoint returns
+  <code>[{"name", "sessionId", "title", "updatedAt"}]</code>, naming each of the caller's open sessions the
+  way the caller did, so it can be continued or closed, instead of the agent's stored sessions. It
+  no longer needs the agent to implement <code>session/list</code> (no more 501), asks the agent nothing when
+  the caller has nothing open, and lists every open session, including one the agent has not saved
+  yet or that runs in another process of the pool.</p>
+</li>
+<li>The HTTP endpoint answers a request for a named session that is still running an earlier turn
+  with a 409 at once, instead of waiting for it for up to the request's timeout and then returning
+  a 502. Waiting held a thread on the scheduler that also answers agents' permission and workspace
+  requests, so one caller sending overlapping turns to one session could stall every other user's
+  agent.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2081,6 +2126,21 @@
   built when the pool closed was never closed. A closed pool now refuses work with an
   <code>AcpHarnessClientException</code>, and a connection that finishes building after the close is closed at
   once. Closing does not interrupt or wait for a connect in progress.</li>
+<li>The HTTP endpoint blocked on the Netty event loop, so on a real server <code>/prompt</code>, <code>/stream</code> and
+  listing sessions failed with a 500, and closing a session never reached the agent. It now runs
+  turns without holding a thread.</li>
+<li>The HTTP endpoint gave sessions no owner, so any caller could continue or close another user's
+  session by naming it, and <code>GET {path}/sessions</code> listed everyone's. Session names are now scoped to
+  the caller, and listing returns only the caller's open sessions. Names are limited to 109
+  characters, and the endpoint can no longer reach a session the application opened under the same
+  name. On OpenCode, <code>spring.ai.acp.harness.pool.max-processes</code> now limits how many endpoint users
+  can hold sessions.</li>
+<li><code>/stream</code> ended normally when a turn failed. It now returns a 502, or aborts the connection if
+  text was already sent.</li>
+<li>An invalid session name on the HTTP endpoint returned a 500, after the pool had assigned the name
+  to a process. It is now a 400 before anything else happens.</li>
+<li>A full pool is reported by the new <code>AcpHarnessCapacityException</code>, which the HTTP endpoint returns
+  as a 503 instead of a 502 or 500.</li>
 </ul>
 <h2 id="050-2026-10-20">[0.5.0] - 2026-10-20<a class="headerlink" href="#050-2026-10-20" title="Permanent link">&para;</a></h2>
 <h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
@@ -2157,7 +2217,7 @@
   waiting out the request timeout, so the turn ends with an error straight away.</li>
 </ul>
 <h2 id="031-2026-10-01">[0.3.1] - 2026-10-01<a class="headerlink" href="#031-2026-10-01" title="Permanent link">&para;</a></h2>
-<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>auth: provided</code> for an MCP server whose credentials come from the application's own
   <code>McpCredentialsProvider</code>. Such a server may omit <code>url</code>: the provider supplies the upstream

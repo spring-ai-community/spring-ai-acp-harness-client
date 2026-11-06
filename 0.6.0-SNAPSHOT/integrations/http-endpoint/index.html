@@ -1259,6 +1259,24 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    HTTP Endpoint
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -1275,6 +1293,47 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sessions-belong-to-the-caller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions belong to the caller
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-turn-does-not-finish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a turn does not finish
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -1391,6 +1450,36 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sessions-belong-to-the-caller" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sessions belong to the caller
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-a-turn-does-not-finish" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When a turn does not finish
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1447,11 +1536,11 @@
 </tr>
 <tr>
 <td><code>GET {path}/sessions</code></td>
-<td>Stored sessions, or 501 when the agent cannot list them.</td>
+<td>The caller's open sessions, sorted by name: <code>[{"name", "sessionId", "title", "updatedAt"}]</code>. <code>name</code> is the name the caller gave, which continues or closes the session. <code>title</code> and <code>updatedAt</code> come from the agent and are null when it does not implement <code>session/list</code>.</td>
 </tr>
 <tr>
 <td><code>DELETE {path}/sessions/{name}</code></td>
-<td>Closes a named session.</td>
+<td>Closes one of the caller's named sessions. Returns 204 whether or not the name was in use.</td>
 </tr>
 <tr>
 <td><code>GET {path}/health</code></td>
@@ -1459,6 +1548,38 @@
 </tr>
 </tbody>
 </table>
+<h2 id="sessions-belong-to-the-caller">Sessions belong to the caller<a class="headerlink" href="#sessions-belong-to-the-caller" title="Permanent link">&para;</a></h2>
+<p>The <code>session</code> name in a request is scoped to whoever sent it, so two users choosing the same name get separate conversations, and neither can see, continue or close the other's. Without a <code>Principal</code>, as with <code>allow-unauthenticated</code>, all callers share one scope.</p>
+<p>Names follow the usual session name rules, up to 109 characters; anything else is a 400. The scope means the endpoint cannot reach a session your application opened itself through <code>AcpHarnessClient</code> under the same name. <code>GET {path}/sessions</code> lists only sessions open in this process, so it does not include stored sessions from earlier runs. It works whether or not the agent implements <code>session/list</code>, and with nothing open it answers without starting an agent.</p>
+<p>A session runs one turn at a time. A request for a session that is still running an earlier turn gets a 409 at once, rather than waiting for it: waiting would hold a thread on the scheduler that also answers every running agent's permission and workspace requests, so one caller sending overlapping requests could stall everyone else's. Wait for the earlier turn's response, then send the next.</p>
+<h2 id="when-a-turn-does-not-finish">When a turn does not finish<a class="headerlink" href="#when-a-turn-does-not-finish" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Response</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>502</td>
+<td>The turn failed or timed out. The response never repeats what the agent said; on <code>/prompt</code>, its <code>requestId</code> finds the details in the logs.</td>
+</tr>
+<tr>
+<td>409</td>
+<td>The named session is still running an earlier turn. Send the next turn once that one has answered.</td>
+</tr>
+<tr>
+<td>503</td>
+<td>The agent is fine but cannot take another session right now. Try again later. See <code>spring.ai.acp.harness.pool</code>.</td>
+</tr>
+<tr>
+<td>200, then an aborted connection</td>
+<td><code>/stream</code> only: the turn failed after text was already sent. A stream that ends normally finished its turn.</td>
+</tr>
+</tbody>
+</table>
+<p>On OpenCode, each process serves one user at a time, so <code>spring.ai.acp.harness.pool.max-processes</code> limits how many users can hold sessions at once, and a user beyond that gets a 503; see <a href="../../runtimes/opencode/#processes-users-and-memory">Processes, users and memory</a>.</p>
 
 
 
