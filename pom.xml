@@ -67,7 +67,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <spring-boot.version>4.1.1</spring-boot.version>
-        <acp.version>0.18.0</acp.version>
+        <acp.version>0.80.0</acp.version>
         <spring-ai.version>2.0.1</spring-ai.version>
         <!-- Pre-1.0 and community-maintained: pinned exactly, like acp-core. -->
         <mcp-security.version>0.1.14</mcp-security.version>

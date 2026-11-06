@@ -59,14 +59,17 @@ class SelectMatcherTests {
 	@Test
 	void anOptionWithNoEnumeratedValuesTakesWhateverItIsGiven() {
 		AcpSchema.SessionConfigSelect freeform = new AcpSchema.SessionConfigSelect("select", "model", "Model", null,
-				"model", "current", List.of(), null);
+				"model", "current", AcpSchema.SessionConfigSelectOptions.ungrouped(List.of()), null);
 
 		assertThat(SelectMatcher.match(freeform, "anything", null)).contains("anything");
 	}
 
 	private static AcpSchema.SessionConfigSelect select(String id, String current, String... values) {
 		return new AcpSchema.SessionConfigSelect("select", id, id, null, id, current,
-				java.util.Arrays.stream(values).map(v -> new AcpSchema.SessionConfigSelectOption(v, v)).toList(), null);
+				AcpSchema.SessionConfigSelectOptions.ungrouped(java.util.Arrays.stream(values)
+					.map(v -> new AcpSchema.SessionConfigSelectOption(v, v))
+					.toList()),
+				null);
 	}
 
 }

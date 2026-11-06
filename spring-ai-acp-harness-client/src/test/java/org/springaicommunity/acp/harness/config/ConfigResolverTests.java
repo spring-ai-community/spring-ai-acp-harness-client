@@ -52,7 +52,7 @@ class ConfigResolverTests {
 	}
 
 	private void advertise(AcpSchema.SessionConfigOption... options) {
-		session.advertised(new AdvertisedSessionConfig(List.of(options), null, null));
+		session.advertised(new AdvertisedSessionConfig(List.of(options), null));
 	}
 
 	private void acceptsConfigOption() {
@@ -158,8 +158,7 @@ class ConfigResolverTests {
 	@Test
 	void fallsBackToSetModeForAnAgentThatOnlyReturnsModes() {
 		session.advertised(new AdvertisedSessionConfig(List.of(),
-				new AcpSchema.SessionModeState("auto", List.of(new AcpSchema.SessionMode("plan", "Plan", null))),
-				null));
+				new AcpSchema.SessionModeState("auto", List.of(new AcpSchema.SessionMode("plan", "Plan", null)))));
 		when(client.setSessionMode(any())).thenReturn(Mono.just(new AcpSchema.SetSessionModeResponse()));
 
 		SessionConfiguration resolved = resolve(new FakeRuntime(), settings(b -> b.mode("plan")));
@@ -169,21 +168,10 @@ class ConfigResolverTests {
 	}
 
 	@Test
-	void fallsBackToSetModelForAnAgentThatOnlyReturnsModels() {
-		session.advertised(new AdvertisedSessionConfig(List.of(), null,
-				new AcpSchema.SessionModelState("a", List.of(new AcpSchema.ModelInfo("b", "Model B", null)))));
-		when(client.setSessionModel(any())).thenReturn(Mono.just(new AcpSchema.SetSessionModelResponse()));
-
-		SessionConfiguration resolved = resolve(new FakeRuntime(), settings(b -> b.model("Model B")));
-
-		assertThat(resolved.of(PortableOption.MODEL).mechanism()).isEqualTo(Mechanism.SESSION_MODEL);
-		assertThat(resolved.applied(PortableOption.MODEL)).isEqualTo("b");
-	}
-
-	@Test
 	void usesProvidersSetWhenTheAgentAdvertisesTheCapability() {
-		when(client.getAgentCapabilities()).thenReturn(NegotiatedCapabilities.fromAgent(
-				new AcpSchema.AgentCapabilities(false, null, null, null, new AcpSchema.ProvidersCapabilities(), null)));
+		when(client.getAgentCapabilities())
+			.thenReturn(NegotiatedCapabilities.fromAgent(new AcpSchema.AgentCapabilities(false, null, null, null, null,
+					new AcpSchema.ProvidersCapabilities(), null)));
 		when(client.setProvider(any())).thenReturn(Mono.just(new AcpSchema.SetProviderResponse()));
 
 		ProviderSpec provider = new ProviderSpec("openai", "openai", URI.create("https://api.example.com/v1"), "k",
@@ -257,8 +245,9 @@ class ConfigResolverTests {
 		// unsupported would fire on-unsupported=fail on a session that is talking to the
 		// right
 		// provider.
-		when(client.getAgentCapabilities()).thenReturn(NegotiatedCapabilities.fromAgent(
-				new AcpSchema.AgentCapabilities(false, null, null, null, new AcpSchema.ProvidersCapabilities(), null)));
+		when(client.getAgentCapabilities())
+			.thenReturn(NegotiatedCapabilities.fromAgent(new AcpSchema.AgentCapabilities(false, null, null, null, null,
+					new AcpSchema.ProvidersCapabilities(), null)));
 		when(client.setProvider(any())).thenReturn(Mono.error(new IllegalStateException("Invalid params")));
 		AcpHarnessRuntime carriedAtLaunch = new FakeRuntime() {
 			@Override
@@ -377,7 +366,10 @@ class ConfigResolverTests {
 
 	private static AcpSchema.SessionConfigSelect select(String id, String category, String current, String... values) {
 		return new AcpSchema.SessionConfigSelect("select", id, id, null, category, current,
-				java.util.Arrays.stream(values).map(v -> new AcpSchema.SessionConfigSelectOption(v, v)).toList(), null);
+				AcpSchema.SessionConfigSelectOptions.ungrouped(java.util.Arrays.stream(values)
+					.map(v -> new AcpSchema.SessionConfigSelectOption(v, v))
+					.toList()),
+				null);
 	}
 
 	/**

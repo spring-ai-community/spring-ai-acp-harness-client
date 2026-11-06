@@ -13,20 +13,17 @@ class AcpHarnessEventMapperTests {
 
 	@Test
 	void mapsAgentTextAndThoughtsToDistinctEvents() {
-		assertThat(AcpHarnessEventMapper
-			.map(new AcpSchema.AgentMessageChunk("agent_message_chunk", new AcpSchema.TextContent("hello"))))
+		assertThat(AcpHarnessEventMapper.map(new AcpSchema.AgentMessageChunk(new AcpSchema.TextContent("hello"))))
 			.isEqualTo(new AcpHarnessEvent.Text("hello"));
 
-		assertThat(AcpHarnessEventMapper
-			.map(new AcpSchema.AgentThoughtChunk("agent_thought_chunk", new AcpSchema.TextContent("pondering"))))
+		assertThat(AcpHarnessEventMapper.map(new AcpSchema.AgentThoughtChunk(new AcpSchema.TextContent("pondering"))))
 			.isEqualTo(new AcpHarnessEvent.Thought("pondering"));
 	}
 
 	@Test
 	void dropsTheEchoOfOurOwnPrompt() {
 		assertThat(AcpHarnessEventMapper
-			.map(new AcpSchema.UserMessageChunk("user_message_chunk", new AcpSchema.TextContent("what I just sent"))))
-			.isNull();
+			.map(new AcpSchema.UserMessageChunk(new AcpSchema.TextContent("what I just sent")))).isNull();
 	}
 
 	@Test
@@ -39,10 +36,10 @@ class AcpHarnessEventMapperTests {
 
 	@Test
 	void mapsToolCallLifecycleToStartedThenUpdated() {
-		AcpSchema.SessionUpdate started = new AcpSchema.ToolCall("tool_call", "t1", "Read file",
+		AcpSchema.SessionUpdate started = new AcpSchema.ToolCall("tool_call", "t1", "Read file", null,
 				AcpSchema.ToolKind.READ, AcpSchema.ToolCallStatus.PENDING, List.of(), List.of(), null, null, null);
 		AcpSchema.SessionUpdate finished = new AcpSchema.ToolCallUpdateNotification("tool_call_update", "t1", null,
-				null, AcpSchema.ToolCallStatus.COMPLETED, List.of(), null, null, null, null);
+				null, null, AcpSchema.ToolCallStatus.COMPLETED, List.of(), null, null, null, null);
 
 		assertThat(AcpHarnessEventMapper.map(started))
 			.isEqualTo(new AcpHarnessEvent.ToolCallStarted("t1", "Read file", AcpSchema.ToolKind.READ));
@@ -52,7 +49,7 @@ class AcpHarnessEventMapperTests {
 
 	@Test
 	void skipsContentBlocksThatCarryNoText() {
-		AcpSchema.SessionUpdate image = new AcpSchema.AgentMessageChunk("agent_message_chunk",
+		AcpSchema.SessionUpdate image = new AcpSchema.AgentMessageChunk(
 				new AcpSchema.ImageContent("image", "data", "image/png", null, null, null));
 
 		assertThat(AcpHarnessEventMapper.map(image)).isNull();

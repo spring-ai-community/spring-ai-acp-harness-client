@@ -2,6 +2,7 @@ package org.springaicommunity.acp.harness.turn;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
@@ -216,7 +217,7 @@ public final class AcpHarnessTurn {
 			recording.failed(reasonOf(failed.cause()), failed.cause());
 		}
 		else if (terminal instanceof AcpHarnessEvent.Completed completed) {
-			recording.completed(completed.reason() == null ? null : completed.reason().name());
+			recording.completed(completed.reason() == null ? null : tagOf(completed.reason().value()));
 		}
 		sink.next(terminal);
 		sink.complete();
@@ -272,13 +273,22 @@ public final class AcpHarnessTurn {
 		switch (event) {
 			case AcpHarnessEvent.ToolCallStarted started -> recording.toolCallStarted(started.id(), started.title(),
 					started.kind() == null ? null : started.kind().name());
-			case AcpHarnessEvent.ToolCallUpdated updated ->
-				recording.toolCallUpdated(updated.id(), updated.status() == null ? null : updated.status().name());
+			case AcpHarnessEvent.ToolCallUpdated updated -> recording.toolCallUpdated(updated.id(),
+					updated.status() == null ? null : tagOf(updated.status().value()));
 			case AcpHarnessEvent.UsageUpdated usage ->
 				recording.usage(usage.contextUsed(), usage.contextSize(), usage.costAmount(), usage.costCurrency());
 			default -> {
 			}
 		}
+	}
+
+	/**
+	 * A stop reason or tool call status as an observation tag: its wire value in upper
+	 * case, the form these tags took while acp-core modelled them as enums
+	 * ({@code end_turn} is {@code END_TURN}), so dashboards built on them keep working.
+	 */
+	private static String tagOf(String wireValue) {
+		return wireValue.toUpperCase(Locale.ROOT);
 	}
 
 	/**

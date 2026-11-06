@@ -10,7 +10,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
 
 /**
  * What the agent said about itself when it created the session: the config options it
- * will accept, and the legacy {@code modes} and {@code models} states.
+ * will accept, and the legacy {@code modes} state.
  *
  * <p>
  * Reading this before setting anything is what makes the negotiated tier honest. Measured
@@ -21,22 +21,32 @@ import com.agentclientprotocol.sdk.spec.AcpSchema;
  * the answer has to come from the advertised options.
  *
  * <p>
- * {@code modes} and {@code models} are the pre-{@code configOptions} way of saying the
- * same thing. The spec's transition guidance has agents return both, and they do, so this
- * is consulted only when no matching config option exists — OpenCode, for instance,
- * returns neither.
+ * {@code modes} is the pre-{@code configOptions} way of saying the same thing for the
+ * mode. The spec's transition guidance has agents return both, and they do, so it is
+ * consulted only when no matching config option exists — OpenCode, for instance, does not
+ * return it. Its counterpart for the model, {@code models} with
+ * {@code session/set_model}, never became stable ACP, and acp-core 0.80.0 no longer
+ * models it.
  */
 public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> configOptions,
-		AcpSchema.@Nullable SessionModeState modes, AcpSchema.@Nullable SessionModelState models) {
+		AcpSchema.@Nullable SessionModeState modes) {
 
-	private static final AdvertisedSessionConfig EMPTY = new AdvertisedSessionConfig(List.of(), null, null);
+	private static final AdvertisedSessionConfig EMPTY = new AdvertisedSessionConfig(List.of(), null);
 
 	public AdvertisedSessionConfig {
 		configOptions = configOptions == null ? List.of() : List.copyOf(configOptions);
 	}
 
 	/**
-	 * Nothing advertised: an agent that returned no options and no mode or model state.
+	 * What a session answer carried, either part of which an agent may leave out.
+	 */
+	public static AdvertisedSessionConfig of(@Nullable List<AcpSchema.SessionConfigOption> configOptions,
+			AcpSchema.@Nullable SessionModeState modes) {
+		return new AdvertisedSessionConfig(configOptions == null ? List.of() : configOptions, modes);
+	}
+
+	/**
+	 * Nothing advertised: an agent that returned no options and no mode state.
 	 */
 	public static AdvertisedSessionConfig empty() {
 		return EMPTY;
@@ -74,16 +84,8 @@ public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> config
 		return modes != null && modes.availableModes() != null && !modes.availableModes().isEmpty() ? modes : null;
 	}
 
-	/**
-	 * The legacy {@code models} state, or null when the agent sent none or an empty one.
-	 */
-	public AcpSchema.@Nullable SessionModelState findModels() {
-		return models != null && models.availableModels() != null && !models.availableModels().isEmpty() ? models
-				: null;
-	}
-
 	public boolean isEmpty() {
-		return configOptions.isEmpty() && findModes() == null && findModels() == null;
+		return configOptions.isEmpty() && findModes() == null;
 	}
 
 	/**
@@ -96,7 +98,7 @@ public record AdvertisedSessionConfig(List<AcpSchema.SessionConfigOption> config
 	 * pre-provider list would be resolved against the wrong one.
 	 */
 	public AdvertisedSessionConfig withConfigOptions(@Nullable List<AcpSchema.SessionConfigOption> options) {
-		return options == null || options.isEmpty() ? this : new AdvertisedSessionConfig(options, modes, models);
+		return options == null || options.isEmpty() ? this : new AdvertisedSessionConfig(options, modes);
 	}
 
 	private static boolean equalsIgnoreCase(@Nullable String a, @Nullable String b) {

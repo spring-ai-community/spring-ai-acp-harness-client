@@ -98,9 +98,6 @@ public final class AcpHarnessProbe {
 				AcpHarnessSession session = client.openSession("probe");
 				AcpSchema.SessionConfigSelect model = session.advertised().select("model", "model");
 				List<String> models = model == null ? List.of() : values(model);
-				if (models.isEmpty()) {
-					models = legacyModelIds(session);
-				}
 				AcpSchema.SessionConfigSelect mode = session.advertised().select("mode", "mode");
 				List<String> modes = mode == null ? legacyModeIds(session) : values(mode);
 
@@ -117,14 +114,6 @@ public final class AcpHarnessProbe {
 		}
 	}
 
-	/**
-	 * The models of the legacy {@code models} state, or none when the agent sent none.
-	 */
-	private static List<String> legacyModelIds(AcpHarnessSession session) {
-		AcpSchema.SessionModelState state = session.advertised().findModels();
-		return state == null ? List.of() : state.availableModels().stream().map(AcpSchema.ModelInfo::modelId).toList();
-	}
-
 	/** The modes of the legacy {@code modes} state, or none when the agent sent none. */
 	private static List<String> legacyModeIds(AcpHarnessSession session) {
 		AcpSchema.SessionModeState state = session.advertised().findModes();
@@ -133,7 +122,7 @@ public final class AcpHarnessProbe {
 
 	private static List<String> values(AcpSchema.SessionConfigSelect select) {
 		return select.options() == null ? List.of()
-				: select.options().stream().map(AcpSchema.SessionConfigSelectOption::value).toList();
+				: select.options().allOptions().stream().map(AcpSchema.SessionConfigSelectOption::value).toList();
 	}
 
 	private static void deleteQuietly(@Nullable Path directory) {

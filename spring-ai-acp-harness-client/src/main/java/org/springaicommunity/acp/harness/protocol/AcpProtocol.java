@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
  * <strong>v2 is a draft, and this library cannot speak it.</strong> ACP v2 replaces the
  * turn-based model — a prompt response carries the {@code messageId} of the inserted
  * message rather than a {@code stopReason} — and restructures diffs, permission subjects
- * and message patching. {@code acp-core} 0.17.0 models the v1 shapes and declares
+ * and message patching. {@code acp-core} models the v1 shapes and declares
  * {@code LATEST_PROTOCOL_VERSION = 1}, so a client that found itself in a v2 conversation
  * would decode a {@code PromptResponse} with a null stop reason and report every turn as
  * having ended for no reason. The protocol's own announcement says to gate v2 behind both
@@ -48,7 +48,7 @@ public final class AcpProtocol {
 	public static final int V1 = 1;
 
 	/**
-	 * Published as a draft; its wire format is not what {@code acp-core} 0.17.0 decodes.
+	 * Published as a draft; its wire format is not what {@code acp-core} decodes.
 	 */
 	public static final int DRAFT_V2 = 2;
 
@@ -106,7 +106,7 @@ public final class AcpProtocol {
 
 	private static String sdkVersion() {
 		String version = com.agentclientprotocol.sdk.spec.AcpSchema.class.getPackage().getImplementationVersion();
-		return version == null ? "0.17.0" : version;
+		return version == null ? "(version unknown)" : version;
 	}
 
 }

@@ -110,9 +110,9 @@ public interface PermissionPolicy {
 			return null;
 		}
 		return options.stream()
-			.filter(o -> o.kind() == preferred)
+			.filter(o -> preferred.equals(o.kind()))
 			.findFirst()
-			.or(() -> options.stream().filter(o -> o.kind() == fallback).findFirst())
+			.or(() -> options.stream().filter(o -> fallback.equals(o.kind())).findFirst())
 			.orElse(null);
 	}
 

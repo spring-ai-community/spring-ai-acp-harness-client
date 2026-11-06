@@ -148,7 +148,7 @@ class TodoPlanTests {
 	}
 
 	private static AcpSchema.ToolCall toolCall(String title, Object rawInput, Map<String, Object> meta) {
-		return new AcpSchema.ToolCall("tool_call", "call_1", title, null, null, null, null, rawInput, null, meta);
+		return new AcpSchema.ToolCall("tool_call", "call_1", title, null, null, null, null, null, rawInput, null, meta);
 	}
 
 }

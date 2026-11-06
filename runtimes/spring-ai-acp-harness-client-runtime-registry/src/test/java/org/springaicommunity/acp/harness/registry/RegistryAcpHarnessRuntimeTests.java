@@ -125,7 +125,7 @@ class RegistryAcpHarnessRuntimeTests {
 		// wrong answer
 		// here would turn an allowlist into an approval.
 		var titled = new com.agentclientprotocol.sdk.spec.AcpSchema.ToolCallUpdate("t1", "Read the build file", null,
-				null, null, null, null, null);
+				null, null, null, null, null, null, null);
 
 		assertThat(runtime("gemini").toolNameOf(titled)).isNull();
 	}

@@ -13,7 +13,6 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
-import org.springaicommunity.acp.harness.event.SessionUpdateDecoder;
 import org.springaicommunity.acp.harness.permission.PermissionPolicy;
 import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
 import org.springaicommunity.acp.harness.process.AcpHarnessLogWatcher;
@@ -60,8 +59,6 @@ public final class AcpHarnessClientFactory {
 	private static final Logger logger = LoggerFactory.getLogger(AcpHarnessClientFactory.class);
 
 	private static final String CLIENT_NAME = "spring-ai-acp-harness-client";
-
-	private static final String SESSION_UPDATE = "session/update";
 
 	private AcpHarnessClientFactory() {
 	}
@@ -241,23 +238,21 @@ public final class AcpHarnessClientFactory {
 
 	private static AcpHarnessClient connect(AcpHarnessRuntime runtime, AcpHarnessSettings settings, Launched launched,
 			AcpHarnessObservations observations) {
-		SessionConfigRecorder recorder = new SessionConfigRecorder();
-		AcpClientTransport transport = recorder.wrap(launched.transport());
 		SessionUpdateRouter router = new SessionUpdateRouter();
 
 		WorkspaceFileSystem files = new WorkspaceFileSystem(settings.workspace(), settings.filesystem());
 		WorkspaceTerminals terminals = new WorkspaceTerminals(files.jail(), settings.terminal());
 
-		AcpClient.AsyncSpec spec = AcpClient.async(transport)
+		// requestTimeout does not bound session/prompt: a turn enforces its own timeout,
+		// which may be longer or shorter than this one.
+		AcpClient.AsyncSpec spec = AcpClient.async(launched.transport())
 			.requestTimeout(settings.timeout())
 			.clientCapabilities(capabilities(settings))
-			// Deliberately not sessionUpdateConsumer: see SessionUpdateDecoder for why a
-			// raw handler.
-			.notificationHandler(SESSION_UPDATE, params -> {
-				AcpSchema.SessionNotification notification = SessionUpdateDecoder.decode(params, transport);
-				if (notification != null) {
-					router.accept(notification);
-				}
+			.clientInfo(new AcpSchema.Implementation(CLIENT_NAME, version()))
+			// An update kind newer than the SDK arrives as UnknownSessionUpdate, which
+			// the event mapper drops.
+			.sessionUpdateHandler(notification -> {
+				router.accept(notification);
 				return Mono.empty();
 			})
 			.requestPermissionHandler(request -> handlePermission(runtime, settings.permissions(), request));
@@ -295,7 +290,7 @@ public final class AcpHarnessClientFactory {
 
 		Liveness liveness = launched.liveness();
 		DefaultAcpHarnessClient client = new DefaultAcpHarnessClient(acp, runtime, settings, new SessionRegistry(),
-				router, recorder, handshake.initialized(), handshake.protocolVersion(), observations,
+				router, handshake.initialized(), handshake.protocolVersion(), observations,
 				liveness.knowable() ? liveness.alive() : null, release);
 		client.watch(launched.watcher());
 		return client;
@@ -316,10 +311,8 @@ public final class AcpHarnessClientFactory {
 		AcpSchema.InitializeResponse initialized;
 		int offered = settings.protocol().maxVersion();
 		try {
-			initialized = acp
-				.initialize(new AcpSchema.InitializeRequest(offered, capabilities(settings),
-						new AcpSchema.Implementation(CLIENT_NAME, version()), null))
-				.block(settings.timeout());
+			// The capabilities and client info sent are the builder's.
+			initialized = acp.initialize(offered, null).block(settings.timeout());
 			if (initialized == null) {
 				throw new AcpHarnessClientException("Agent '" + runtime.id() + "' did not complete initialization");
 			}
@@ -483,15 +476,14 @@ public final class AcpHarnessClientFactory {
 	 * otherwise.
 	 *
 	 * <p>
-	 * Declared identically on the builder and in the {@code initialize} request because
-	 * the SDK uses the first to decide which inbound methods it will route and the second
-	 * is what the agent reads; they are two halves of one statement and disagreeing would
-	 * mean advertising something no handler answers.
+	 * Set explicitly rather than derived from the handlers registered, so that what is
+	 * advertised reads off the settings in one place. The SDK sends the builder's
+	 * capabilities in {@code initialize}, so the two cannot disagree.
 	 */
 	private static AcpSchema.ClientCapabilities capabilities(AcpHarnessSettings settings) {
 		return new AcpSchema.ClientCapabilities(
 				new AcpSchema.FileSystemCapability(settings.filesystem().read(), settings.filesystem().write()),
-				settings.terminal().enabled(), null, null);
+				settings.terminal().enabled());
 	}
 
 	private static String version() {

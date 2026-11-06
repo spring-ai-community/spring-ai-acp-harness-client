@@ -6,7 +6,6 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.springaicommunity.acp.harness.client.SessionConfigRecorder;
 import org.springaicommunity.acp.harness.config.AcpHarnessSettings;
 import org.springaicommunity.acp.harness.session.AcpHarnessSessions.Operation;
 
@@ -36,16 +35,14 @@ class DefaultAcpHarnessSessionsTests {
 
 	private final SessionRegistry registry = new SessionRegistry();
 
-	private final SessionConfigRecorder recorder = new SessionConfigRecorder();
-
 	private DefaultAcpHarnessSessions sessions(AcpSchema.AgentCapabilities capabilities) {
 		return new DefaultAcpHarnessSessions(acp, "fake", AcpHarnessSettings.builder("fake", workspace).build(),
-				capabilities, registry, recorder, session -> {
+				capabilities, registry, session -> {
 				});
 	}
 
 	private static AcpSchema.AgentCapabilities capabilities(boolean load, AcpSchema.SessionCapabilities session) {
-		return new AcpSchema.AgentCapabilities(load, session, null, null, null, null);
+		return new AcpSchema.AgentCapabilities(load, session, null, null, null, null, null);
 	}
 
 	private static AcpSchema.SessionCapabilities all() {

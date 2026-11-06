@@ -37,12 +37,21 @@ final class SelectMatcher {
 	}
 
 	/**
+	 * Every option, flattened when the agent sent them in groups: a value is matched the
+	 * same way wherever it is listed.
+	 */
+	private static @Nullable List<AcpSchema.SessionConfigSelectOption> optionsOf(AcpSchema.SessionConfigSelect select) {
+		AcpSchema.SessionConfigSelectOptions options = select.options();
+		return options == null ? null : options.allOptions();
+	}
+
+	/**
 	 * @param request what the application asked for
 	 * @param qualifier a provider id to try as a prefix, or null
 	 * @return the value to send, or null when this option does not offer it
 	 */
 	static @Nullable String match(AcpSchema.SessionConfigSelect select, String request, @Nullable String qualifier) {
-		List<AcpSchema.SessionConfigSelectOption> options = select.options();
+		List<AcpSchema.SessionConfigSelectOption> options = optionsOf(select);
 		if (options == null || options.isEmpty()) {
 			// Not an enumerated select: the agent takes free text, so the request passes
 			// through and the
@@ -93,7 +102,7 @@ final class SelectMatcher {
 	 * instead.
 	 */
 	static String examples(AcpSchema.SessionConfigSelect select) {
-		List<AcpSchema.SessionConfigSelectOption> options = select.options();
+		List<AcpSchema.SessionConfigSelectOption> options = optionsOf(select);
 		if (options == null || options.isEmpty()) {
 			return "no enumerated values";
 		}

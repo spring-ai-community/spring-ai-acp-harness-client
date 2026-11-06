@@ -7,6 +7,8 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Confines every path an agent names to the session's working directory.
  *
@@ -89,7 +91,7 @@ public final class WorkspaceJail {
 	 * Resolves a directory to run something in, which must already exist inside the
 	 * workspace.
 	 */
-	public Path directory(String requested) {
+	public Path directory(@Nullable String requested) {
 		if (requested == null || requested.isBlank()) {
 			return root;
 		}
