@@ -43,6 +43,13 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ### Fixed
 
+- A supervised agent (`serve.transport: websocket`) that failed to become ready was restarted by
+  its own exit. After a start that failed, the supervisor went on spawning the agent in the
+  background, although the caller had been told it did not start. A restart that failed
+  scheduled two more, and the second spawned an agent beside the first that the application's
+  shutdown never stopped. Only an agent that became ready and then exits is now restarted, once.
+  Reported, with a proposed fix and its test, by [@zjxzjw](https://github.com/zjxzjw) in
+  [#31](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/31).
 - A per-turn `timeout` longer than `spring.ai.acp.harness.timeout` was ignored: the SDK bounded
   `session/prompt` by the client-wide timeout, so the turn failed at that one. The SDK no longer
   bounds prompts, so the turn's own timeout applies

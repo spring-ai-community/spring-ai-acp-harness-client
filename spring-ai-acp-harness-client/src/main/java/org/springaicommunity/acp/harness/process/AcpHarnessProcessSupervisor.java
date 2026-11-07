@@ -173,7 +173,6 @@ public final class AcpHarnessProcessSupervisor implements AutoCloseable {
 		}
 		this.process = started;
 		drainOutput(started);
-		watchForExit(started);
 
 		if (!awaitReady(started)) {
 			started.destroyForcibly();
@@ -182,6 +181,8 @@ public final class AcpHarnessProcessSupervisor implements AutoCloseable {
 		}
 		healthy = true;
 		logger.info("Runtime '{}' is ready (pid {})", runtimeId, started.pid());
+		// Only now: see watchForExit.
+		watchForExit(started);
 	}
 
 	/**
@@ -220,6 +221,18 @@ public final class AcpHarnessProcessSupervisor implements AutoCloseable {
 		return recent.isEmpty() ? "" : "; it said: " + String.join(" | ", recent);
 	}
 
+	/**
+	 * Restarts a process that dies after it became ready.
+	 *
+	 * <p>
+	 * Registered only once the process is ready. One that dies during startup already has
+	 * an owner for its failure: {@link #start()} throws it to the caller, and a restart's
+	 * own catch schedules the next attempt. Watching it as well would restart a start the
+	 * caller was told had failed, and turn every failed restart into two, the second
+	 * spawning an agent beside the first that {@link #close()} never stops. The exit of a
+	 * process that becomes ready and then dies before this is registered is not missed:
+	 * {@code onExit()} is already complete, and the callback runs at once.
+	 */
 	private void watchForExit(Process started) {
 		started.onExit().thenAccept(exited -> {
 			if (closed.get()) {
@@ -255,6 +268,11 @@ public final class AcpHarnessProcessSupervisor implements AutoCloseable {
 				restartListeners.forEach(this::runQuietly);
 			}
 			catch (RuntimeException ex) {
+				if (closed.get()) {
+					// Closed while starting, which is what killed it. The scheduler is
+					// shut down and would refuse the next attempt anyway.
+					return;
+				}
 				logger.error("Restart of runtime '{}' failed: {}", runtimeId, ex.getMessage());
 				scheduleRestart();
 			}
