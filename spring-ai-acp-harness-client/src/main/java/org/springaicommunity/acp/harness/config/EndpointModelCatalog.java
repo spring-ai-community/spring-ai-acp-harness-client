@@ -49,10 +49,20 @@ final class EndpointModelCatalog implements ModelCatalog {
 	 */
 	private final Map<URI, List<String>> cache = new ConcurrentHashMap<>();
 
+	/**
+	 * One client for every catalogue in the JVM. A catalogue is built per agent
+	 * connection, and a client per connection would leave a selector thread and a
+	 * connection pool behind on every reconnection.
+	 */
+	private static final HttpClient SHARED_HTTP = HttpClient.newBuilder()
+		.connectTimeout(TIMEOUT)
+		.followRedirects(HttpClient.Redirect.NORMAL)
+		.build();
+
 	private final HttpClient http;
 
 	EndpointModelCatalog() {
-		this(HttpClient.newBuilder().connectTimeout(TIMEOUT).followRedirects(HttpClient.Redirect.NORMAL).build());
+		this(SHARED_HTTP);
 	}
 
 	EndpointModelCatalog(HttpClient http) {

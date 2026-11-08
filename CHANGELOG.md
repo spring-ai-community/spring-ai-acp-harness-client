@@ -5,6 +5,18 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ## [0.8.0] - Unreleased
 
+### Fixed
+
+- A supervised agent whose start failed, or whose WebSocket transport could not be constructed,
+  left the supervisor, transport or log watcher it had created behind. `AcpHarnessClientFactory`
+  now closes what it created before rethrowing, and a supervisor closes the client it uses for
+  health probes.
+- The WebSocket transport now waits for its close frame to be sent before shutting its
+  `HttpClient` down, and shuts the executor down with it, so the agent sees a normal closure
+  rather than a reset. The MCP loopback proxy closes its `HttpClient` on close too.
+- The endpoint model catalogue now uses one `HttpClient` for the JVM instead of one per agent
+  connection, so reconnecting no longer accumulates selector threads and connection pools.
+
 ## [0.7.0] - 2026-11-07
 
 ### Documentation

@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -63,6 +64,13 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 
 	private static final Duration PING_INTERVAL = Duration.ofSeconds(30);
 
+	/**
+	 * How long a closing transport waits for its close frame to be written before it
+	 * shuts the HTTP client down. The frame is local work; this bounds a socket that has
+	 * already gone quiet.
+	 */
+	private static final Duration CLOSE_TIMEOUT = Duration.ofSeconds(1);
+
 	private final URI uri;
 
 	private final Map<String, String> headers;
@@ -70,6 +78,12 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 	private final AcpJsonMapper jsonMapper;
 
 	private final HttpClient httpClient;
+
+	/**
+	 * The client's executor, owned here: shutting an {@code HttpClient} down does not
+	 * shut down an executor it was handed, and this one cannot outlive the transport.
+	 */
+	private final ExecutorService httpExecutor;
 
 	private final ScheduledExecutorService keepalive;
 
@@ -110,10 +124,8 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 			Validation.requireHeaderValue(name, value);
 		});
 		this.jsonMapper = jsonMapper;
-		this.httpClient = HttpClient.newBuilder()
-			.connectTimeout(CONNECT_TIMEOUT)
-			.executor(Executors.newCachedThreadPool(daemon("acp-ws")))
-			.build();
+		this.httpExecutor = Executors.newCachedThreadPool(daemon("acp-ws"));
+		this.httpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).executor(httpExecutor).build();
 		this.keepalive = Executors.newSingleThreadScheduledExecutor(daemon("acp-ws-keepalive"));
 		this.outboundScheduler = Schedulers
 			.fromExecutorService(Executors.newSingleThreadExecutor(daemon("acp-ws-outbound")), "ws-outbound");
@@ -214,11 +226,31 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 			outbound.tryEmitComplete();
 			termination.tryEmitEmpty();
 			WebSocket socket = webSocket;
+			CompletableFuture<WebSocket> closeSent = null;
 			if (socket != null && !socket.isOutputClosed()) {
-				socket.sendClose(WebSocket.NORMAL_CLOSURE, "client closing");
+				try {
+					closeSent = socket.sendClose(WebSocket.NORMAL_CLOSURE, "client closing");
+				}
+				catch (IllegalStateException ex) {
+					logger.debug("WebSocket to {} was already closing", uri, ex);
+				}
 			}
 			keepalive.shutdownNow();
 			outboundScheduler.dispose();
+			// sendClose is asynchronous, and shutting the client down before the frame is
+			// written turns a normal closure into a reset the agent sees as a dropped
+			// connection. Wait for the frame, then shut down in an orderly way; the
+			// executor is ours, so it is shut down explicitly.
+			if (closeSent != null) {
+				try {
+					closeSent.orTimeout(CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).join();
+				}
+				catch (RuntimeException ex) {
+					logger.debug("Close frame to {} was not sent within {}", uri, CLOSE_TIMEOUT, ex);
+				}
+			}
+			httpClient.shutdown();
+			httpExecutor.shutdown();
 		});
 	}
 

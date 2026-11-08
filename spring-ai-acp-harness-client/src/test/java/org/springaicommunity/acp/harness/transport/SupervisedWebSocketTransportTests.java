@@ -132,6 +132,20 @@ class SupervisedWebSocketTransportTests {
 		transport.awaitTermination().onErrorComplete().block(TIMEOUT);
 	}
 
+	/**
+	 * The factory closes a transport it built and then could not hand out, before it was
+	 * ever connected. That path must release the client and executors rather than wait
+	 * for a socket that was never opened.
+	 */
+	@Test
+	void closingBeforeConnectingCompletes() {
+		SupervisedWebSocketTransport transport = new SupervisedWebSocketTransport(URI.create("ws://127.0.0.1:1/acp"),
+				Map.of());
+
+		transport.closeGracefully().block(TIMEOUT);
+		transport.awaitTermination().onErrorComplete().block(TIMEOUT);
+	}
+
 	@Test
 	void terminationCompletesWhenTheClientClosesTheTransport() throws IOException {
 		server = start();
