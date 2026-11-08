@@ -1,5 +1,6 @@
 package org.springaicommunity.acp.harness.test;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
@@ -57,6 +58,18 @@ class AcpHarnessStartupFailureTests {
 			.hasMessageContaining("Failed to initialize runtime");
 	}
 
+	/**
+	 * A served agent that exits before becoming ready, the way a misconfigured
+	 * {@code goose serve} does. The factory has a supervisor by then, and must close it
+	 * rather than let it outlive the failed construction.
+	 */
+	@Test
+	void aServedAgentThatDoesNotBecomeReadyIsReported() {
+		assertThatThrownBy(() -> AcpHarnessClientFactory.create(new FailingServedRuntime(), settings()))
+			.isInstanceOf(AcpHarnessClientException.class)
+			.hasMessageContaining("did not become ready");
+	}
+
 	private AcpHarnessSettings settings() {
 		return AcpHarnessSettings.builder("failing", workspace).timeout(Duration.ofSeconds(5)).build();
 	}
@@ -89,6 +102,26 @@ class AcpHarnessStartupFailureTests {
 					: "printf '%s\\n' \"" + complaint + "\" >&2; sleep 1; exit 1";
 			return new AcpHarnessLaunchSpec.Stdio("sh", List.of("-c", script), Map.of());
 		}
+	}
+
+	/**
+	 * A served agent that exits before it becomes ready, with no health endpoint to wait
+	 * on.
+	 */
+	private record FailingServedRuntime() implements AcpHarnessRuntime {
+
+		@Override
+		public String id() {
+			return "failing-served";
+		}
+
+		@Override
+		public AcpHarnessLaunchSpec launch(AcpHarnessSettings settings) {
+			AcpHarnessLaunchSpec.ManagedProcess process = new AcpHarnessLaunchSpec.ManagedProcess("sh",
+					List.of("-c", "exit 1"), Map.of(), null, Duration.ofMillis(500));
+			return new AcpHarnessLaunchSpec.WebSocket(URI.create("ws://127.0.0.1:1/acp"), Map.of(), process);
+		}
+
 	}
 
 }
