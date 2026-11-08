@@ -1,5 +1,7 @@
 # spring-ai-acp-harness-client
 
+<img src="docs/images/logo.svg" alt="SAAHC logo: a sock outlined in white on a green circle" width="120" align="right">
+
 [![CI](https://github.com/spring-ai-community/spring-ai-acp-harness-client/actions/workflows/ci.yml/badge.svg)](https://github.com/spring-ai-community/spring-ai-acp-harness-client/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-21%2B-orange.svg)](https://adoptium.net/temurin/releases/?version=21)
