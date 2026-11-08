@@ -1,5 +1,5 @@
 site_name: Spring AI ACP Harness Client
-site_description: Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application
+site_description: Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application
 site_url: https://spring-ai-community.github.io/spring-ai-acp-harness-client/
 repo_url: https://github.com/spring-ai-community/spring-ai-acp-harness-client
 repo_name: spring-ai-community/spring-ai-acp-harness-client

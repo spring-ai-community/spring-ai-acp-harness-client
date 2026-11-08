@@ -8,9 +8,9 @@
 
 **Documentation:** https://spring-ai-community.github.io/spring-ai-acp-harness-client/latest-snapshot/
 
-A Spring library that talks to **any** [Agent Client Protocol](https://agentclientprotocol.com)
-coding agent — Goose, Codex, OpenCode, and others — behind one programming model and one
-configuration surface.
+Spring AI ACP Harness Client (SAAHC, pronounced "sock") is a Spring library that talks to
+**any** [Agent Client Protocol](https://agentclientprotocol.com) coding agent — Goose, Codex,
+OpenCode, and others — behind one programming model and one configuration surface.
 
 - configuration carries options that work across **all** runtimes, plus a per-runtime escape hatch;
 - application code always uses the same abstracted interface;
@@ -339,4 +339,4 @@ it.
 
 ## License
 
-Spring AI ACP Harness Client is available under the [Apache License 2.0](LICENSE).
+SAAHC is available under the [Apache License 2.0](LICENSE).

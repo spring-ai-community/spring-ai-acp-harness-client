@@ -11,7 +11,7 @@ spring:
         on-unsupported: fail       # fail | warn (default) | ignore
 ```
 
-`spring.ai.acp.harness.model` is a **request**. When a session opens, Spring AI ACP Harness Client reads the options the agent advertises and matches the request against them, in order: exact id, display name, `<provider>/<model>`, then a suffix match that must be unique. Only then does it send `session/set_config_option`. It never sends a value the agent did not advertise, because some agents (goose) accept an unknown model id and fail later, inside the turn.
+`spring.ai.acp.harness.model` is a **request**. When a session opens, Spring AI ACP Harness Client (SAAHC) reads the options the agent advertises and matches the request against them, in order: exact id, display name, `<provider>/<model>`, then a suffix match that must be unique. Only then does it send `session/set_config_option`. It never sends a value the agent did not advertise, because some agents (goose) accept an unknown model id and fail later, inside the turn.
 
 When nothing matches, `on-unsupported` decides:
 
@@ -94,7 +94,7 @@ With `base-url` set, the **endpoint's own `/models` listing** decides which mode
 
 ## Tanzu AI Models on Cloud Foundry
 
-On Cloud Foundry, binding a Tanzu AI Models (GenAI) service is the whole provider configuration. At startup, Spring AI ACP Harness Client finds the binding in `VCAP_SERVICES` and uses its OpenAI-compatible endpoint as a [bring-your-own endpoint](#bring-your-own-endpoint), so every runtime reaches it with no runtime-specific settings.
+On Cloud Foundry, binding a Tanzu AI Models (GenAI) service is the whole provider configuration. At startup, SAAHC finds the binding in `VCAP_SERVICES` and uses its OpenAI-compatible endpoint as a [bring-your-own endpoint](#bring-your-own-endpoint), so every runtime reaches it with no runtime-specific settings.
 
 ```bash
 cf create-service genai tanzu-all-models my-models

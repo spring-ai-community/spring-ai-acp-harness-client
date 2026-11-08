@@ -2,13 +2,13 @@
 
 `AGENTS.md` is a Markdown file of standing instructions: who the agent is serving, what the project is, its conventions, what it must never do. It is effectively the agent's system prompt. Unlike a skill, which loads on demand, `AGENTS.md` is in context on **every** turn.
 
-Agents read it from their working directory. Spring AI ACP Harness Client does not push instructions over the protocol; it sets the working directory with `spring.ai.acp.harness.workspace`. **So installing instructions means putting `AGENTS.md` at the workspace root.** Goose, Codex and OpenCode all read it there.
+Agents read it from their working directory. Spring AI ACP Harness Client (SAAHC) does not push instructions over the protocol; it sets the working directory with `spring.ai.acp.harness.workspace`. **So installing instructions means putting `AGENTS.md` at the workspace root.** Goose, Codex and OpenCode all read it there.
 
 ```text
 workspace/                      ← spring.ai.acp.harness.workspace
 ├── AGENTS.md                   ← always in context
 └── .agents/
-    └── skills/                 ← installed by Spring AI ACP Harness Client; loaded on demand
+    └── skills/                 ← installed by SAAHC; loaded on demand
         └── release-checks/
             └── SKILL.md
 ```

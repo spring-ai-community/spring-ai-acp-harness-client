@@ -5,6 +5,12 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ## [0.7.0] - Unreleased
 
+### Documentation
+
+- The project now goes by SAAHC (pronounced "sock") for short. The documentation introduces it
+  as "Spring AI ACP Harness Client (SAAHC)" and uses it after that. Nothing technical is renamed:
+  artifacts, packages, properties and types keep their names.
+
 ### Changed
 
 - ACP Java SDK 0.80.0 ([#28](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/28)).
