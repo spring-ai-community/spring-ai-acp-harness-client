@@ -96,7 +96,8 @@ Then check that the release is there. It can take a while to appear after the wo
 
 ### 5. Publish the GitHub Release
 
-Create a GitHub Release from the tag `v0.6.0` and paste in the version's `CHANGELOG.md` section.
+Create a GitHub Release from the tag `v0.6.0`, titled `v0.6.0`. For its notes, paste in the
+version's `CHANGELOG.md` section and end with a [Thanks section](#thanking-contributors).
 Publishing it runs `Deploy Documentation`, which publishes the tag's docs as `0.6.0` with the
 alias `latest`. From then on the site opens on `latest`.
 
@@ -159,7 +160,8 @@ git push origin 0.6.x
 
 Then run `Release to Maven Central` on the tag `v0.6.1`, check
 https://central.sonatype.com/artifact/org.springaicommunity/spring-ai-acp-harness-client/0.6.1,
-and publish a GitHub Release from `v0.6.1`.
+and publish a GitHub Release from `v0.6.1`, with its CHANGELOG section and a
+[Thanks section](#thanking-contributors).
 
 `main` keeps its version, but its docs and CHANGELOG catch up through a pull request branched
 from `main`:
@@ -195,6 +197,47 @@ grep -rnE '0\.6\.0-SNAPSHOT|0\.5\.0|not released yet|maven-snapshots|snapshot ve
 
 For a patch release, the same places move from the previous release to the new one. Step 6
 brings the same changes to `main`.
+
+## Thanking contributors
+
+A release's GitHub Release notes end with a `### Thanks` section naming everyone outside the
+person cutting the release whose work is in it. The section goes in the release notes only, not
+in `CHANGELOG.md`. Leave it out if nobody qualifies.
+
+To find them, list the commit authors and co-authors since the previous release, and the issues
+and pull requests the version's CHANGELOG section links to:
+
+```bash
+git log v0.5.0..v0.6.0 --format='%an <%ae>%n%(trailers:key=Co-authored-by,valueonly,unfold)' \
+  | sed '/^$/d' | sort -u
+git show v0.6.0:CHANGELOG.md | awk '/^## \[0\.6\.0\]/{f=1;next} /^## \[/{f=0} f' \
+  | grep -oE '/(issues|pull)/[0-9]+' | sort -u
+```
+
+Then look up who opened each of those issues and pull requests (`gh issue view <n> --json author`;
+`gh` answers for a pull request number too), and who reviewed or commented on the pull requests
+merged since the previous release. Credit a contributor whose pull request was superseded by
+another that builds on it, and someone who reported a bug with a reproducer. Leave out bots and AI
+co-author trailers.
+
+Write one entry per person, saying what they did in the CHANGELOG's terms and linking the issues
+and pull requests involved. Credit only work that is in this release. Add the person's name in
+parentheses when they publish one, on their GitHub profile or in a commit's `Signed-off-by`, and
+leave out a profile name that is plainly a nickname:
+
+```markdown
+### Thanks
+
+Thank you to the contributors who made this release possible:
+
+- [@login](https://github.com/login) (Name) found that …, reported it in
+  [#20](https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/20) with a
+  failing test, and fixed it in
+  [#21](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/21).
+```
+
+To add the section to a release that is already published, run `gh release edit vX.Y.Z
+--notes-file <file>`. Editing a release doesn't redeploy the docs.
 
 ## The docs site
 
