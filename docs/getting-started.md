@@ -24,7 +24,7 @@ Releases are on Maven Central. Add **one runtime starter**:
         <dependency>
             <groupId>org.springaicommunity</groupId>
             <artifactId>spring-ai-acp-harness-client-boot-starter-goose</artifactId>
-            <version>0.6.0</version>
+            <version>0.7.0</version>
         </dependency>
     </dependencies>
     ```
@@ -37,7 +37,7 @@ Releases are on Maven Central. Add **one runtime starter**:
     }
 
     dependencies {
-        implementation("org.springaicommunity:spring-ai-acp-harness-client-boot-starter-goose:0.6.0")
+        implementation("org.springaicommunity:spring-ai-acp-harness-client-boot-starter-goose:0.7.0")
     }
     ```
 
