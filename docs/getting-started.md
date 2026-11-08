@@ -4,14 +4,14 @@
 
 - **Java 21 or later** and **Spring Boot 4.1**.
 
-- **An agent you can run.** Spring AI ACP Harness Client does not package agent binaries. For the compiled adapters:
+- **An agent you can run.** Spring AI ACP Harness Client (SAAHC) does not package agent binaries. For the compiled adapters:
 
     - **Goose**: the `goose` CLI on the `PATH`, or `GOOSE_CLI_PATH` pointing at it. Verified against goose 1.57.0.
     - **Codex**: Node.js with `npx`. The adapter runs `npx -y @agentclientprotocol/codex-acp@2.5.0`, so the first start downloads it. `CODEX_ACP_CLI_PATH` names a local codex-acp to run instead.
     - **OpenCode**: the `opencode` CLI on the `PATH`, or `OPENCODE_CLI_PATH`. Verified against opencode 2.2.4.
     - **Registry agents**: nothing pre-installed; the agent is downloaded and checksum-verified. Agents distributed through npm or PyPI need `npx` or `uvx`.
 
-- **Model credentials**, either already configured in the agent itself (for example `goose configure` or `codex login`) or given to Spring AI ACP Harness Client through `spring.ai.acp.harness.provider` (see [Models and Providers](configuration/models.md)).
+- **Model credentials**, either already configured in the agent itself (for example `goose configure` or `codex login`) or given to SAAHC through `spring.ai.acp.harness.provider` (see [Models and Providers](configuration/models.md)).
 
 ## Add the dependency
 
@@ -79,7 +79,7 @@ public class ReviewApplication {
 
 !!! tip
 
-    The repository's `samples/smoke-app` has all three adapters and the registry on its classpath. After `./mvnw install` in the Spring AI ACP Harness Client checkout, run it against each agent in turn:
+    The repository's `samples/smoke-app` has all three adapters and the registry on its classpath. After `./mvnw install` in the SAAHC checkout, run it against each agent in turn:
 
     ```bash
     ./mvnw -pl samples/smoke-app spring-boot:run

@@ -36,7 +36,7 @@ spring:
 | `args` | stdio | Arguments, in order. |
 | `env` | stdio | Environment for the server process. |
 
-A Spring AI MCP server of your own is just another HTTP entry. At `INFO`, Spring AI ACP Harness Client logs the host and path of each server it offers when a session opens, never its headers.
+A Spring AI MCP server of your own is just another HTTP entry. At `INFO`, Spring AI ACP Harness Client (SAAHC) logs the host and path of each server it offers when a session opens, never its headers.
 
 !!! danger "Important"
 
@@ -44,7 +44,7 @@ A Spring AI MCP server of your own is just another HTTP entry. At `INFO`, Spring
 
 ## When a server fails to load
 
-An MCP server the agent cannot reach is reported nowhere in ACP: the session opens normally, the model answers, and it simply has no tools. Goose writes the failure only to its own log file, and Spring AI ACP Harness Client watches that log for agents it started:
+An MCP server the agent cannot reach is reported nowhere in ACP: the session opens normally, the model answers, and it simply has no tools. Goose writes the failure only to its own log file, and SAAHC watches that log for agents it started:
 
 ```yaml
 spring:

@@ -62,6 +62,10 @@ Java 21 is required. Use the Maven wrapper:
   `observation`, `executor`, `runtime`, `skill`.
 - Core and application code must not name a specific agent; vendor knowledge lives only in its
   runtime adapter under `spring-ai-acp-harness-client-runtime-*`.
+- SAAHC (pronounced "sock") is the project's short name in prose only, never in an artifact,
+  package, property, type or Maven `<name>`. In user-facing docs, a page's first mention is
+  "Spring AI ACP Harness Client (SAAHC)" and later ones are "SAAHC", since readers land on any
+  page from search. A page that names the project once keeps the full name, without the acronym.
 
 ## Architecture
 

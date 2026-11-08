@@ -97,7 +97,7 @@ The adapter does not move goose's configuration, so goose looks for this file in
 
 !!! note
 
-    A misspelled name does not stop goose. It writes `Failed to load extension <name>: … Unknown extension` (since 1.55.0, `failed to start extension` with the name and `Unknown extension` in fields of their own) to its log and carries on. Spring AI ACP Harness Client reads that log for agents it started, so the mistake appears as a WARN line and in `AcpHarnessClient.notices()`, worded as a server that could not be loaded.
+    A misspelled name does not stop goose. It writes `Failed to load extension <name>: … Unknown extension` (since 1.55.0, `failed to start extension` with the name and `Unknown extension` in fields of their own) to its log and carries on. Spring AI ACP Harness Client (SAAHC) reads that log for agents it started, so the mistake appears as a WARN line and in `AcpHarnessClient.notices()`, worded as a server that could not be loaded.
 
 For tools that are not built in, declare an MCP server under `spring.ai.acp.harness.mcp-servers` rather than a goose extension. It is the same thing to goose, and it stays portable.
 
@@ -133,5 +133,5 @@ With `serve.transport: websocket`, the adapter starts `goose serve` on `host` an
 
 ## Log directory and MCP gateways
 
-- `log-dir` tells Spring AI ACP Harness Client where goose writes its log, which is the only place goose reports an MCP server or extension it could not load. Defaults to `$XDG_STATE_HOME/goose/logs`, else `~/.local/state/goose/logs`. Set it only if your deployment moves goose's state.
+- `log-dir` tells SAAHC where goose writes its log, which is the only place goose reports an MCP server or extension it could not load. Defaults to `$XDG_STATE_HOME/goose/logs`, else `~/.local/state/goose/logs`. Set it only if your deployment moves goose's state.
 - `mcp.answer-discover: true` answers goose's `server/discover` probe on behalf of MCP gateways that reply to it with an error goose cannot correlate. See [MCP Servers](../configuration/mcp-servers.md#goose-and-mcp-gateways).

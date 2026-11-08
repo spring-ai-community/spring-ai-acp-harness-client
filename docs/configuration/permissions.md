@@ -2,7 +2,7 @@
 
 ## Permission policy
 
-When an agent asks permission to run a tool (`session/request_permission`), Spring AI ACP Harness Client answers on your behalf, since a server-side application has no human at the keyboard. Every request gets an answer, so no turn stalls. The exception is `ask`, for an application someone *is* sitting at.
+When an agent asks permission to run a tool (`session/request_permission`), Spring AI ACP Harness Client (SAAHC) answers on your behalf, since a server-side application has no human at the keyboard. Every request gets an answer, so no turn stalls. The exception is `ask`, for an application someone *is* sitting at.
 
 ```yaml
 spring:
@@ -67,4 +67,4 @@ When enabled, every path is confined to the workspace by its *real* path, with s
 
 ## Where adapters write
 
-Adapters write agent config files (`config.toml`, `opencode.json`) to `spring.ai.acp.harness.runtime-home`, never to the workspace. It defaults to a directory under the JVM's temp directory named for the runtime. The only thing Spring AI ACP Harness Client writes into the workspace is `.agents/skills/`.
+Adapters write agent config files (`config.toml`, `opencode.json`) to `spring.ai.acp.harness.runtime-home`, never to the workspace. It defaults to a directory under the JVM's temp directory named for the runtime. The only thing SAAHC writes into the workspace is `.agents/skills/`.
