@@ -32,7 +32,7 @@ All three runtime starters are on the classpath, so `spring.ai.acp.harness.runti
 ```xml title="pom.xml"
 <properties>
     <java.version>21</java.version>
-    <spring-ai-acp-harness-client.version>0.6.0</spring-ai-acp-harness-client.version>
+    <spring-ai-acp-harness-client.version>0.7.0</spring-ai-acp-harness-client.version>
 </properties>
 
 <dependencies>

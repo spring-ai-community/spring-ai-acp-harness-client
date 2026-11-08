@@ -48,7 +48,7 @@ Releases are on Maven Central:
 <dependency>
     <groupId>org.springaicommunity</groupId>
     <artifactId>spring-ai-acp-harness-client-boot-starter-goose</artifactId>
-    <version>0.6.0</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
