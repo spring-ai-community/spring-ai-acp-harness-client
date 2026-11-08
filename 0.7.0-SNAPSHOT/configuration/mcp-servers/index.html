@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1728,13 +1728,13 @@
 </tr>
 </tbody>
 </table>
-<p>A Spring AI MCP server of your own is just another HTTP entry. At <code>INFO</code>, Spring AI ACP Harness Client logs the host and path of each server it offers when a session opens, never its headers.</p>
+<p>A Spring AI MCP server of your own is just another HTTP entry. At <code>INFO</code>, Spring AI ACP Harness Client (SAAHC) logs the host and path of each server it offers when a session opens, never its headers.</p>
 <div class="admonition danger">
 <p class="admonition-title">Important</p>
 <p><strong>Declaring a server is not permission to call it.</strong> If the agent asks permission before calling a tool, the default policy (<code>deny</code>) refuses it. Configuring MCP servers is two steps: declare them here, then grant them in <a href="../permissions/">Permissions</a>.</p>
 </div>
 <h2 id="when-a-server-fails-to-load">When a server fails to load<a class="headerlink" href="#when-a-server-fails-to-load" title="Permanent link">&para;</a></h2>
-<p>An MCP server the agent cannot reach is reported nowhere in ACP: the session opens normally, the model answers, and it simply has no tools. Goose writes the failure only to its own log file, and Spring AI ACP Harness Client watches that log for agents it started:</p>
+<p>An MCP server the agent cannot reach is reported nowhere in ACP: the session opens normally, the model answers, and it simply has no tools. Goose writes the failure only to its own log file, and SAAHC watches that log for agents it started:</p>
 <div class="highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">spring</span><span class="p">:</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">ai</span><span class="p">:</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">acp</span><span class="p">:</span>

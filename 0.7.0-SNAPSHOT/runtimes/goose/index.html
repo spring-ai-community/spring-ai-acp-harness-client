@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1772,7 +1772,7 @@
 <p>The adapter does not move goose's configuration, so goose looks for this file in its usual place: <code>~/.config/goose/config.yaml</code> for the user the application runs as. On a developer machine that is your own goose configuration. To give the application a file of its own, point <code>GOOSE_PATH_ROOT</code> at a directory through the <code>env</code> block. Goose then reads <code>&lt;root&gt;/config/config.yaml</code>, and keeps its sessions and logs under that root too, so set <code>log-dir</code> to <code>&lt;root&gt;/state/logs</code> as well (<a href="#log-directory-and-mcp-gateways">see below</a>). A name disabled in the file and also listed in <code>builtins</code> is loaded: <code>builtins</code> wins.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>A misspelled name does not stop goose. It writes <code>Failed to load extension &lt;name&gt;: … Unknown extension</code> (since 1.55.0, <code>failed to start extension</code> with the name and <code>Unknown extension</code> in fields of their own) to its log and carries on. Spring AI ACP Harness Client reads that log for agents it started, so the mistake appears as a WARN line and in <code>AcpHarnessClient.notices()</code>, worded as a server that could not be loaded.</p>
+<p>A misspelled name does not stop goose. It writes <code>Failed to load extension &lt;name&gt;: … Unknown extension</code> (since 1.55.0, <code>failed to start extension</code> with the name and <code>Unknown extension</code> in fields of their own) to its log and carries on. Spring AI ACP Harness Client (SAAHC) reads that log for agents it started, so the mistake appears as a WARN line and in <code>AcpHarnessClient.notices()</code>, worded as a server that could not be loaded.</p>
 </div>
 <p>For tools that are not built in, declare an MCP server under <code>spring.ai.acp.harness.mcp-servers</code> rather than a goose extension. It is the same thing to goose, and it stays portable.</p>
 <h2 id="environment-variables">Environment variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
@@ -1844,7 +1844,7 @@
 <p>With <code>serve.transport: websocket</code>, the adapter starts <code>goose serve</code> on <code>host</code> and <code>port</code>, generates a secret it sends as a header on every connection, and supervises the process: it is health-checked and restarted with backoff, and stopped when the application closes. Use it when you want goose to outlive individual connections, as the goose buildpack did. Stdio stays the default because it is what every other runtime supports. Keep <code>host</code> on loopback unless you mean to expose the server.</p>
 <h2 id="log-directory-and-mcp-gateways">Log directory and MCP gateways<a class="headerlink" href="#log-directory-and-mcp-gateways" title="Permanent link">&para;</a></h2>
 <ul>
-<li><code>log-dir</code> tells Spring AI ACP Harness Client where goose writes its log, which is the only place goose reports an MCP server or extension it could not load. Defaults to <code>$XDG_STATE_HOME/goose/logs</code>, else <code>~/.local/state/goose/logs</code>. Set it only if your deployment moves goose's state.</li>
+<li><code>log-dir</code> tells SAAHC where goose writes its log, which is the only place goose reports an MCP server or extension it could not load. Defaults to <code>$XDG_STATE_HOME/goose/logs</code>, else <code>~/.local/state/goose/logs</code>. Set it only if your deployment moves goose's state.</li>
 <li><code>mcp.answer-discover: true</code> answers goose's <code>server/discover</code> probe on behalf of MCP gateways that reply to it with an error goose cannot correlate. See <a href="../../configuration/mcp-servers/#goose-and-mcp-gateways">MCP Servers</a>.</li>
 </ul>
 

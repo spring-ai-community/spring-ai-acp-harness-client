@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1584,11 +1584,11 @@
 
 <h1 id="agent-instructions-agentsmd">Agent Instructions (AGENTS.md)<a class="headerlink" href="#agent-instructions-agentsmd" title="Permanent link">&para;</a></h1>
 <p><code>AGENTS.md</code> is a Markdown file of standing instructions: who the agent is serving, what the project is, its conventions, what it must never do. It is effectively the agent's system prompt. Unlike a skill, which loads on demand, <code>AGENTS.md</code> is in context on <strong>every</strong> turn.</p>
-<p>Agents read it from their working directory. Spring AI ACP Harness Client does not push instructions over the protocol; it sets the working directory with <code>spring.ai.acp.harness.workspace</code>. <strong>So installing instructions means putting <code>AGENTS.md</code> at the workspace root.</strong> Goose, Codex and OpenCode all read it there.</p>
+<p>Agents read it from their working directory. Spring AI ACP Harness Client (SAAHC) does not push instructions over the protocol; it sets the working directory with <code>spring.ai.acp.harness.workspace</code>. <strong>So installing instructions means putting <code>AGENTS.md</code> at the workspace root.</strong> Goose, Codex and OpenCode all read it there.</p>
 <div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>workspace/                      ← spring.ai.acp.harness.workspace
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── AGENTS.md                   ← always in context
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>└── .agents/
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    └── skills/                 ← installed by Spring AI ACP Harness Client; loaded on demand
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    └── skills/                 ← installed by SAAHC; loaded on demand
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>        └── release-checks/
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>            └── SKILL.md
 </span></code></pre></div>

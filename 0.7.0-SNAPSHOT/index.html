@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1448,9 +1448,9 @@
 
 
 <h1 id="spring-ai-acp-harness-client-reference">Spring AI ACP Harness Client Reference<a class="headerlink" href="#spring-ai-acp-harness-client-reference" title="Permanent link">&para;</a></h1>
-<p>Spring AI ACP Harness Client drives any <a href="https://agentclientprotocol.com">Agent Client Protocol</a> coding agent (Goose, Codex, OpenCode, or any of the agents in the ACP registry) from a Spring Boot application, behind one API and one configuration model.</p>
-<p>A <em>harness</em> is the coding agent runtime you drive, such as Goose, Codex or OpenCode. This library creates no agent of its own: it configures a harness, launches or attaches to it, and talks to it over ACP. So its types say harness: <code>AcpHarnessClient</code> is your application's client, <code>AcpHarnessSession</code> a session the harness holds, <code>AcpHarnessEvent</code> what it streamed back. ACP calls the two ends of the connection the client and the agent, and this documentation keeps that word for the running program.</p>
-<p>Spring AI ACP Harness Client relates to coding agents the way Spring Data relates to databases:</p>
+<p>Spring AI ACP Harness Client (SAAHC, pronounced "sock") drives any <a href="https://agentclientprotocol.com">Agent Client Protocol</a> coding agent (Goose, Codex, OpenCode, or any of the agents in the ACP registry) from a Spring Boot application, behind one API and one configuration model.</p>
+<p>A <em>harness</em> is the coding agent runtime you drive, such as Goose, Codex or OpenCode. SAAHC creates no agent of its own: it configures a harness, launches or attaches to it, and talks to it over ACP. So its types say harness: <code>AcpHarnessClient</code> is your application's client, <code>AcpHarnessSession</code> a session the harness holds, <code>AcpHarnessEvent</code> what it streamed back. ACP calls the two ends of the connection the client and the agent, and this documentation keeps that word for the running program.</p>
+<p>SAAHC relates to coding agents the way Spring Data relates to databases:</p>
 <ul>
 <li>application code talks to one abstraction, <code>AcpHarnessClient</code>;</li>
 <li>configuration carries options that work on <strong>every</strong> agent, plus a per-agent escape hatch;</li>
@@ -1469,7 +1469,7 @@
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">        </span><span class="p">.</span><span class="na">call</span><span class="p">()</span>
 </span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">        </span><span class="p">.</span><span class="na">content</span><span class="p">();</span>
 </span></code></pre></div>
-<p>The agent itself is a separate process: Spring AI ACP Harness Client launches it (or attaches to it), speaks ACP to it over stdio or WebSocket, supervises it, and turns what it streams back into typed Java events. Around that conversation, Spring AI ACP Harness Client configures the things that make an agent <em>yours</em>:</p>
+<p>The agent itself is a separate process: SAAHC launches it (or attaches to it), speaks ACP to it over stdio or WebSocket, supervises it, and turns what it streams back into typed Java events. Around that conversation, SAAHC configures the things that make an agent <em>yours</em>:</p>
 <table>
 <thead>
 <tr>

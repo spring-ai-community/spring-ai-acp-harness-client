@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1558,7 +1558,7 @@
 <p><strong>Java 21 or later</strong> and <strong>Spring Boot 4.1</strong>.</p>
 </li>
 <li>
-<p><strong>An agent you can run.</strong> Spring AI ACP Harness Client does not package agent binaries. For the compiled adapters:</p>
+<p><strong>An agent you can run.</strong> Spring AI ACP Harness Client (SAAHC) does not package agent binaries. For the compiled adapters:</p>
 <ul>
 <li><strong>Goose</strong>: the <code>goose</code> CLI on the <code>PATH</code>, or <code>GOOSE_CLI_PATH</code> pointing at it. Verified against goose 1.57.0.</li>
 <li><strong>Codex</strong>: Node.js with <code>npx</code>. The adapter runs <code>npx -y @agentclientprotocol/codex-acp@2.5.0</code>, so the first start downloads it. <code>CODEX_ACP_CLI_PATH</code> names a local codex-acp to run instead.</li>
@@ -1567,7 +1567,7 @@
 </ul>
 </li>
 <li>
-<p><strong>Model credentials</strong>, either already configured in the agent itself (for example <code>goose configure</code> or <code>codex login</code>) or given to Spring AI ACP Harness Client through <code>spring.ai.acp.harness.provider</code> (see <a href="../configuration/models/">Models and Providers</a>).</p>
+<p><strong>Model credentials</strong>, either already configured in the agent itself (for example <code>goose configure</code> or <code>codex login</code>) or given to SAAHC through <code>spring.ai.acp.harness.provider</code> (see <a href="../configuration/models/">Models and Providers</a>).</p>
 </li>
 </ul>
 <h2 id="add-the-dependency">Add the dependency<a class="headerlink" href="#add-the-dependency" title="Permanent link">&para;</a></h2>
@@ -1625,7 +1625,7 @@
 <p><code>AcpHarnessClient</code> is a thread-safe singleton. The agent process is started on the <strong>first prompt</strong>, not at context refresh: an application whose agent is misconfigured still starts, and reports the problem the first time it is used. The process is stopped when the context closes.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-<p>The repository's <code>samples/smoke-app</code> has all three adapters and the registry on its classpath. After <code>./mvnw install</code> in the Spring AI ACP Harness Client checkout, run it against each agent in turn:</p>
+<p>The repository's <code>samples/smoke-app</code> has all three adapters and the registry on its classpath. After <code>./mvnw install</code> in the SAAHC checkout, run it against each agent in turn:</p>
 <div class="highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>./mvnw<span class="w"> </span>-pl<span class="w"> </span>samples/smoke-app<span class="w"> </span>spring-boot:run
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>./mvnw<span class="w"> </span>-pl<span class="w"> </span>samples/smoke-app<span class="w"> </span>spring-boot:run<span class="w"> </span>-Dspring-boot.run.arguments<span class="o">=</span>--spring.ai.acp.harness.runtime<span class="o">=</span>codex
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>./mvnw<span class="w"> </span>-pl<span class="w"> </span>samples/smoke-app<span class="w"> </span>spring-boot:run<span class="w"> </span>-Dspring-boot.run.arguments<span class="o">=</span>--spring.ai.acp.harness.runtime<span class="o">=</span>opencode

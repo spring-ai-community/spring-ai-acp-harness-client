@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1579,7 +1579,7 @@
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="nt">model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gpt-5.6-terra</span>
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">        </span><span class="nt">on-unsupported</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">fail</span><span class="w">       </span><span class="c1"># fail | warn (default) | ignore</span>
 </span></code></pre></div>
-<p><code>spring.ai.acp.harness.model</code> is a <strong>request</strong>. When a session opens, Spring AI ACP Harness Client reads the options the agent advertises and matches the request against them, in order: exact id, display name, <code>&lt;provider&gt;/&lt;model&gt;</code>, then a suffix match that must be unique. Only then does it send <code>session/set_config_option</code>. It never sends a value the agent did not advertise, because some agents (goose) accept an unknown model id and fail later, inside the turn.</p>
+<p><code>spring.ai.acp.harness.model</code> is a <strong>request</strong>. When a session opens, Spring AI ACP Harness Client (SAAHC) reads the options the agent advertises and matches the request against them, in order: exact id, display name, <code>&lt;provider&gt;/&lt;model&gt;</code>, then a suffix match that must be unique. Only then does it send <code>session/set_config_option</code>. It never sends a value the agent did not advertise, because some agents (goose) accept an unknown model id and fail later, inside the turn.</p>
 <p>When nothing matches, <code>on-unsupported</code> decides:</p>
 <table>
 <thead>
@@ -1703,7 +1703,7 @@
 <p>The endpoint has to speak the agent's dialect. codex-acp 1.12+ supports only the OpenAI <strong>Responses</strong> API, so a gateway that serves only <code>/chat/completions</code> fails inside Codex's first turn. Goose and OpenCode work with either. When one runtime needs a different endpoint, give it its own profile (<a href="../../runtimes/#swapping-the-runtime">Swapping the runtime</a>). To pin goose to one dialect, set <code>OPENAI_BASE_PATH</code> in <code>spring.ai.acp.harness.runtimes.goose.env</code>.</p>
 </div>
 <h2 id="tanzu-ai-models-on-cloud-foundry">Tanzu AI Models on Cloud Foundry<a class="headerlink" href="#tanzu-ai-models-on-cloud-foundry" title="Permanent link">&para;</a></h2>
-<p>On Cloud Foundry, binding a Tanzu AI Models (GenAI) service is the whole provider configuration. At startup, Spring AI ACP Harness Client finds the binding in <code>VCAP_SERVICES</code> and uses its OpenAI-compatible endpoint as a <a href="#bring-your-own-endpoint">bring-your-own endpoint</a>, so every runtime reaches it with no runtime-specific settings.</p>
+<p>On Cloud Foundry, binding a Tanzu AI Models (GenAI) service is the whole provider configuration. At startup, SAAHC finds the binding in <code>VCAP_SERVICES</code> and uses its OpenAI-compatible endpoint as a <a href="#bring-your-own-endpoint">bring-your-own endpoint</a>, so every runtime reaches it with no runtime-specific settings.</p>
 <div class="highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>cf<span class="w"> </span>create-service<span class="w"> </span>genai<span class="w"> </span>tanzu-all-models<span class="w"> </span>my-models
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>cf<span class="w"> </span>bind-service<span class="w"> </span>my-app<span class="w"> </span>my-models
 </span></code></pre></div>

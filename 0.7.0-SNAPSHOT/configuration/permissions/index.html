@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Drive Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
+        <meta name="description" content="Spring AI ACP Harness Client (SAAHC) drives Goose, Codex, OpenCode or any ACP registry agent from a Spring Boot application">
       
       
       
@@ -1550,7 +1550,7 @@
 
 <h1 id="permissions-and-the-workspace">Permissions and the Workspace<a class="headerlink" href="#permissions-and-the-workspace" title="Permanent link">&para;</a></h1>
 <h2 id="permission-policy">Permission policy<a class="headerlink" href="#permission-policy" title="Permanent link">&para;</a></h2>
-<p>When an agent asks permission to run a tool (<code>session/request_permission</code>), Spring AI ACP Harness Client answers on your behalf, since a server-side application has no human at the keyboard. Every request gets an answer, so no turn stalls. The exception is <code>ask</code>, for an application someone <em>is</em> sitting at.</p>
+<p>When an agent asks permission to run a tool (<code>session/request_permission</code>), Spring AI ACP Harness Client (SAAHC) answers on your behalf, since a server-side application has no human at the keyboard. Every request gets an answer, so no turn stalls. The exception is <code>ask</code>, for an application someone <em>is</em> sitting at.</p>
 <div class="highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">spring</span><span class="p">:</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">ai</span><span class="p">:</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">acp</span><span class="p">:</span>
@@ -1620,7 +1620,7 @@
 </span></code></pre></div>
 <p>When enabled, every path is confined to the workspace by its <em>real</em> path, with symlinks followed, so neither <code>..</code> nor a planted symlink escapes. This governs only what the agent asks <em>this client</em> to do. Its own process's file access is the operating system's to restrict: run the agent as a user, or in a container, that can reach only what it should.</p>
 <h2 id="where-adapters-write">Where adapters write<a class="headerlink" href="#where-adapters-write" title="Permanent link">&para;</a></h2>
-<p>Adapters write agent config files (<code>config.toml</code>, <code>opencode.json</code>) to <code>spring.ai.acp.harness.runtime-home</code>, never to the workspace. It defaults to a directory under the JVM's temp directory named for the runtime. The only thing Spring AI ACP Harness Client writes into the workspace is <code>.agents/skills/</code>.</p>
+<p>Adapters write agent config files (<code>config.toml</code>, <code>opencode.json</code>) to <code>spring.ai.acp.harness.runtime-home</code>, never to the workspace. It defaults to a directory under the JVM's temp directory named for the runtime. The only thing SAAHC writes into the workspace is <code>.agents/skills/</code>.</p>
 
 
 
