@@ -13,7 +13,9 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
   health probes.
 - The WebSocket transport now waits for its close frame to be sent before shutting its
   `HttpClient` down, and shuts the executor down with it, so the agent sees a normal closure
-  rather than a reset. The MCP loopback proxy closes its `HttpClient` on close too.
+  rather than a reset. Its client and executors are released once however the socket ended,
+  including when the agent closed it first — the usual way a restarted agent's connection
+  ends. The MCP loopback proxy closes its `HttpClient` on close too.
 - The endpoint model catalogue now uses one `HttpClient` for the JVM instead of one per agent
   connection, so reconnecting no longer accumulates selector threads and connection pools.
 

@@ -8,12 +8,14 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -97,7 +99,17 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 
 	private final Scheduler outboundScheduler;
 
+	/**
+	 * Set when either side starts closing the socket. A dropped socket sets it too, so it
+	 * says "stop using this transport", not "its resources have been released".
+	 */
 	private final AtomicBoolean closing = new AtomicBoolean();
+
+	/**
+	 * Set once when the client and the executors this transport owns have been released,
+	 * whichever path noticed the close first.
+	 */
+	private final AtomicBoolean released = new AtomicBoolean();
 
 	private final AtomicBoolean connected = new AtomicBoolean();
 
@@ -215,43 +227,87 @@ public final class SupervisedWebSocketTransport implements AcpClientTransport {
 	@Override
 	public Mono<Void> closeGracefully() {
 		return Mono.fromRunnable(() -> {
-			if (!closing.compareAndSet(false, true)) {
-				return;
-			}
-			ScheduledFuture<?> task = pingTask;
-			if (task != null) {
-				task.cancel(false);
-			}
-			inbound.tryEmitComplete();
-			outbound.tryEmitComplete();
-			termination.tryEmitEmpty();
-			WebSocket socket = webSocket;
-			CompletableFuture<WebSocket> closeSent = null;
-			if (socket != null && !socket.isOutputClosed()) {
-				try {
-					closeSent = socket.sendClose(WebSocket.NORMAL_CLOSURE, "client closing");
-				}
-				catch (IllegalStateException ex) {
-					logger.debug("WebSocket to {} was already closing", uri, ex);
+			try {
+				if (closing.compareAndSet(false, true)) {
+					ScheduledFuture<?> task = pingTask;
+					if (task != null) {
+						task.cancel(false);
+					}
+					inbound.tryEmitComplete();
+					outbound.tryEmitComplete();
+					termination.tryEmitEmpty();
+					awaitCloseFrame(sendCloseFrame());
 				}
 			}
-			keepalive.shutdownNow();
-			outboundScheduler.dispose();
-			// sendClose is asynchronous, and shutting the client down before the frame is
-			// written turns a normal closure into a reset the agent sees as a dropped
-			// connection. Wait for the frame, then shut down in an orderly way; the
-			// executor is ours, so it is shut down explicitly.
-			if (closeSent != null) {
-				try {
-					closeSent.orTimeout(CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS).join();
-				}
-				catch (RuntimeException ex) {
-					logger.debug("Close frame to {} was not sent within {}", uri, CLOSE_TIMEOUT, ex);
-				}
+			finally {
+				// dropped() sets closing too, so this close may be the second one. The
+				// resources are released here regardless: skipping them is the leak this
+				// class had when the agent ended the connection first.
+				release();
 			}
-			httpClient.shutdown();
-			httpExecutor.shutdown();
 		});
+	}
+
+	/**
+	 * The executor this transport owns. Package-private so a test can assert it was shut
+	 * down; nothing in the transport's contract needs it.
+	 */
+	ExecutorService httpExecutor() {
+		return this.httpExecutor;
+	}
+
+	/** The close frame to wait for, or null when there is no socket left to tell. */
+	private @Nullable CompletableFuture<WebSocket> sendCloseFrame() {
+		WebSocket socket = webSocket;
+		if (socket == null || socket.isOutputClosed()) {
+			return null;
+		}
+		try {
+			return socket.sendClose(WebSocket.NORMAL_CLOSURE, "client closing");
+		}
+		catch (IllegalStateException ex) {
+			logger.debug("WebSocket to {} was already closing", uri, ex);
+			return null;
+		}
+	}
+
+	/**
+	 * Waits for the close frame to be written, but no longer than {@link #CLOSE_TIMEOUT}.
+	 * {@code get} rather than {@code orTimeout(...).join()}: the latter completes the
+	 * JDK's own future exceptionally when it fires.
+	 */
+	private void awaitCloseFrame(@Nullable CompletableFuture<WebSocket> closeSent) {
+		if (closeSent == null) {
+			return;
+		}
+		try {
+			closeSent.get(CLOSE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			logger.debug("Interrupted waiting for the close frame to {}", uri, ex);
+		}
+		catch (ExecutionException ex) {
+			logger.debug("Close frame to {} was not sent", uri, ex);
+		}
+		catch (TimeoutException ex) {
+			logger.debug("Close frame to {} was not sent within {}", uri, CLOSE_TIMEOUT, ex);
+		}
+	}
+
+	/**
+	 * Releases the client, its executor, the keepalive and the outbound scheduler,
+	 * exactly once. Reached from every close, including one that follows a socket the
+	 * agent had already dropped.
+	 */
+	private void release() {
+		if (!released.compareAndSet(false, true)) {
+			return;
+		}
+		keepalive.shutdownNow();
+		outboundScheduler.dispose();
+		httpClient.shutdown();
+		httpExecutor.shutdown();
 	}
 
 	@Override
