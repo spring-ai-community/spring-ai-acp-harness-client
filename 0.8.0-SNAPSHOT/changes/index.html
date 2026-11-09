@@ -1402,6 +1402,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="[0.8.0] - Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1439,7 +1456,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1489,7 +1506,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1528,7 +1545,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1567,7 +1584,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1617,7 +1634,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_4" class="md-nav__link">
+  <a href="#fixed_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1758,6 +1775,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="[0.8.0] - Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1795,7 +1829,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed" class="md-nav__link">
+  <a href="#fixed_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1845,7 +1879,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_1" class="md-nav__link">
+  <a href="#fixed_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1884,7 +1918,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_2" class="md-nav__link">
+  <a href="#fixed_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1923,7 +1957,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_3" class="md-nav__link">
+  <a href="#fixed_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -1973,7 +2007,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#fixed_4" class="md-nav__link">
+  <a href="#fixed_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Fixed
@@ -2101,6 +2135,20 @@
 <p>All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 <a href="https://semver.org/">Semantic Versioning</a> (MAJOR.MINOR.PATCH).</p>
 <h2 id="080-unreleased">[0.8.0] - Unreleased<a class="headerlink" href="#080-unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A supervised agent whose start failed, or whose WebSocket transport could not be constructed,
+  left the supervisor, transport or log watcher it had created behind. <code>AcpHarnessClientFactory</code>
+  now closes what it created before rethrowing, and a supervisor closes the client it uses for
+  health probes.</li>
+<li>The WebSocket transport now waits for its close frame to be sent before shutting its
+  <code>HttpClient</code> down, and shuts the executor down with it, so the agent sees a normal closure
+  rather than a reset. Its client and executors are released once however the socket ended,
+  including when the agent closed it first — the usual way a restarted agent's connection
+  ends. The MCP loopback proxy closes its <code>HttpClient</code> on close too.</li>
+<li>The endpoint model catalogue now uses one <code>HttpClient</code> for the JVM instead of one per agent
+  connection, so reconnecting no longer accumulates selector threads and connection pools.</li>
+</ul>
 <h2 id="070-2026-11-07">[0.7.0] - 2026-11-07<a class="headerlink" href="#070-2026-11-07" title="Permanent link">&para;</a></h2>
 <h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2144,7 +2192,7 @@
 <li><code>AcpHarnessTurn</code> now releases the session's turn permit itself, when the agent is done with the
   session, so a caller of <code>AcpHarnessTurn.prompt</code> acquires it and no longer releases it.</li>
 </ul>
-<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li>A supervised agent (<code>serve.transport: websocket</code>) that failed to become ready was restarted by
   its own exit. After a start that failed, the supervisor went on spawning the agent in the
@@ -2308,7 +2356,7 @@
   requests, so one caller sending overlapping turns to one session could stall every other user's
   agent.</li>
 </ul>
-<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>A new session that failed while being configured, such as an unsupported model with
   <code>on-unsupported: fail</code>, stayed open on the agent until <code>session-ttl</code>, with its MCP route still
@@ -2385,7 +2433,7 @@
   Boot now loads the file as ordinary configuration, so its keys miss <code>spring.acp</code> and are
   silently ignored: add <code>acp:</code> to the import.</li>
 </ul>
-<h3 id="fixed_2">Fixed<a class="headerlink" href="#fixed_2" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>spring-ai-acp-harness-client-mcp-oauth</code>: a sign-in that had lapsed — its refresh token no
   longer honoured — was never cleared, so the user was never asked to sign in again and every
@@ -2408,7 +2456,7 @@
   itself. Jackson's annotations (<code>com.fasterxml.jackson.annotation</code>) are unchanged.</li>
 <li>Spring Boot 4.1.1, which brings Jackson 3.1.5, the version the SDK is built against.</li>
 </ul>
-<h3 id="fixed_3">Fixed<a class="headerlink" href="#fixed_3" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_4">Fixed<a class="headerlink" href="#fixed_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li>With <code>goose serve</code>, an answer to the agent (a permission decision, a file read, a terminal
   result) could be dropped when it was sent at the same moment as a new request, leaving that
@@ -2455,7 +2503,7 @@
   declared <code>new AcpProperties()</code> as a bean registers it with
   <code>@EnableConfigurationProperties(AcpProperties.class)</code> instead.</li>
 </ul>
-<h3 id="fixed_4">Fixed<a class="headerlink" href="#fixed_4" title="Permanent link">&para;</a></h3>
+<h3 id="fixed_5">Fixed<a class="headerlink" href="#fixed_5" title="Permanent link">&para;</a></h3>
 <ul>
 <li>OpenCode sessions no longer call MCP servers as another user, or through a closed session's
   route. OpenCode keeps one MCP client per server name for its whole process, replaced by each
