@@ -363,6 +363,9 @@ public final class AcpHarnessProcessSupervisor implements AutoCloseable {
 		healthy = false;
 		terminate();
 		scheduler.shutdownNow();
+		// The health probe's client is owned here, and no health poll will use it after
+		// the scheduler above is shut down.
+		httpClient.shutdownNow();
 		Thread hook = shutdownHook;
 		if (hook != null) {
 			try {

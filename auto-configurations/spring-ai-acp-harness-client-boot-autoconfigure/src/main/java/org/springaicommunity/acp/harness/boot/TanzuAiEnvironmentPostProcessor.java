@@ -189,17 +189,18 @@ public class TanzuAiEnvironmentPostProcessor implements EnvironmentPostProcessor
 	}
 
 	static String fetch(URI configUrl, String apiKey) throws IOException, InterruptedException {
-		HttpClient client = HttpClient.newBuilder().connectTimeout(CATALOG_TIMEOUT).build();
-		HttpResponse<String> response = client.send(HttpRequest.newBuilder(configUrl)
-			.timeout(CATALOG_TIMEOUT)
-			.header("Authorization", "Bearer " + apiKey)
-			.header("Accept", "application/json")
-			.GET()
-			.build(), HttpResponse.BodyHandlers.ofString());
-		if (response.statusCode() != 200) {
-			throw new IOException("HTTP " + response.statusCode());
+		try (HttpClient client = HttpClient.newBuilder().connectTimeout(CATALOG_TIMEOUT).build()) {
+			HttpResponse<String> response = client.send(HttpRequest.newBuilder(configUrl)
+				.timeout(CATALOG_TIMEOUT)
+				.header("Authorization", "Bearer " + apiKey)
+				.header("Accept", "application/json")
+				.GET()
+				.build(), HttpResponse.BodyHandlers.ofString());
+			if (response.statusCode() != 200) {
+				throw new IOException("HTTP " + response.statusCode());
+			}
+			return response.body();
 		}
-		return response.body();
 	}
 
 }

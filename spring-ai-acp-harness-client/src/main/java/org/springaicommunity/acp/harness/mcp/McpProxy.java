@@ -339,6 +339,10 @@ final class McpProxy implements AutoCloseable {
 		routes.clear();
 		server.stop(0);
 		workers.shutdownNow();
+		// The client is AutoCloseable since Java 21. A proxy is replaced whenever its
+		// agent connection is, so leaving this to the collector accumulates selector
+		// threads and connection pools on every restart.
+		http.shutdownNow();
 	}
 
 }

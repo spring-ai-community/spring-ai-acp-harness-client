@@ -125,35 +125,46 @@ public final class AcpHarnessClientFactory {
 			AcpHarnessObservations observations) {
 		AcpHarnessProcessSupervisor supervisor = served.process() == null ? null
 				: new AcpHarnessProcessSupervisor(runtime.id(), served.process(), settings.pool().maxRestarts());
-		if (supervisor != null) {
-			supervisor.start();
-		}
-
-		SupervisedWebSocketTransport transport = new SupervisedWebSocketTransport(served.uri(), served.headers());
-		AtomicBoolean connected = new AtomicBoolean(true);
-		transport.onDisconnect(() -> connected.set(false));
-		// A restarted server is a new process behind the same address: this connection is
-		// stale
-		// whatever the socket thinks, and the pool should replace the client rather than
-		// reuse it.
-		if (supervisor != null) {
-			supervisor.addRestartListener(() -> connected.set(false));
-		}
-
-		Liveness liveness = new Liveness(true, () -> connected.get() && (supervisor == null || supervisor.isHealthy()));
-		Runnable onClose = supervisor == null ? () -> {
-		} : supervisor::close;
-
-		// Only a server this library started has an environment it knows, and therefore a
-		// log it can
-		// find; an attached one is somebody else's process.
-		AcpHarnessLogWatcher watcher = supervisor == null ? null : logWatcher(runtime, settings);
-		Launched launched = new Launched(transport, diagnostics, liveness, onClose, watcher);
+		AcpHarnessLogWatcher watcher = null;
+		SupervisedWebSocketTransport transport = null;
+		Launched launched = null;
 		try {
+			if (supervisor != null) {
+				supervisor.start();
+			}
+			// Only a server this library started has an environment it knows, and
+			// therefore a log it can find; an attached one is somebody else's process.
+			watcher = supervisor == null ? null : logWatcher(runtime, settings);
+			transport = new SupervisedWebSocketTransport(served.uri(), served.headers());
+			AtomicBoolean connected = new AtomicBoolean(true);
+			transport.onDisconnect(() -> connected.set(false));
+			// A restarted server is a new process behind the same address: this
+			// connection is stale whatever the socket thinks, and the pool should replace
+			// the client rather than reuse it.
+			if (supervisor != null) {
+				supervisor.addRestartListener(() -> connected.set(false));
+			}
+			Liveness liveness = new Liveness(true,
+					() -> connected.get() && (supervisor == null || supervisor.isHealthy()));
+			Runnable onClose = supervisor == null ? () -> {
+			} : supervisor::close;
+			launched = new Launched(transport, diagnostics, liveness, onClose, watcher);
 			return connect(runtime, settings, launched, observations);
 		}
 		catch (RuntimeException ex) {
-			launched.close();
+			// Nothing else knows what was created here. A failed construction must not
+			// leave a supervisor, a transport or a log watcher behind for a client that
+			// was never handed out.
+			closeQuietly(transport);
+			if (launched != null) {
+				launched.close();
+			}
+			else {
+				closeQuietly(watcher);
+				if (supervisor != null) {
+					supervisor.close();
+				}
+			}
 			throw ex;
 		}
 	}
@@ -491,6 +502,20 @@ public final class AcpHarnessClientFactory {
 	private static void closeQuietly(@Nullable AcpHarnessLogWatcher watcher) {
 		if (watcher != null) {
 			watcher.close();
+		}
+	}
+
+	private static void closeQuietly(@Nullable SupervisedWebSocketTransport transport) {
+		if (transport == null) {
+			return;
+		}
+		try {
+			// A transport that never connected has no socket to close; this releases the
+			// client and executors it created in its constructor.
+			transport.closeGracefully().block(Duration.ofSeconds(1));
+		}
+		catch (RuntimeException ex) {
+			logger.debug("Closing an unconnected WebSocket transport did not complete cleanly", ex);
 		}
 	}
 

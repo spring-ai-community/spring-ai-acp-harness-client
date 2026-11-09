@@ -132,6 +132,22 @@ class SupervisedWebSocketTransportTests {
 		transport.awaitTermination().onErrorComplete().block(TIMEOUT);
 	}
 
+	/**
+	 * The factory closes a transport it built and then could not hand out, before it was
+	 * ever connected. That path must release the client and executors rather than wait
+	 * for a socket that was never opened.
+	 */
+	@Test
+	void closingBeforeConnectingCompletes() {
+		SupervisedWebSocketTransport transport = new SupervisedWebSocketTransport(URI.create("ws://127.0.0.1:1/acp"),
+				Map.of());
+
+		transport.closeGracefully().block(TIMEOUT);
+		transport.awaitTermination().onErrorComplete().block(TIMEOUT);
+
+		assertThat(transport.httpExecutor().isShutdown()).isTrue();
+	}
+
 	@Test
 	void terminationCompletesWhenTheClientClosesTheTransport() throws IOException {
 		server = start();
@@ -141,7 +157,31 @@ class SupervisedWebSocketTransportTests {
 
 		client.closeGracefully().block(TIMEOUT);
 
+		assertThat(transport.httpExecutor().isShutdown()).isTrue();
 		transport.awaitTermination().block(TIMEOUT);
+	}
+
+	/**
+	 * An agent that restarts or dies closes the socket first, and only then does the
+	 * client close the transport it is no longer live. {@code dropped()} has already set
+	 * {@code closing} by then, so this close has to release the client and executors
+	 * without sending another close frame; otherwise every reconnection leaves a thread
+	 * pool behind.
+	 */
+	@Test
+	void aTransportWhoseSocketDroppedIsStillShutDownOnClose() throws Exception {
+		server = start();
+		CountDownLatch disconnected = new CountDownLatch(1);
+		SupervisedWebSocketTransport transport = new SupervisedWebSocketTransport(endpoint(), Map.of());
+		transport.onDisconnect(disconnected::countDown);
+		client = client(transport);
+		client.initialize().block(TIMEOUT);
+
+		server.closeGracefully().block(TIMEOUT);
+		assertThat(disconnected.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS)).isTrue();
+		client.closeGracefully().onErrorComplete().block(TIMEOUT);
+
+		assertThat(transport.httpExecutor().isShutdown()).isTrue();
 	}
 
 	private static AcpAsyncClient client(SupervisedWebSocketTransport transport) {
