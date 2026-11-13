@@ -3,8 +3,6 @@ package org.springaicommunity.acp.harness.turn;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -13,7 +11,6 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
-import org.springaicommunity.acp.harness.event.AcpHarnessEventMapper;
 import org.springaicommunity.acp.harness.observation.AcpHarnessObservations;
 import org.springaicommunity.acp.harness.permission.PendingPermissions;
 import org.springaicommunity.acp.harness.session.AcpHarnessSession;
@@ -212,15 +209,15 @@ public final class AcpHarnessTurn {
 		// Set once session/cancel is sent: the agent is only winding down from then on,
 		// and nothing it sends is this turn's to report.
 		AtomicBoolean cancelling = new AtomicBoolean();
-		// The tool calls this turn reported as its plan, whose updates are then dropped.
-		Set<String> planCalls = ConcurrentHashMap.newKeySet();
+		// The runtime's view of this turn's updates: its plan tool, its subagents.
+		UpdateMapping mapping = new UpdateMapping(planTool, subagents);
 
 		Consumer<AcpSchema.SessionUpdate> listener = update -> {
 			if (cancelling.get()) {
 				logger.trace("Session {} is winding down a cancelled turn; dropping update", sessionId);
 				return;
 			}
-			AcpHarnessEvent event = map(update, planCalls);
+			AcpHarnessEvent event = mapping.map(update);
 			if (event != null) {
 				record(recording, event);
 				sink.next(event);
@@ -359,68 +356,6 @@ public final class AcpHarnessTurn {
 		}
 		sink.next(terminal);
 		sink.complete();
-	}
-
-	/**
-	 * Maps one update, reporting a tool call {@link #planTool} recognises as a plan.
-	 *
-	 * <p>
-	 * The call becomes {@link AcpHarnessEvent.PlanUpdated} in place of
-	 * {@link AcpHarnessEvent.ToolCallStarted}, and the updates that follow it —
-	 * "completed", with the tool's acknowledgement as content — are dropped, so a caller
-	 * sees the plan change and not the bookkeeping behind it. Anything the mapper drops,
-	 * a replayed call included, stays dropped. A recogniser that throws is treated as one
-	 * that did not recognise the call: this runs on the transport's inbound thread, and a
-	 * plan that cannot be read is still a tool call worth reporting.
-	 *
-	 * <p>
-	 * A message or thought chunk {@link #subagents} says a subagent wrote is dropped, so
-	 * it is not appended to the agent's answer. A recogniser that throws leaves the chunk
-	 * as it was, for the same reason.
-	 */
-	private @Nullable AcpHarnessEvent map(AcpSchema.SessionUpdate update, Set<String> planCalls) {
-		AcpHarnessEvent event = AcpHarnessEventMapper.map(update);
-		if (event == null) {
-			return null;
-		}
-		if ((event instanceof AcpHarnessEvent.Text || event instanceof AcpHarnessEvent.Thought)
-				&& writtenBySubagent(update)) {
-			return null;
-		}
-		if (update instanceof AcpSchema.ToolCall call) {
-			List<AcpSchema.PlanEntry> plan = planOf(call);
-			if (plan != null) {
-				if (call.toolCallId() != null) {
-					planCalls.add(call.toolCallId());
-				}
-				return new AcpHarnessEvent.PlanUpdated(List.copyOf(plan));
-			}
-		}
-		else if (update instanceof AcpSchema.ToolCallUpdateNotification updated
-				&& planCalls.contains(updated.toolCallId())) {
-			return null;
-		}
-		return event;
-	}
-
-	private @Nullable List<AcpSchema.PlanEntry> planOf(AcpSchema.ToolCall call) {
-		try {
-			return planTool.planOf(call);
-		}
-		catch (RuntimeException ex) {
-			logger.debug("Could not read a plan from tool call {}", call.toolCallId(), ex);
-			return null;
-		}
-	}
-
-	private boolean writtenBySubagent(AcpSchema.SessionUpdate chunk) {
-		try {
-			return subagents.wrote(chunk);
-		}
-		catch (RuntimeException ex) {
-			logger.debug("Could not tell whether a subagent wrote a chunk", ex);
-			return false;
-		}
 	}
 
 	/**

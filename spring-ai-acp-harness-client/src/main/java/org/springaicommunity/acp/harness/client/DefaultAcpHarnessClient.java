@@ -1,9 +1,12 @@
 package org.springaicommunity.acp.harness.client;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +43,7 @@ import org.springaicommunity.acp.harness.session.SessionPrincipalResolver;
 import org.springaicommunity.acp.harness.session.SessionRegistry;
 import org.springaicommunity.acp.harness.turn.AcpHarnessTurn;
 import org.springaicommunity.acp.harness.turn.SessionUpdateRouter;
+import org.springaicommunity.acp.harness.turn.UpdateMapping;
 
 import com.agentclientprotocol.sdk.client.AcpAsyncClient;
 import com.agentclientprotocol.sdk.spec.AcpSchema;
@@ -96,6 +100,14 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	private final McpAccess mcpAccess;
 
 	/**
+	 * How each session's out-of-turn updates are mapped, kept per session because the
+	 * mapping remembers the tool calls it reported as a plan. Weak, so a session the
+	 * registry has forgotten takes its mapping with it.
+	 */
+	private final Map<AcpHarnessSession, UpdateMapping> unpromptedMappings = Collections
+		.synchronizedMap(new WeakHashMap<>());
+
+	/**
 	 * @param initialized the agent's {@code initialize} answer, or null when none was
 	 * kept
 	 * @param alive whether the transport is still up, or null when it cannot tell
@@ -130,6 +142,26 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 		this.alive = alive;
 		this.onClose = onClose == null ? () -> {
 		} : onClose;
+		router.whenNoTurn(this::deliverUnprompted);
+	}
+
+	/**
+	 * Hands an update that arrived while no turn was running to its session's
+	 * subscribers, mapped as a turn's would be. Dropped for a session this client does
+	 * not have open: one already closed here, or one being loaded under another name.
+	 */
+	private void deliverUnprompted(String sessionId, AcpSchema.SessionUpdate update) {
+		AcpHarnessSession session = sessions.findBySessionId(sessionId);
+		if (session == null) {
+			logger.trace("No open session {}; dropping update", sessionId);
+			return;
+		}
+		AcpHarnessEvent event = unpromptedMappings
+			.computeIfAbsent(session, s -> new UpdateMapping(runtime::planOf, runtime::writtenBySubagent))
+			.map(update);
+		if (event != null) {
+			session.unprompted(event);
+		}
 	}
 
 	/**
@@ -693,6 +725,21 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 	@Override
 	public @Nullable AcpHarnessSession session(String name) {
 		return sessions.find(name);
+	}
+
+	@Override
+	public Flux<AcpHarnessEvent> unprompted(String name) {
+		return unprompted(name, currentPrincipal());
+	}
+
+	@Override
+	public Flux<AcpHarnessEvent> unprompted(String name, @Nullable SessionPrincipal principal) {
+		AcpHarnessSession session = sessions.find(name);
+		if (session == null) {
+			throw new IllegalStateException(
+					"No session named '" + name + "' is open; open it, or run a turn in it, before listening to it");
+		}
+		return session.unprompted(principal);
 	}
 
 }

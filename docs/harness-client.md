@@ -101,6 +101,23 @@ config.resolutions().values().forEach(r ->     // requested, applied, and by whi
         log.info("{}: {} -> {} ({})", r.option(), r.requested(), r.applied(), r.mechanism()));
 ```
 
+## Between turns
+
+An agent may speak in a session when no turn is running. ACP allows it, and an agent that does background work does it: OpenCode 2.3.0 answers "I'll report when it finishes" while a subagent is still working, then writes the subagent's result into the session on its own once it arrives. A turn cannot carry that, because it has already ended. `unprompted(name)` does:
+
+```java
+Disposable listening = acpHarnessClient.unprompted("pr-482")
+        .ofType(AcpHarnessEvent.Text.class)
+        .subscribe(text -> chat.append(text.text()));
+```
+
+- The flux is hot and best-effort. It carries only what arrives while you are subscribed and no turn is running in that session. A turn's own updates still go to the turn, never here.
+- It carries the same events a turn does (text, thoughts, tool calls, plan updates), mapped by the same runtime rules, so a subagent's words are left out here too. It never carries a terminal event: the agent sends no end signal and no usage for what it says unprompted, so there is nothing to say when it is finished. Wait for a pause instead, as the [console](integrations/console.md) does.
+- It completes when the session closes, however it closes: `sessions().close(...)`, `session-ttl`, or the pool restarting the agent.
+- The session must be open (`openSession`, or a turn run in it) and must belong to the caller, as for a turn. Otherwise `unprompted` throws `IllegalStateException` or `SessionOwnershipException`.
+
+Most agents never speak between turns, and then the flux is simply quiet. Nothing is kept for a session nobody is listening to.
+
 ## Stored conversations
 
 `acpHarnessClient.sessions()` manages the conversations the agent keeps. Every operation is optional in ACP, and the runtimes implement different subsets, so ask first:

@@ -1364,6 +1364,96 @@ class AcpHarnessClientWireTests {
 	}
 
 	/** A runtime that names no agent: only the core is under test here. */
+	// --- what the agent sends while no turn is running
+	// ------------------------------------------------
+
+	/**
+	 * OpenCode 2.3 writes to a session nobody prompted when a background subagent reports
+	 * back. That reaches whoever listens to the session, and the turn before it keeps
+	 * only its own text.
+	 */
+	@Test
+	void anUpdateSentBetweenTurnsReachesTheSessionsListeners() throws InterruptedException {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("Started.").build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			String answer = client.prompt().session("s").user("start a subagent").call().content();
+			String sessionId = client.session("s").sessionId();
+			List<AcpHarnessEvent> heard = new java.util.concurrent.CopyOnWriteArrayList<>();
+			CountDownLatch arrived = new CountDownLatch(1);
+			reactor.core.Disposable listening = client.unprompted("s").subscribe(event -> {
+				heard.add(event);
+				arrived.countDown();
+			});
+
+			agent.speak(sessionId, "DONE");
+
+			assertThat(arrived.await(LIMIT.toSeconds(), TimeUnit.SECONDS)).as("the update arrived").isTrue();
+			listening.dispose();
+			assertThat(answer).isEqualTo("Started.");
+			assertThat(heard).containsExactly(new AcpHarnessEvent.Text("DONE"));
+		}
+	}
+
+	@Test
+	void aTurnsOwnUpdatesDoNotReachTheSessionsListeners() throws InterruptedException {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().reply("one", "two").build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			client.openSession("s");
+			List<AcpHarnessEvent> heard = new java.util.concurrent.CopyOnWriteArrayList<>();
+			CountDownLatch arrived = new CountDownLatch(1);
+			reactor.core.Disposable listening = client.unprompted("s").subscribe(event -> {
+				heard.add(event);
+				arrived.countDown();
+			});
+
+			client.prompt().session("s").user("hi").call();
+			agent.speak(client.session("s").sessionId(), "later");
+
+			assertThat(arrived.await(LIMIT.toSeconds(), TimeUnit.SECONDS)).as("the update arrived").isTrue();
+			listening.dispose();
+			assertThat(heard).containsExactly(new AcpHarnessEvent.Text("later"));
+		}
+	}
+
+	@Test
+	void listeningEndsWhenTheSessionIsClosed() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().sessionOperations("close").build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			client.openSession("s");
+
+			StepVerifier.create(client.unprompted("s"))
+				.then(() -> client.sessions().close("s"))
+				.expectComplete()
+				.verify(LIMIT);
+		}
+	}
+
+	@Test
+	void listeningToASessionThatIsNotOpenFails() {
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			assertThatThrownBy(() -> client.unprompted("never-opened")).isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("never-opened");
+		}
+	}
+
+	@Test
+	void onlyTheSessionsOwnerMayListen() {
+		org.springaicommunity.acp.harness.session.SessionPrincipal alice = org.springaicommunity.acp.harness.session.SessionPrincipal
+			.of("alice");
+		try (ScriptedAcpAgent agent = ScriptedAcpAgent.builder().build();
+				AcpHarnessClient client = connect(agent, settings().build())) {
+			client.openSession("s", alice);
+
+			assertThatThrownBy(
+					() -> client.unprompted("s", org.springaicommunity.acp.harness.session.SessionPrincipal.of("bob")))
+				.isInstanceOf(org.springaicommunity.acp.harness.session.SessionOwnershipException.class);
+			assertThatThrownBy(() -> client.unprompted("s", null))
+				.isInstanceOf(org.springaicommunity.acp.harness.session.SessionOwnershipException.class);
+			assertThat(client.unprompted("s", alice)).isNotNull();
+		}
+	}
+
 	private static class ScriptedRuntime implements AcpHarnessRuntime {
 
 		@Override

@@ -11,8 +11,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.jspecify.annotations.Nullable;
 import org.springaicommunity.acp.harness.config.AdvertisedSessionConfig;
 import org.springaicommunity.acp.harness.config.SessionConfiguration;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 
 import com.agentclientprotocol.sdk.spec.AcpSchema;
+
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 /**
  * One ACP conversation: the caller's stable name, the agent's issued id, and the turn
@@ -47,6 +51,12 @@ public final class AcpHarnessSession {
 	 * Whatever must end with the session: today, its MCP proxy routes. Run at most once.
 	 */
 	private final AtomicReference<@Nullable Runnable> release;
+
+	/**
+	 * What the agent sends on this session while no turn is running, to whoever is
+	 * listening when it arrives. Completed when the session is released.
+	 */
+	private final Sinks.Many<AcpHarnessEvent> unprompted = Sinks.many().multicast().directBestEffort();
 
 	AcpHarnessSession(String name, String sessionId) {
 		this(name, sessionId, null, null);
@@ -90,6 +100,39 @@ public final class AcpHarnessSession {
 		if (pending != null) {
 			pending.run();
 		}
+		unprompted.tryEmitComplete();
+	}
+
+	/**
+	 * What the agent sends on this session while no turn is running there, for a caller
+	 * acting for {@code caller} (null for nobody).
+	 *
+	 * <p>
+	 * An agent may write to a session nobody prompted: OpenCode 2.3 runs a turn of its
+	 * own when a background subagent reports back after the turn that started it has
+	 * ended, and streams the agent's reply then. Those updates arrive here, mapped as a
+	 * turn's are, and are delivered to whoever is subscribed when they arrive; with
+	 * nobody subscribed they are dropped.
+	 *
+	 * <p>
+	 * Never emits a terminal event: the agent says when such a turn starts or ends in no
+	 * way the protocol defines. Completes when the session is closed or forgotten.
+	 * @throws SessionOwnershipException if the session belongs to someone else
+	 */
+	public Flux<AcpHarnessEvent> unprompted(@Nullable SessionPrincipal caller) {
+		if (!belongsTo(caller)) {
+			throw new SessionOwnershipException(name);
+		}
+		return unprompted.asFlux();
+	}
+
+	/**
+	 * Delivers an event the agent sent while no turn was running. Called by the client,
+	 * on the transport's inbound thread.
+	 */
+	public void unprompted(AcpHarnessEvent event) {
+		touch();
+		unprompted.tryEmitNext(event);
 	}
 
 	/**

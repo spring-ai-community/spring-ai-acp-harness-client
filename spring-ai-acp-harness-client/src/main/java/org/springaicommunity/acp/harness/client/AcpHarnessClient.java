@@ -161,6 +161,43 @@ public interface AcpHarnessClient extends AutoCloseable {
 		throw new UnsupportedOperationException(getClass().getName() + " does not support session principals");
 	}
 
+	/**
+	 * What the agent sends on the named session while no turn is running there.
+	 *
+	 * <p>
+	 * A turn's events end with its terminal event, but an agent is not obliged to stay
+	 * quiet afterwards: OpenCode 2.3 runs a turn of its own when a subagent it left
+	 * running in the background reports back, and streams its reply with no prompt
+	 * outstanding. That reply arrives here, mapped as a turn's events are, rather than
+	 * nowhere.
+	 *
+	 * <p>
+	 * Hot and best-effort: events go to whoever is subscribed when they arrive, and are
+	 * dropped with nobody subscribed, so subscribe while the session is open and before
+	 * the activity is expected. Never emits a terminal event, since the agent signals the
+	 * end of a turn it started itself in no way the protocol defines; completes when the
+	 * session is closed or forgotten. A client that cannot deliver them returns an empty
+	 * Flux.
+	 * @throws IllegalStateException if no session of that name is open
+	 * @throws org.springaicommunity.acp.harness.session.SessionOwnershipException if the
+	 * session belongs to someone else
+	 */
+	default Flux<AcpHarnessEvent> unprompted(String name) {
+		return Flux.empty();
+	}
+
+	/**
+	 * Same, for a caller acting for {@code principal}, who must be the session's owner.
+	 * The one-argument form asks {@code McpSettings.principals()} instead.
+	 * @param principal who the caller acts for, or null for nobody
+	 */
+	default Flux<AcpHarnessEvent> unprompted(String name, @Nullable SessionPrincipal principal) {
+		if (principal == null) {
+			return unprompted(name);
+		}
+		throw new UnsupportedOperationException(getClass().getName() + " does not support session principals");
+	}
+
 	@Override
 	void close();
 

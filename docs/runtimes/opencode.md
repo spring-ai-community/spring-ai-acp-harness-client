@@ -88,7 +88,9 @@ OpenCode's `task` tool starts a subagent: a child session that works on part of 
 - The subagent's messages and thoughts are not emitted as `Text` or `Thought`. Its result still reaches the answer, because the agent reads it and replies.
 - The subagent's tool calls are reported like any other, since they are real work in the workspace. Its permission requests reach `spring.ai.acp.harness.permissions` as usual.
 
-Measured against 2.2.7 and 2.3.0. From 2.3.0, subagents run in the background by default. A short one still reports back before the turn ends; a turn whose subagent is still running when the agent answers has not been measured.
+Measured against 2.2.7 and 2.3.0.
+
+From 2.3.0, subagents run in the background. The agent does not wait for one: it can end its turn with "I started the subagent. It hasn't replied yet." When the subagent finishes, OpenCode hands its result to the agent, which then replies in the session on its own, outside any turn. That reply arrives on [`unprompted(name)`](../harness-client.md#between-turns), not on the turn, and carries no end signal and no usage. If a turn is running in the session when the result arrives, the agent reads it during that turn instead. Measured against 2.3.0 with a subagent that waited 20 seconds before replying.
 
 ## Processes, users and memory
 

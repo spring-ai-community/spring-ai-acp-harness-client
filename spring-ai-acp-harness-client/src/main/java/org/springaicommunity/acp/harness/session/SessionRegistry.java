@@ -117,6 +117,16 @@ public final class SessionRegistry {
 		return sessions.get(name);
 	}
 
+	/** The open session the agent knows as {@code sessionId}, or null when none is. */
+	public @Nullable AcpHarnessSession findBySessionId(String sessionId) {
+		for (AcpHarnessSession session : sessions.values()) {
+			if (session.sessionId().equals(sessionId)) {
+				return session;
+			}
+		}
+		return null;
+	}
+
 	public boolean knows(String name) {
 		return sessions.containsKey(name);
 	}

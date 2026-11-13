@@ -60,6 +60,23 @@ class ConsoleChatTests {
 		when(agent.prompt()).thenReturn(prompt);
 		when(prompt.stream()).thenReturn(stream);
 		when(stream.events()).thenReturn(Flux.just(new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN)));
+		when(agent.unprompted(anyString())).thenReturn(Flux.never());
+	}
+
+	/**
+	 * A background subagent's report, answered by the agent with nobody prompting: shown
+	 * once, as one block, and marked as coming between turns.
+	 */
+	@Test
+	void whatTheAgentSaysBetweenTurnsIsShownAsOneBlock() {
+		when(agent.unprompted("console")).thenReturn(
+				Flux.just(new AcpHarnessEvent.Text("The subagent "), new AcpHarnessEvent.Text("replied DONE.")));
+		TestTerminals.Scripted terminal = TestTerminals.typing("/exit\n");
+
+		chat(terminal).run();
+
+		verify(agent).unprompted("console");
+		assertThat(terminal.written()).contains("(the agent, between turns)", "The subagent replied DONE.");
 	}
 
 	@Test
