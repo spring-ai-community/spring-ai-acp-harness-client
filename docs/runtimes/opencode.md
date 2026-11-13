@@ -81,6 +81,15 @@ spring:
 
 `default_agent` in `config` sets the mode new sessions start in. Prefer `spring.ai.acp.harness.mode`, which reports whether it was applied.
 
+## Subagents
+
+OpenCode's `task` tool starts a subagent: a child session that works on part of the request and reports back to the agent. OpenCode streams the subagent's own output on the parent session, so without help the subagent's words would arrive ahead of the agent's answer ("PONGThe subagent replied: PONG"). The adapter recognises those chunks by OpenCode's own marker and leaves them out:
+
+- The subagent's messages and thoughts are not emitted as `Text` or `Thought`. Its result still reaches the answer, because the agent reads it and replies.
+- The subagent's tool calls are reported like any other, since they are real work in the workspace. Its permission requests reach `spring.ai.acp.harness.permissions` as usual.
+
+Measured against 2.2.7 and 2.3.0. From 2.3.0, subagents run in the background by default. A short one still reports back before the turn ends; a turn whose subagent is still running when the agent answers has not been measured.
+
 ## Processes, users and memory
 
 OpenCode keeps MCP clients per process rather than per session. It holds one client per server name, and every `session/new` replaces it, so all the sessions in a process call MCP through whichever session declared the servers last (see [Credentials the agent never sees](../configuration/mcp-servers.md#credentials-the-agent-never-sees)). To keep one user's tools from running with another user's credentials, the pool gives each OpenCode process to **one principal at a time**:

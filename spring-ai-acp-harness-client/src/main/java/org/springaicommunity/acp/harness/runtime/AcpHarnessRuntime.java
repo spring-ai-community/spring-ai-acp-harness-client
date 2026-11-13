@@ -105,6 +105,26 @@ public interface AcpHarnessRuntime {
 	}
 
 	/**
+	 * Whether a message or thought chunk on a session was written by a subagent the agent
+	 * started, rather than by the agent itself.
+	 *
+	 * <p>
+	 * ACP has no subagents. An agent that runs one inside a turn may stream the
+	 * subagent's own output on the parent session, as ordinary chunks marked only in its
+	 * own {@code _meta}, so without this the subagent's words are appended to the answer.
+	 * Answering true drops the chunk: the subagent's result reaches the answer through
+	 * the agent itself, which reads it and replies. The subagent's tool calls are still
+	 * reported, since they are work done in the workspace.
+	 *
+	 * <p>
+	 * Consulted for {@code agent_message_chunk} and {@code agent_thought_chunk} only.
+	 * Answer by a stable identifier, never by the text.
+	 */
+	default boolean writtenBySubagent(AcpSchema.SessionUpdate chunk) {
+		return false;
+	}
+
+	/**
 	 * Where this agent writes its own log, if it writes one this client can find.
 	 *
 	 * <p>
