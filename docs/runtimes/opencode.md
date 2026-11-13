@@ -93,12 +93,14 @@ So `max-processes` is the number of users who can hold OpenCode sessions at the 
 
 Measured resident memory of one `opencode acp` process:
 
-| Point | Linux x86_64, 1.18.33 | macOS arm64, 1.18.32 |
-| --- | --- | --- |
-| After `initialize` | 490 MB | 420 MB |
-| After the first `session/new` | 430 MB | 550 MB |
-| After a first short turn | not measured | 660 MB |
-| Each further session in the same process | not measured | about 1 MB |
+| Point | Linux x86_64, 1.18.33 | macOS arm64, 1.18.32 | macOS arm64, 2.2.7 |
+| --- | --- | --- | --- |
+| After `initialize` | 490 MB | 420 MB | 290 MB |
+| After the first `session/new` | 430 MB | 550 MB | 540 MB |
+| After a first short turn | not measured | 660 MB | 545 MB |
+| Each further session in the same process | not measured | about 1 MB | under 1 MB |
+
+The 2.2.7 column is the whole process tree, measured with `openai/gpt-6-luna`; 2.3.0 measured the same to within 15 MB. Linux has not been measured on 2.x, so the budget below still follows the 1.18 figures.
 
 Budget about **650 MB per OpenCode process**, plus your application's own JVM. Size the host or container for the worst case:
 
