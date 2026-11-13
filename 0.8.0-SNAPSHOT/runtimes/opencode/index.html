@@ -1652,6 +1652,7 @@
 <th>Point</th>
 <th>Linux x86_64, 1.18.33</th>
 <th>macOS arm64, 1.18.32</th>
+<th>macOS arm64, 2.2.7</th>
 </tr>
 </thead>
 <tbody>
@@ -1659,24 +1660,29 @@
 <td>After <code>initialize</code></td>
 <td>490 MB</td>
 <td>420 MB</td>
+<td>290 MB</td>
 </tr>
 <tr>
 <td>After the first <code>session/new</code></td>
 <td>430 MB</td>
 <td>550 MB</td>
+<td>540 MB</td>
 </tr>
 <tr>
 <td>After a first short turn</td>
 <td>not measured</td>
 <td>660 MB</td>
+<td>545 MB</td>
 </tr>
 <tr>
 <td>Each further session in the same process</td>
 <td>not measured</td>
 <td>about 1 MB</td>
+<td>under 1 MB</td>
 </tr>
 </tbody>
 </table>
+<p>The 2.2.7 column is the whole process tree, measured with <code>openai/gpt-6-luna</code>; 2.3.0 measured the same to within 15 MB. Linux has not been measured on 2.x, so the budget below still follows the 1.18 figures.</p>
 <p>Budget about <strong>650 MB per OpenCode process</strong>, plus your application's own JVM. Size the host or container for the worst case:</p>
 <div class="highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>memory ≥ JVM + max-processes × 650 MB
 </span></code></pre></div>
