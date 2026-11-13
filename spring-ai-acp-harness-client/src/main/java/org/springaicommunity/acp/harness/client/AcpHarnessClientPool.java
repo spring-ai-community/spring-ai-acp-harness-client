@@ -233,6 +233,26 @@ public final class AcpHarnessClientPool implements AcpHarnessClient {
 	}
 
 	@Override
+	public Flux<AcpHarnessEvent> unprompted(String name) {
+		return unprompted(name, currentPrincipal());
+	}
+
+	/**
+	 * The session's out-of-turn events, from the process it is open in. The Flux
+	 * completes if that process is restarted, since the session goes with it.
+	 */
+	@Override
+	public Flux<AcpHarnessEvent> unprompted(String name, @Nullable SessionPrincipal principal) {
+		Slot slot = assignment.get(name);
+		AcpHarnessClient client = slot == null ? null : slot.connected();
+		if (client == null) {
+			throw new IllegalStateException(
+					"No session named '" + name + "' is open; open it, or run a turn in it, before listening to it");
+		}
+		return client.unprompted(name, principal);
+	}
+
+	@Override
 	public void evictIdleSessions() {
 		sweep();
 	}

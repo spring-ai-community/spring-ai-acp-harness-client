@@ -189,6 +189,16 @@ public final class ScriptedAcpAgent implements AutoCloseable {
 		return List.copyOf(attachedMcpServers);
 	}
 
+	/**
+	 * Sends {@code text} as an {@code agent_message_chunk} on {@code sessionId} now,
+	 * whether or not a prompt is outstanding: what OpenCode 2.3 does when a background
+	 * subagent reports back after the turn that started it has ended.
+	 */
+	public void speak(String sessionId, String text) {
+		notify(sessionId,
+				Map.of("sessionUpdate", "agent_message_chunk", "content", Map.of("type", "text", "text", text)));
+	}
+
 	@Override
 	public void close() {
 		pair.closeGracefully().block(Duration.ofSeconds(5));

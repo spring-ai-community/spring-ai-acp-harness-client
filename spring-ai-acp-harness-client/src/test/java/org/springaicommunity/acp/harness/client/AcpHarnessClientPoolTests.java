@@ -79,6 +79,19 @@ class AcpHarnessClientPoolTests {
 	}
 
 	@Test
+	@DisplayName("a session's out-of-turn events come from the process it is open in")
+	void listensOnTheProcessTheSessionIsOpenIn() {
+		try (AcpHarnessClientPool pool = pool(settings(2, 1))) {
+			pool.openSession("a");
+			pool.openSession("b");
+
+			assertThat(pool.unprompted("b").blockFirst())
+				.isEqualTo(new org.springaicommunity.acp.harness.event.AcpHarnessEvent.Text("process 2: b"));
+			assertThatThrownBy(() -> pool.unprompted("never-opened")).isInstanceOf(IllegalStateException.class);
+		}
+	}
+
+	@Test
 	@DisplayName("nothing is connected until something is asked of the pool")
 	void connectsLazily() {
 		try (AcpHarnessClientPool pool = pool(settings(2, 32))) {
@@ -449,6 +462,13 @@ class AcpHarnessClientPoolTests {
 		@Override
 		public PromptSpec prompt() {
 			return new FakePromptSpec();
+		}
+
+		@Override
+		public reactor.core.publisher.Flux<org.springaicommunity.acp.harness.event.AcpHarnessEvent> unprompted(
+				String name, SessionPrincipal principal) {
+			return reactor.core.publisher.Flux.just(
+					new org.springaicommunity.acp.harness.event.AcpHarnessEvent.Text("process " + index + ": " + name));
 		}
 
 		@Override

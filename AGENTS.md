@@ -203,6 +203,13 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   not appended to the agent's answer; the subagent's tool calls are still reported. Pinned by
   `SubagentChunkTests`' captured 2.2.7 updates. The live contract suite starts no subagent, so it
   would not notice a regression.
+- **An agent may speak between turns.** OpenCode 2.3.0 runs subagents in the background and,
+  when one finishes after the turn ended, replies in the session unprompted: chunks with no
+  `usage_update` and no end signal. `SessionUpdateRouter.whenNoTurn` hands such updates to
+  `DefaultAcpHarnessClient`, which maps them with the same `UpdateMapping` a turn uses (one per
+  session) and emits them on the session's hot `unprompted` flux; `AcpHarnessClient.unprompted(name)`
+  exposes it, owner-checked like a turn. Never terminal, so consumers wait for a pause
+  (the console buffers until 800 ms of quiet). Wire-tested with `ScriptedAcpAgent.speak`.
 - Optional session operations throw `UnsupportedAcpHarnessOperationException` naming the ACP method
   rather than failing on the wire.
 - ACP v2 is gated behind a flag and refused; target v1.

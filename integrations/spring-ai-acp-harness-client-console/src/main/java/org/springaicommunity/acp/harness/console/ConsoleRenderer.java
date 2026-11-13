@@ -152,6 +152,14 @@ public class ConsoleRenderer {
 		line(styled("  ! " + message, ERROR));
 	}
 
+	/**
+	 * What the agent said while no turn was running, as a block ready to print above the
+	 * prompt: OpenCode, for one, answers a background subagent's report this way.
+	 */
+	public synchronized String unprompted(String text) {
+		return styled("  (the agent, between turns)", DIM) + System.lineSeparator() + text.strip();
+	}
+
 	/** Output of a console command, as opposed to anything the agent said. */
 	public synchronized void info(String text) {
 		line(styled(text, DIM));

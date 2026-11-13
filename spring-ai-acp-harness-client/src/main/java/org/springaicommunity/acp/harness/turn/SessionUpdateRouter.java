@@ -2,8 +2,10 @@ package org.springaicommunity.acp.harness.turn;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +33,22 @@ public final class SessionUpdateRouter {
 	private static final Logger logger = LoggerFactory.getLogger(SessionUpdateRouter.class);
 
 	private final Map<String, Consumer<AcpSchema.SessionUpdate>> listeners = new ConcurrentHashMap<>();
+
+	private volatile @Nullable BiConsumer<String, AcpSchema.SessionUpdate> noTurn;
+
+	/**
+	 * Hands updates for a session no turn is listening to to {@code handler}, with the
+	 * session's id, instead of dropping them.
+	 *
+	 * <p>
+	 * An agent may write to a session between turns: OpenCode 2.3, for one, runs a turn
+	 * of its own when a background subagent reports back, and streams it with no prompt
+	 * outstanding. Called synchronously, like a turn's listener.
+	 * @param handler what receives them, or null to drop them again
+	 */
+	public void whenNoTurn(@Nullable BiConsumer<String, AcpSchema.SessionUpdate> handler) {
+		this.noTurn = handler;
+	}
 
 	/**
 	 * Directs updates for {@code sessionId} to {@code listener} until {@link #unregister}
@@ -62,17 +80,22 @@ public final class SessionUpdateRouter {
 			return;
 		}
 		Consumer<AcpSchema.SessionUpdate> listener = listeners.get(notification.sessionId());
-		if (listener == null) {
-			// Expected between turns: a turn the agent never finished winding down
-			// stops listening after a grace period, and anything later is dropped here.
-			logger.trace("No active turn for session {}; dropping update", notification.sessionId());
-			return;
-		}
 		try {
-			listener.accept(notification.update());
+			if (listener != null) {
+				listener.accept(notification.update());
+				return;
+			}
+			BiConsumer<String, AcpSchema.SessionUpdate> handler = noTurn;
+			if (handler == null) {
+				// Expected between turns: a turn the agent never finished winding down
+				// stops listening after a grace period, and anything later is dropped.
+				logger.trace("No active turn for session {}; dropping update", notification.sessionId());
+				return;
+			}
+			handler.accept(notification.sessionId(), notification.update());
 		}
 		catch (RuntimeException ex) {
-			// Never let one turn's listener break the shared notification pump.
+			// Never let one listener break the shared notification pump.
 			logger.warn("Listener for session {} threw; continuing", notification.sessionId(), ex);
 		}
 	}

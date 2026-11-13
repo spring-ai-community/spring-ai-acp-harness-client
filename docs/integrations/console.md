@@ -53,6 +53,8 @@ The console starts on its own thread once the application is ready, so startup c
 
 When the agent does not implement a session operation, the command says which ACP method is missing rather than failing.
 
+What the agent says [between turns](../harness-client.md#between-turns), such as a background subagent's result arriving after the turn that started it has ended, is printed above the prompt once the agent pauses for a moment, under a dimmed "(the agent, between turns)" line. A line you are typing is kept.
+
 ## Properties
 
 | Property | Default | Description |

@@ -3,6 +3,7 @@ package org.springaicommunity.acp.harness.console;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springaicommunity.acp.harness.client.AcpHarnessClient;
+import org.springaicommunity.acp.harness.event.AcpHarnessEvent;
 import org.springaicommunity.acp.harness.runtime.AcpHarnessNotice;
 import org.springaicommunity.acp.harness.session.AcpHarnessSession;
 import org.springaicommunity.acp.harness.session.AcpHarnessSessions;
@@ -34,6 +36,8 @@ import org.springaicommunity.acp.harness.session.StoredSession;
 
 import reactor.core.Disposable;
 import reactor.core.Disposables;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * The read-prompt-stream loop.
@@ -80,6 +84,18 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 
 	/** The turn in flight, for Ctrl-C to cancel; null between turns. */
 	private final AtomicReference<@Nullable Disposable> turn = new AtomicReference<>();
+
+	/**
+	 * How long the agent must be quiet before what it said between turns is printed: it
+	 * arrives in chunks, and printing each above the prompt would break it into lines.
+	 */
+	private static final Duration QUIET = Duration.ofMillis(800);
+
+	/** What the agent says on the current session between turns; replaced with it. */
+	private final Disposable.Swap listening = Disposables.swap();
+
+	/** Set once reading starts, so what arrives between turns prints above the prompt. */
+	private volatile @Nullable LineReader lineReader;
 
 	/** Notices already shown, so each is reported once rather than after every turn. */
 	private final Set<AcpHarnessNotice> seenNotices = new HashSet<>();
@@ -136,6 +152,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 	/** Greets, then reads and answers until the user leaves. Returns when they do. */
 	public void run() {
 		LineReader reader = reader();
+		lineReader = reader;
 		greet();
 		try {
 			while (true) {
@@ -167,6 +184,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 			}
 		}
 		finally {
+			listening.dispose();
 			saveHistory(reader);
 		}
 		out.bye();
@@ -199,6 +217,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 
 	private void open(String name) {
 		AcpHarnessSession opened = agent.openSession(name);
+		listen(name);
 		opened.configuration()
 			.resolutions()
 			.values()
@@ -244,6 +263,38 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 		}
 		out.endOfTurn();
 		showNewNotices();
+	}
+
+	/**
+	 * Prints what the agent says on {@code name} while no turn runs, in place of whatever
+	 * session was listened to before. Text only, gathered until the agent goes quiet.
+	 */
+	private void listen(String name) {
+		try {
+			Flux<String> text = agent.unprompted(name)
+				.ofType(AcpHarnessEvent.Text.class)
+				.map(AcpHarnessEvent.Text::text);
+			listening.update(text.publish(shared -> shared.buffer(shared.sampleTimeout(chunk -> Mono.delay(QUIET))))
+				.map(chunks -> String.join("", chunks))
+				.filter(said -> !said.isBlank())
+				.subscribe(this::showUnprompted,
+						error -> logger.debug("Stopped listening to session {}: {}", name, error.getMessage())));
+		}
+		catch (RuntimeException ex) {
+			logger.debug("Cannot listen to session {}: {}", name, ex.getMessage());
+		}
+	}
+
+	private void showUnprompted(String said) {
+		String shown = out.unprompted(said);
+		LineReader reader = lineReader;
+		if (reader != null) {
+			reader.printAbove(shown);
+		}
+		else {
+			terminal.writer().println(shown);
+			terminal.writer().flush();
+		}
 	}
 
 	/** Cancels the turn in flight, if there is one. What Ctrl-C does during a turn. */
@@ -347,6 +398,7 @@ public class ConsoleChat implements ApplicationListener<ApplicationReadyEvent> {
 			return;
 		}
 		session = next;
+		listen(next);
 		out.info("  continuing " + sessionId);
 	}
 

@@ -5,6 +5,13 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ## [0.8.0] - Unreleased
 
+### Added
+
+- `AcpHarnessClient.unprompted(name)`: what the agent says in a session while no turn is
+  running, which was dropped before. OpenCode 2.3.0 does this when a background subagent
+  finishes after the turn that started it has ended. The terminal console prints it above the
+  prompt. See [Between turns](https://github.com/spring-ai-community/spring-ai-acp-harness-client/blob/main/docs/harness-client.md#between-turns).
+
 ### Fixed
 
 - A supervised agent whose start failed, or whose WebSocket transport could not be constructed,
