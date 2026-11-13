@@ -10,10 +10,29 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 - `AcpHarnessClient.unprompted(name)`: what the agent says in a session while no turn is
   running, which was dropped before. OpenCode 2.3.0 does this when a background subagent
   finishes after the turn that started it has ended. The terminal console prints it above the
-  prompt. See [Between turns](https://github.com/spring-ai-community/spring-ai-acp-harness-client/blob/main/docs/harness-client.md#between-turns).
+  prompt. See [Between turns](https://github.com/spring-ai-community/spring-ai-acp-harness-client/blob/main/docs/harness-client.md#between-turns)
+  ([#39](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/39)).
+
+### Changed
+
+- The Codex runtime runs `@agentclientprotocol/codex-acp@2.6.0` by default, up from 2.5.0. Set
+  `spring.ai.acp.harness.runtimes.codex.package` to keep the earlier one. 2.6.0's live contract
+  suite failed its deny-by-default test, which was already flaky on 2.5.0, so the verified
+  version in the README stays 2.5.0
+  ([#37](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/37)).
+- The ACP registry snapshot bundled in the jar, which the registry runtime reads when it has no
+  cached catalogue and cannot reach the live registry, or with `registry.offline` on, now has
+  goose 1.59.0 (from 1.57.0), codex-acp 2.6.0 (from 2.5.0) and OpenCode 2.2.7 (from 2.2.5). goose
+  and OpenCode passed their live contract suites at these versions.
 
 ### Fixed
 
+- A turn in which OpenCode started a subagent put the subagent's own words ahead of the agent's
+  answer ("PONGThe subagent replied: PONG"). OpenCode 2.2.7 and 2.3.0 stream a subagent's
+  message and thought chunks on the parent session, and the turn reported them as the agent's.
+  They are now left out; the subagent's tool calls are still reported. A runtime recognises
+  such chunks with the new `AcpHarnessRuntime.writtenBySubagent`, which defaults to false
+  ([#38](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/38)).
 - A supervised agent whose start failed, or whose WebSocket transport could not be constructed,
   left the supervisor, transport or log watcher it had created behind. `AcpHarnessClientFactory`
   now closes what it created before rethrowing, and a supervisor closes the client it uses for
