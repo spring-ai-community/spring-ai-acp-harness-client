@@ -7,7 +7,7 @@
 - **An agent you can run.** Spring AI ACP Harness Client (SAAHC) does not package agent binaries. For the compiled adapters:
 
     - **Goose**: the `goose` CLI on the `PATH`, or `GOOSE_CLI_PATH` pointing at it. Verified against goose 1.57.0.
-    - **Codex**: Node.js with `npx`. The adapter runs `npx -y @agentclientprotocol/codex-acp@2.5.0`, so the first start downloads it. `CODEX_ACP_CLI_PATH` names a local codex-acp to run instead.
+    - **Codex**: Node.js with `npx`. The adapter runs `npx -y @agentclientprotocol/codex-acp@2.6.0`, so the first start downloads it. `CODEX_ACP_CLI_PATH` names a local codex-acp to run instead.
     - **OpenCode**: the `opencode` CLI on the `PATH`, or `OPENCODE_CLI_PATH`. Verified against opencode 2.2.4.
     - **Registry agents**: nothing pre-installed; the agent is downloaded and checksum-verified. Agents distributed through npm or PyPI need `npx` or `uvx`.
 

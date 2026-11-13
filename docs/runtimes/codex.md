@@ -9,7 +9,7 @@ spring:
       harness:
         runtimes:
           codex:
-            package: "@agentclientprotocol/codex-acp@2.5.0"   # what npx runs (this is the default)
+            package: "@agentclientprotocol/codex-acp@2.6.0"   # what npx runs (this is the default)
             # command: /usr/local/bin/codex-acp                # a pre-installed adapter instead of npx
             args: [ ]                                           # extra arguments for the adapter
             home: /var/lib/codex                                # CODEX_HOME; see "Codex's home directory"
