@@ -949,6 +949,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#subagents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subagents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#processes-users-and-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1523,6 +1534,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#subagents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Subagents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#processes-users-and-memory" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1637,6 +1659,13 @@
 </span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">                    </span><span class="nt">bash</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ask</span>
 </span></code></pre></div>
 <p><code>default_agent</code> in <code>config</code> sets the mode new sessions start in. Prefer <code>spring.ai.acp.harness.mode</code>, which reports whether it was applied.</p>
+<h2 id="subagents">Subagents<a class="headerlink" href="#subagents" title="Permanent link">&para;</a></h2>
+<p>OpenCode's <code>task</code> tool starts a subagent: a child session that works on part of the request and reports back to the agent. OpenCode streams the subagent's own output on the parent session, so without help the subagent's words would arrive ahead of the agent's answer ("PONGThe subagent replied: PONG"). The adapter recognises those chunks by OpenCode's own marker and leaves them out:</p>
+<ul>
+<li>The subagent's messages and thoughts are not emitted as <code>Text</code> or <code>Thought</code>. Its result still reaches the answer, because the agent reads it and replies.</li>
+<li>The subagent's tool calls are reported like any other, since they are real work in the workspace. Its permission requests reach <code>spring.ai.acp.harness.permissions</code> as usual.</li>
+</ul>
+<p>Measured against 2.2.7 and 2.3.0. From 2.3.0, subagents run in the background by default. A short one still reports back before the turn ends; a turn whose subagent is still running when the agent answers has not been measured.</p>
 <h2 id="processes-users-and-memory">Processes, users and memory<a class="headerlink" href="#processes-users-and-memory" title="Permanent link">&para;</a></h2>
 <p>OpenCode keeps MCP clients per process rather than per session. It holds one client per server name, and every <code>session/new</code> replaces it, so all the sessions in a process call MCP through whichever session declared the servers last (see <a href="../../configuration/mcp-servers/#credentials-the-agent-never-sees">Credentials the agent never sees</a>). To keep one user's tools from running with another user's credentials, the pool gives each OpenCode process to <strong>one principal at a time</strong>:</p>
 <ul>
