@@ -616,7 +616,8 @@ public final class DefaultAcpHarnessClient implements AcpHarnessClient {
 				// From here the turn releases the permit, and not always when the caller
 				// hears the turn is over: a cancelled or timed-out turn keeps the
 				// session until the agent has finished with it.
-				return AcpHarnessTurn.on(acp, router, observations, runtime::planOf, permissions)
+				return AcpHarnessTurn
+					.on(acp, router, observations, runtime::planOf, permissions, runtime::writtenBySubagent)
 					.prompt(session, prompt, effective.timeout(), turnContext(session, effective, ephemeral))
 					.doFinally(signal -> {
 						if (ephemeral) {

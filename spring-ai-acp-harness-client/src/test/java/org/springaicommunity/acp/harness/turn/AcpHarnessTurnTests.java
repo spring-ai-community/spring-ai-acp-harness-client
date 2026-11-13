@@ -435,6 +435,51 @@ class AcpHarnessTurnTests {
 		assertThat(events).containsExactly(new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
 	}
 
+	/**
+	 * A subagent's words stay out of the answer, and so do its thoughts, while its tool
+	 * calls are reported: they are work done in the workspace.
+	 */
+	@Test
+	void chunksASubagentWroteAreLeftOutOfTheAnswer() {
+		Map<String, Object> child = Map.of("child", true);
+		agentStreams(List.of(toolCall("call-1", "subagent"),
+				new AcpSchema.AgentMessageChunk("agent_message_chunk", new AcpSchema.TextContent("PONG"), null, child),
+				new AcpSchema.AgentThoughtChunk("agent_thought_chunk", new AcpSchema.TextContent("thinking"), null,
+						child),
+				toolCall("child:call-2", "read"), toolCallUpdate("call-1"), chunk("The subagent replied: PONG")),
+				AcpSchema.StopReason.END_TURN);
+
+		List<AcpHarnessEvent> events = AcpHarnessTurn
+			.on(client, router, AcpHarnessObservations.NONE, PlanTool.NONE, new PendingPermissions(),
+					update -> update instanceof AcpSchema.AgentMessageChunk c && c.meta() != null
+							|| update instanceof AcpSchema.AgentThoughtChunk t && t.meta() != null)
+			.prompt(session, PROMPT, Duration.ofSeconds(5))
+			.collectList()
+			.block(Duration.ofSeconds(5));
+
+		assertThat(events).containsExactly(new AcpHarnessEvent.ToolCallStarted("call-1", "subagent", null),
+				new AcpHarnessEvent.ToolCallStarted("child:call-2", "read", null),
+				new AcpHarnessEvent.ToolCallUpdated("call-1", AcpSchema.ToolCallStatus.COMPLETED, null),
+				new AcpHarnessEvent.Text("The subagent replied: PONG"),
+				new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
+	}
+
+	@Test
+	void aSubagentRecogniserThatThrowsLeavesTheChunkInTheAnswer() {
+		agentStreams(List.of(chunk("hello")), AcpSchema.StopReason.END_TURN);
+
+		List<AcpHarnessEvent> events = AcpHarnessTurn
+			.on(client, router, AcpHarnessObservations.NONE, PlanTool.NONE, new PendingPermissions(), update -> {
+				throw new IllegalStateException("unreadable");
+			})
+			.prompt(session, PROMPT, Duration.ofSeconds(5))
+			.collectList()
+			.block(Duration.ofSeconds(5));
+
+		assertThat(events).containsExactly(new AcpHarnessEvent.Text("hello"),
+				new AcpHarnessEvent.Completed(AcpSchema.StopReason.END_TURN));
+	}
+
 	private static AcpSchema.SessionUpdate toolCall(String id, String title) {
 		return new AcpSchema.ToolCall("tool_call", id, title, null, null, null, null, null, null, null, null);
 	}

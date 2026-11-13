@@ -197,6 +197,12 @@ Module dependency shape: `AcpHarnessClient` API → `AcpHarnessClientPool` → `
   recognises such a call (by `_meta`, never the title) and `AcpHarnessTurn` emits `PlanUpdated` in its
   place, dropping the call's updates. Goose's parser is `TodoPlan`, pinned by a captured 1.52.0
   `tool_call`.
+- **A subagent's words are not the answer.** OpenCode (2.2.7, 2.3.0) streams a subagent's message
+  and thought chunks on the parent session, marked only by `_meta["opencode/child-session"]`.
+  `AcpHarnessRuntime.writtenBySubagent` recognises them and `AcpHarnessTurn` drops them, so they are
+  not appended to the agent's answer; the subagent's tool calls are still reported. Pinned by
+  `SubagentChunkTests`' captured 2.2.7 updates. The live contract suite starts no subagent, so it
+  would not notice a regression.
 - Optional session operations throw `UnsupportedAcpHarnessOperationException` naming the ACP method
   rather than failing on the wire.
 - ACP v2 is gated behind a flag and refused; target v1.

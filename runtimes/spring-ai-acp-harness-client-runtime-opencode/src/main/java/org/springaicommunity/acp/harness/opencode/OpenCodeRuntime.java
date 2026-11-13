@@ -75,6 +75,11 @@ public class OpenCodeRuntime implements AcpHarnessRuntime {
 	private static final String CONFIG_FILE = "opencode.json";
 
 	/**
+	 * The {@code _meta} key marking an update a subagent sent on its parent's session.
+	 */
+	static final String CHILD_SESSION_META = "opencode/child-session";
+
+	/**
 	 * What OpenCode loads to talk to an OpenAI-compatible endpoint it has no built-in
 	 * entry for.
 	 */
@@ -263,6 +268,25 @@ public class OpenCodeRuntime implements AcpHarnessRuntime {
 	@Override
 	public @Nullable String toolNameOf(AcpSchema.@Nullable ToolCallUpdate toolCall) {
 		return ToolNames.fromRawInput(toolCall);
+	}
+
+	/**
+	 * OpenCode streams a subagent's output on the parent session, each update marked with
+	 * {@value #CHILD_SESSION_META} in {@code _meta}, so a turn that starts one would
+	 * otherwise return the subagent's words ahead of the agent's own (measured against
+	 * 2.2.7 and 2.3.0). A client can ask for them on a separate
+	 * {@code opencode/session/child_update} notification instead, but acp-core has no
+	 * handler for a vendor notification, and the parent-session form keeps the subagent's
+	 * tool calls in the turn, where they belong.
+	 */
+	@Override
+	public boolean writtenBySubagent(AcpSchema.SessionUpdate chunk) {
+		Map<String, Object> meta = switch (chunk) {
+			case AcpSchema.AgentMessageChunk c -> c.meta();
+			case AcpSchema.AgentThoughtChunk c -> c.meta();
+			default -> null;
+		};
+		return meta != null && meta.get(CHILD_SESSION_META) != null;
 	}
 
 	private Map<String, String> environment(AcpHarnessSettings settings) {

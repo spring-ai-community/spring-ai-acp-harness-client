@@ -74,27 +74,30 @@ public final class AcpHarnessTurn {
 
 	private final PendingPermissions permissions;
 
+	private final Subagents subagents;
+
 	private final Duration cancelGrace;
 
 	private AcpHarnessTurn(AcpAsyncClient client, SessionUpdateRouter router,
 			@Nullable AcpHarnessObservations observations, @Nullable PlanTool planTool,
-			@Nullable PendingPermissions permissions, Duration cancelGrace) {
+			@Nullable PendingPermissions permissions, @Nullable Subagents subagents, Duration cancelGrace) {
 		this.client = client;
 		this.router = router;
 		this.observations = observations == null ? AcpHarnessObservations.NONE : observations;
 		this.planTool = planTool == null ? PlanTool.NONE : planTool;
 		this.permissions = permissions == null ? new PendingPermissions() : permissions;
+		this.subagents = subagents == null ? Subagents.NONE : subagents;
 		this.cancelGrace = cancelGrace;
 	}
 
 	public static AcpHarnessTurn on(AcpAsyncClient client, SessionUpdateRouter router) {
-		return new AcpHarnessTurn(client, router, AcpHarnessObservations.NONE, PlanTool.NONE, null, CANCEL_GRACE);
+		return new AcpHarnessTurn(client, router, AcpHarnessObservations.NONE, PlanTool.NONE, null, null, CANCEL_GRACE);
 	}
 
 	/** Same, reporting what the turn does to {@code observations}. */
 	public static AcpHarnessTurn on(AcpAsyncClient client, SessionUpdateRouter router,
 			AcpHarnessObservations observations) {
-		return new AcpHarnessTurn(client, router, observations, PlanTool.NONE, null, CANCEL_GRACE);
+		return new AcpHarnessTurn(client, router, observations, PlanTool.NONE, null, null, CANCEL_GRACE);
 	}
 
 	/**
@@ -102,7 +105,7 @@ public final class AcpHarnessTurn {
 	 */
 	public static AcpHarnessTurn on(AcpAsyncClient client, SessionUpdateRouter router,
 			AcpHarnessObservations observations, PlanTool planTool) {
-		return new AcpHarnessTurn(client, router, observations, planTool, null, CANCEL_GRACE);
+		return new AcpHarnessTurn(client, router, observations, planTool, null, null, CANCEL_GRACE);
 	}
 
 	/**
@@ -111,12 +114,21 @@ public final class AcpHarnessTurn {
 	 */
 	public static AcpHarnessTurn on(AcpAsyncClient client, SessionUpdateRouter router,
 			AcpHarnessObservations observations, PlanTool planTool, PendingPermissions permissions) {
-		return new AcpHarnessTurn(client, router, observations, planTool, permissions, CANCEL_GRACE);
+		return new AcpHarnessTurn(client, router, observations, planTool, permissions, null, CANCEL_GRACE);
+	}
+
+	/**
+	 * Same, leaving out of the answer the chunks {@code subagents} says a subagent wrote.
+	 */
+	public static AcpHarnessTurn on(AcpAsyncClient client, SessionUpdateRouter router,
+			AcpHarnessObservations observations, PlanTool planTool, PendingPermissions permissions,
+			Subagents subagents) {
+		return new AcpHarnessTurn(client, router, observations, planTool, permissions, subagents, CANCEL_GRACE);
 	}
 
 	/** This turn, waiting {@code grace} for a cancelled prompt's answer. For tests. */
 	AcpHarnessTurn cancelGrace(Duration grace) {
-		return new AcpHarnessTurn(client, router, observations, planTool, permissions, grace);
+		return new AcpHarnessTurn(client, router, observations, planTool, permissions, subagents, grace);
 	}
 
 	/**
@@ -136,6 +148,22 @@ public final class AcpHarnessTurn {
 		 */
 		@Nullable
 		List<AcpSchema.PlanEntry> planOf(AcpSchema.ToolCall toolCall);
+
+	}
+
+	/**
+	 * Recognises the message and thought chunks a subagent wrote on the parent session,
+	 * which are not the agent's answer.
+	 *
+	 * @see org.springaicommunity.acp.harness.runtime.AcpHarnessRuntime#writtenBySubagent
+	 */
+	@FunctionalInterface
+	public interface Subagents {
+
+		/** Recognises nothing: every chunk is the agent's own. */
+		Subagents NONE = chunk -> false;
+
+		boolean wrote(AcpSchema.SessionUpdate chunk);
 
 	}
 
@@ -344,10 +372,19 @@ public final class AcpHarnessTurn {
 	 * a replayed call included, stays dropped. A recogniser that throws is treated as one
 	 * that did not recognise the call: this runs on the transport's inbound thread, and a
 	 * plan that cannot be read is still a tool call worth reporting.
+	 *
+	 * <p>
+	 * A message or thought chunk {@link #subagents} says a subagent wrote is dropped, so
+	 * it is not appended to the agent's answer. A recogniser that throws leaves the chunk
+	 * as it was, for the same reason.
 	 */
 	private @Nullable AcpHarnessEvent map(AcpSchema.SessionUpdate update, Set<String> planCalls) {
 		AcpHarnessEvent event = AcpHarnessEventMapper.map(update);
 		if (event == null) {
+			return null;
+		}
+		if ((event instanceof AcpHarnessEvent.Text || event instanceof AcpHarnessEvent.Thought)
+				&& writtenBySubagent(update)) {
 			return null;
 		}
 		if (update instanceof AcpSchema.ToolCall call) {
@@ -373,6 +410,16 @@ public final class AcpHarnessTurn {
 		catch (RuntimeException ex) {
 			logger.debug("Could not read a plan from tool call {}", call.toolCallId(), ex);
 			return null;
+		}
+	}
+
+	private boolean writtenBySubagent(AcpSchema.SessionUpdate chunk) {
+		try {
+			return subagents.wrote(chunk);
+		}
+		catch (RuntimeException ex) {
+			logger.debug("Could not tell whether a subagent wrote a chunk", ex);
+			return false;
 		}
 	}
 
