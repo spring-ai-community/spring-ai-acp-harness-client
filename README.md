@@ -68,8 +68,8 @@ choices until it is.
 
 ## Status
 
-**All four milestones are done.** One unchanged application runs against goose 1.57.0, codex-acp
-2.5.0 and opencode 2.2.4 with `spring.ai.acp.harness.runtime` as the only difference — the completion test,
+**All four milestones are done.** One unchanged application runs against goose 1.59.0, codex-acp
+2.5.0 and opencode 2.2.7 with `spring.ai.acp.harness.runtime` as the only difference — the completion test,
 and the reason the abstraction is worth having. Since M4 it also runs against Gemini CLI, which this
 library has never had a line of code about: no adapter, just a catalogue entry.
 
@@ -218,9 +218,9 @@ why `sessions().supports(...)` is part of the API rather than a convenience:
 
 | | `list` | `load` | `resume` | `delete` | `close` |
 | --- | --- | --- | --- | --- | --- |
-| goose 1.57.0 | yes | yes | **no** | yes | yes |
+| goose 1.59.0 | yes | yes | **no** | yes | yes |
 | codex-acp 2.5.0 | yes | yes | yes | yes | yes |
-| opencode 2.2.4 | yes | yes | yes | yes | yes |
+| opencode 2.2.7 | yes | yes | yes | yes | yes |
 
 ```java
 if (acpHarnessClient.sessions().supports(Operation.LOAD)) {

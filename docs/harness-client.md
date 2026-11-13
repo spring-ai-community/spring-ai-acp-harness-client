@@ -118,9 +118,9 @@ sessions.close("review-123");                   // always succeeds, told or not
 
 |  | `list` | `load` | `resume` | `delete` | `close` |
 | --- | --- | --- | --- | --- | --- |
-| goose 1.57.0 | yes | yes | no | yes | yes |
+| goose 1.59.0 | yes | yes | no | yes | yes |
 | codex-acp 2.5.0 | yes | yes | yes | yes | yes |
-| opencode 2.2.4 | yes | yes | yes | yes | yes |
+| opencode 2.2.7 | yes | yes | yes | yes | yes |
 
 An operation the agent does not advertise throws `UnsupportedAcpHarnessOperationException` naming the ACP method, rather than failing on the wire.
 

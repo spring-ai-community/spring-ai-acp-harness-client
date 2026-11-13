@@ -5,7 +5,7 @@ A runtime is an adapter that knows how to launch one agent and what that agent c
 | `spring.ai.acp.harness.runtime` | Starter | Launches | Transport |
 | --- | --- | --- | --- |
 | `goose` | `spring-ai-acp-harness-client-boot-starter-goose` | `goose acp`, or a supervised `goose serve` | stdio, or WebSocket |
-| `codex` | `spring-ai-acp-harness-client-boot-starter-codex` | `npx -y @agentclientprotocol/codex-acp@2.5.0` | stdio |
+| `codex` | `spring-ai-acp-harness-client-boot-starter-codex` | `npx -y @agentclientprotocol/codex-acp@2.6.0` | stdio |
 | `opencode` | `spring-ai-acp-harness-client-boot-starter-opencode` | `opencode acp` | stdio |
 | any registry id, e.g. `gemini` | `spring-ai-acp-harness-client-boot-starter-registry` | whatever the [ACP registry](https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json) publishes | stdio |
 
