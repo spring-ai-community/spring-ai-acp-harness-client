@@ -756,6 +756,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#between-turns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Between turns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stored-conversations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1518,6 +1529,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#between-turns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Between turns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stored-conversations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1708,16 +1730,29 @@
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">config</span><span class="p">.</span><span class="na">resolutions</span><span class="p">().</span><span class="na">values</span><span class="p">().</span><span class="na">forEach</span><span class="p">(</span><span class="n">r</span><span class="w"> </span><span class="o">-&gt;</span><span class="w">     </span><span class="c1">// requested, applied, and by which mechanism</span>
 </span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="n">log</span><span class="p">.</span><span class="na">info</span><span class="p">(</span><span class="s">"{}: {} -&gt; {} ({})"</span><span class="p">,</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="na">option</span><span class="p">(),</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="na">requested</span><span class="p">(),</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="na">applied</span><span class="p">(),</span><span class="w"> </span><span class="n">r</span><span class="p">.</span><span class="na">mechanism</span><span class="p">()));</span>
 </span></code></pre></div>
+<h2 id="between-turns">Between turns<a class="headerlink" href="#between-turns" title="Permanent link">&para;</a></h2>
+<p>An agent may speak in a session when no turn is running. ACP allows it, and an agent that does background work does it: OpenCode 2.3.0 answers "I'll report when it finishes" while a subagent is still working, then writes the subagent's result into the session on its own once it arrives. A turn cannot carry that, because it has already ended. <code>unprompted(name)</code> does:</p>
+<div class="highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">Disposable</span><span class="w"> </span><span class="n">listening</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">acpHarnessClient</span><span class="p">.</span><span class="na">unprompted</span><span class="p">(</span><span class="s">"pr-482"</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">        </span><span class="p">.</span><span class="na">ofType</span><span class="p">(</span><span class="n">AcpHarnessEvent</span><span class="p">.</span><span class="na">Text</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">        </span><span class="p">.</span><span class="na">subscribe</span><span class="p">(</span><span class="n">text</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">chat</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">text</span><span class="p">.</span><span class="na">text</span><span class="p">()));</span>
+</span></code></pre></div>
+<ul>
+<li>The flux is hot and best-effort. It carries only what arrives while you are subscribed and no turn is running in that session. A turn's own updates still go to the turn, never here.</li>
+<li>It carries the same events a turn does (text, thoughts, tool calls, plan updates), mapped by the same runtime rules, so a subagent's words are left out here too. It never carries a terminal event: the agent sends no end signal and no usage for what it says unprompted, so there is nothing to say when it is finished. Wait for a pause instead, as the <a href="../integrations/console/">console</a> does.</li>
+<li>It completes when the session closes, however it closes: <code>sessions().close(...)</code>, <code>session-ttl</code>, or the pool restarting the agent.</li>
+<li>The session must be open (<code>openSession</code>, or a turn run in it) and must belong to the caller, as for a turn. Otherwise <code>unprompted</code> throws <code>IllegalStateException</code> or <code>SessionOwnershipException</code>.</li>
+</ul>
+<p>Most agents never speak between turns, and then the flux is simply quiet. Nothing is kept for a session nobody is listening to.</p>
 <h2 id="stored-conversations">Stored conversations<a class="headerlink" href="#stored-conversations" title="Permanent link">&para;</a></h2>
 <p><code>acpHarnessClient.sessions()</code> manages the conversations the agent keeps. Every operation is optional in ACP, and the runtimes implement different subsets, so ask first:</p>
-<div class="highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">AcpHarnessSessions</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">acpHarnessClient</span><span class="p">.</span><span class="na">sessions</span><span class="p">();</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sessions</span><span class="p">.</span><span class="na">supports</span><span class="p">(</span><span class="n">AcpHarnessSessions</span><span class="p">.</span><span class="na">Operation</span><span class="p">.</span><span class="na">LIST</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">StoredSession</span><span class="o">&gt;</span><span class="w"> </span><span class="n">stored</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sessions</span><span class="p">.</span><span class="na">list</span><span class="p">();</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="p">}</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sessions</span><span class="p">.</span><span class="na">supports</span><span class="p">(</span><span class="n">AcpHarnessSessions</span><span class="p">.</span><span class="na">Operation</span><span class="p">.</span><span class="na">LOAD</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="n">sessions</span><span class="p">.</span><span class="na">load</span><span class="p">(</span><span class="s">"review-123"</span><span class="p">,</span><span class="w"> </span><span class="n">storedId</span><span class="p">);</span><span class="w">      </span><span class="c1">// reattach and replay history under this name</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="n">sessions</span><span class="p">.</span><span class="na">close</span><span class="p">(</span><span class="s">"review-123"</span><span class="p">);</span><span class="w">                   </span><span class="c1">// always succeeds, told or not</span>
+<div class="highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">AcpHarnessSessions</span><span class="w"> </span><span class="n">sessions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">acpHarnessClient</span><span class="p">.</span><span class="na">sessions</span><span class="p">();</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sessions</span><span class="p">.</span><span class="na">supports</span><span class="p">(</span><span class="n">AcpHarnessSessions</span><span class="p">.</span><span class="na">Operation</span><span class="p">.</span><span class="na">LIST</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">List</span><span class="o">&lt;</span><span class="n">StoredSession</span><span class="o">&gt;</span><span class="w"> </span><span class="n">stored</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sessions</span><span class="p">.</span><span class="na">list</span><span class="p">();</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">}</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">sessions</span><span class="p">.</span><span class="na">supports</span><span class="p">(</span><span class="n">AcpHarnessSessions</span><span class="p">.</span><span class="na">Operation</span><span class="p">.</span><span class="na">LOAD</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">sessions</span><span class="p">.</span><span class="na">load</span><span class="p">(</span><span class="s">"review-123"</span><span class="p">,</span><span class="w"> </span><span class="n">storedId</span><span class="p">);</span><span class="w">      </span><span class="c1">// reattach and replay history under this name</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="n">sessions</span><span class="p">.</span><span class="na">close</span><span class="p">(</span><span class="s">"review-123"</span><span class="p">);</span><span class="w">                   </span><span class="c1">// always succeeds, told or not</span>
 </span></code></pre></div>
 <table>
 <thead>

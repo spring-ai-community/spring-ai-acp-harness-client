@@ -1406,6 +1406,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1484,7 +1495,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1612,7 +1623,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1779,6 +1790,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#fixed" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1857,7 +1879,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added" class="md-nav__link">
+  <a href="#added_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -1985,7 +2007,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#added_1" class="md-nav__link">
+  <a href="#added_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Added
@@ -2135,6 +2157,13 @@
 <p>All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 <a href="https://semver.org/">Semantic Versioning</a> (MAJOR.MINOR.PATCH).</p>
 <h2 id="080-unreleased">[0.8.0] - Unreleased<a class="headerlink" href="#080-unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>AcpHarnessClient.unprompted(name)</code>: what the agent says in a session while no turn is
+  running, which was dropped before. OpenCode 2.3.0 does this when a background subagent
+  finishes after the turn that started it has ended. The terminal console prints it above the
+  prompt. See <a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/blob/main/docs/harness-client.md#between-turns">Between turns</a>.</li>
+</ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
 <li>A supervised agent whose start failed, or whose WebSocket transport could not be constructed,
@@ -2229,7 +2258,7 @@
   (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/issues/26">#26</a>).</li>
 </ul>
 <h2 id="060-2026-11-06">[0.6.0] - 2026-11-06<a class="headerlink" href="#060-2026-11-06" title="Permanent link">&para;</a></h2>
-<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>PromptSpec.waitIfBusy(Duration)</code> sets how long a turn waits for a named session that is still
   running an earlier turn, before failing with the new <code>AcpHarnessSessionBusyException</code>.
@@ -2466,7 +2495,7 @@
   waiting out the request timeout, so the turn ends with an error straight away.</li>
 </ul>
 <h2 id="031-2026-10-01">[0.3.1] - 2026-10-01<a class="headerlink" href="#031-2026-10-01" title="Permanent link">&para;</a></h2>
-<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li><code>auth: provided</code> for an MCP server whose credentials come from the application's own
   <code>McpCredentialsProvider</code>. Such a server may omit <code>url</code>: the provider supplies the upstream
