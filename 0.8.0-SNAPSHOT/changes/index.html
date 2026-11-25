@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../images/logo.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
     
     
       
@@ -2189,15 +2189,14 @@
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The Codex runtime runs <code>@agentclientprotocol/codex-acp@2.6.0</code> by default, up from 2.5.0. Set
-  <code>spring.ai.acp.harness.runtimes.codex.package</code> to keep the earlier one. 2.6.0's live contract
-  suite failed its deny-by-default test, which was already flaky on 2.5.0, so the verified
-  version in the README stays 2.5.0
-  (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/37">#37</a>).</li>
+<li>The Codex runtime runs <code>@agentclientprotocol/codex-acp@2.12.0</code> by default, up from 2.5.0. Set
+  <code>spring.ai.acp.harness.runtimes.codex.package</code> to keep the earlier one. 2.12.0 passed its live
+  contract suite, so the README's verified version is now 2.12.0
+  (<a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/37">#37</a>, <a href="https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/41">#41</a>).</li>
 <li>The ACP registry snapshot bundled in the jar, which the registry runtime reads when it has no
   cached catalogue and cannot reach the live registry, or with <code>registry.offline</code> on, now has
-  goose 1.59.0 (from 1.57.0), codex-acp 2.6.0 (from 2.5.0) and OpenCode 2.2.7 (from 2.2.5). goose
-  and OpenCode passed their live contract suites at these versions.</li>
+  goose 1.61.0 (from 1.57.0), codex-acp 2.12.0 (from 2.5.0) and OpenCode 2.4.1 (from 2.2.5).
+  All three passed their live contract suites at these versions.</li>
 </ul>
 <h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
 <ul>
