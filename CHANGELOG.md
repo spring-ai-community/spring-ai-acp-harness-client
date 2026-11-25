@@ -3,7 +3,7 @@
 All notable changes to Spring AI ACP Harness Client are documented here. The project follows
 [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH).
 
-## [0.8.0] - Unreleased
+## [0.8.0] - 2026-11-25
 
 ### Added
 
