@@ -15,15 +15,14 @@ All notable changes to Spring AI ACP Harness Client are documented here. The pro
 
 ### Changed
 
-- The Codex runtime runs `@agentclientprotocol/codex-acp@2.6.0` by default, up from 2.5.0. Set
-  `spring.ai.acp.harness.runtimes.codex.package` to keep the earlier one. 2.6.0's live contract
-  suite failed its deny-by-default test, which was already flaky on 2.5.0, so the verified
-  version in the README stays 2.5.0
-  ([#37](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/37)).
+- The Codex runtime runs `@agentclientprotocol/codex-acp@2.12.0` by default, up from 2.5.0. Set
+  `spring.ai.acp.harness.runtimes.codex.package` to keep the earlier one. 2.12.0 passed its live
+  contract suite, so the README's verified version is now 2.12.0
+  ([#37](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/37), [#41](https://github.com/spring-ai-community/spring-ai-acp-harness-client/pull/41)).
 - The ACP registry snapshot bundled in the jar, which the registry runtime reads when it has no
   cached catalogue and cannot reach the live registry, or with `registry.offline` on, now has
-  goose 1.59.0 (from 1.57.0), codex-acp 2.6.0 (from 2.5.0) and OpenCode 2.2.7 (from 2.2.5). goose
-  and OpenCode passed their live contract suites at these versions.
+  goose 1.61.0 (from 1.57.0), codex-acp 2.12.0 (from 2.5.0) and OpenCode 2.4.1 (from 2.2.5).
+  All three passed their live contract suites at these versions.
 
 ### Fixed
 
