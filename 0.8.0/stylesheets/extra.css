@@ -1,0 +1,13 @@
+/*
+ * Mermaid diagrams are rendered client-side at their natural size. Material's content
+ * column is 61rem, so a diagram wider than that is scaled down to fit, which makes the
+ * labels unreadable. Prefer scrolling over shrinking.
+ */
+.mermaid {
+  overflow-x: auto;
+  text-align: center;
+}
+
+.mermaid svg {
+  height: auto;
+}
